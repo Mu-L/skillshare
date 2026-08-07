@@ -79,8 +79,11 @@ func ensureProjectConfig(root string) error {
 	}
 	dir := filepath.Join(root, ".skillshare")
 	if info, err := os.Stat(dir); err == nil && info.IsDir() {
-		gitignored, err := isConfigGitignored(root)
-		if (err != nil || !gitignored) && projectDirHasContent(dir) {
+		// isConfigGitignored reports false whenever it cannot tell, so an
+		// unreadable .gitignore falls through to the guard rather than the
+		// shared-repo path.
+		gitignored, _ := isConfigGitignored(root)
+		if !gitignored && projectDirHasContent(dir) {
 			return fmt.Errorf(
 				".skillshare/ in %s holds skills or agents but has no config.yaml\n"+
 					"Restore it from version control, or run 'skillshare init -p' to write a new one",
