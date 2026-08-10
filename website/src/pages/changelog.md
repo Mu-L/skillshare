@@ -9,6 +9,15 @@ All notable changes to skillshare are documented here. For the full commit histo
 
 ---
 
+## [0.20.25] - 2026-08-10
+
+### Bug Fixes
+
+- **Batch updates no longer mark skills under target dot-directories as stale** — skills installed from subdirectories such as `.claude/skills/...` or `.codex/skills/...` were skipped by discovery during batch updates and reported as deleted upstream, which could incorrectly suggest `--prune`. Batch update now resolves the requested subdirectory directly before declaring it missing. Refs: #261.
+- **Explicit target dot-directory installs discover their requested content** — commands such as `skillshare install user/repo/.claude` no longer return zero results just because `.claude` is normally excluded from repository-wide discovery. Explicitly requested roots are scanned for both skills and agents, while repository-root scans continue to skip synced target copies.
+- **Project commands preserve existing projects when `config.yaml` is missing** — when `.skillshare/` already contains skills or agents but `.skillshare/config.yaml` has disappeared, project-mode commands now stop with recovery guidance instead of silently re-initializing an empty config, dropping target configuration, and leaving stale links. Fresh projects and shared repositories that intentionally gitignore `config.yaml` still initialize automatically.
+- **Windows can uninstall nested skills again** — uninstalling a skill stored under a folder no longer passes Windows backslashes into the trash-name validator and fails with `trash name must not contain backslash`. Nested skill names are normalized to slash-separated paths in global and project mode without weakening traversal checks. Refs: #264.
+
 ## [0.20.24] - 2026-08-03
 
 ### Bug Fixes
