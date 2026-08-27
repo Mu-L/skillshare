@@ -9,6 +9,28 @@ All notable changes to skillshare are documented here. For the full commit histo
 
 ---
 
+## [0.20.26] - 2026-08-27
+
+### Bug Fixes
+
+- **`update --force` can override the security audit again** — when an update was blocked by an audit finding, the error told you to pass `--force`, but the flag never reached the audit gate. Update stages new content in a temporary directory and had to leave its internal overwrite flag off to keep the gate active, which discarded your `--force` along with it, so a flagged update could not be applied short of `--skip-audit` — which turns scanning off entirely. `--force` now reaches the gate on every update path: regular skills, tracked repos, agents, and the web UI's Force Retry button.
+
+  ```bash
+  skillshare update my-skill --force       # apply despite audit findings
+  skillshare update my-skill --skip-audit  # skip scanning entirely
+  ```
+
+  Audit *scan failures* stay fail-closed regardless of `--force`: accepting findings you have seen is not the same as proceeding when the scanner could not run.
+
+- **`install --json` no longer bypasses the security audit** — `--json` set the internal overwrite flag so installs could run non-interactively, and the audit gate read that same flag, so JSON-mode installs silently accepted content that would have been blocked interactively.
+- **Grouped batch updates are covered by the audit gate** — updating several skills from a single repository inherited the same overwrite flag and skipped the block threshold.
+- **Web UI: Force Retry only appears where it can help** — a failure such as `failed to remove existing skill: ... permission denied` offered a Force Retry button that retried with force and failed identically, with no hint of what would actually fix it. The button now shows for audit blocks and for pulls the server would retry with force, and is hidden elsewhere.
+- **Web UI: update errors no longer quote CLI flags** — messages ending in `Use --force to override or --skip-audit to bypass scanning` were rendered verbatim in the dashboard, where there is no command line to type them into.
+
+### Breaking Changes
+
+- **A `--force` at install time no longer exempts later updates from the audit gate** — `--force` is a per-command decision. A skill installed with `--force` is scanned again on its next `update`, and needs `--force` (or `--skip-audit`) again to apply findings at or above the block threshold.
+
 ## [0.20.25] - 2026-08-10
 
 ### Bug Fixes
