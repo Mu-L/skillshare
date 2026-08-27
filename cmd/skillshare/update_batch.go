@@ -38,6 +38,7 @@ func (uc *updateContext) auditScanFn() auditScanFunc {
 func (uc *updateContext) makeInstallOpts() install.InstallOptions {
 	opts := install.InstallOptions{
 		Force:          true,
+		AuditOverride:  uc.opts.force,
 		Update:         true,
 		SkipAudit:      uc.opts.skipAudit,
 		AuditThreshold: uc.opts.threshold,
