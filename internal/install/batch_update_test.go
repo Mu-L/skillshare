@@ -285,7 +285,7 @@ func TestUpdateSkillsFromRepo_SkillOnlyInTargetDotDirNotStale(t *testing.T) {
 	sourceDir := t.TempDir()
 	dest := filepath.Join(sourceDir, "my-skill")
 
-	result, err := UpdateSkillsFromRepo("file://"+repo,
+	result, err := UpdateSkillsFromRepo("file://"+repo, "",
 		map[string]string{".claude/skills/my-skill": dest},
 		InstallOptions{Update: true, SkipAudit: true, SourceDir: sourceDir})
 	if err != nil {
@@ -323,7 +323,7 @@ func TestUpdateSkillsFromRepo_BlockedAuditKeepsInstalledSkill(t *testing.T) {
 	targets := map[string]string{"skills/my-skill": dest}
 	opts := InstallOptions{Update: true, Force: true, AuditThreshold: "CRITICAL", SourceDir: sourceDir}
 
-	result, err := UpdateSkillsFromRepo("file://"+repo, targets, opts)
+	result, err := UpdateSkillsFromRepo("file://"+repo, "", targets, opts)
 	if err != nil {
 		t.Fatalf("initial install failed: %v", err)
 	}
@@ -343,7 +343,7 @@ func TestUpdateSkillsFromRepo_BlockedAuditKeepsInstalledSkill(t *testing.T) {
 	gitAdd(t, repo, ".")
 	gitCommit(t, repo, "v2 malicious")
 
-	result, err = UpdateSkillsFromRepo("file://"+repo, targets, opts)
+	result, err = UpdateSkillsFromRepo("file://"+repo, "", targets, opts)
 	if err != nil {
 		t.Fatalf("UpdateSkillsFromRepo failed: %v", err)
 	}
@@ -365,5 +365,49 @@ func TestUpdateSkillsFromRepo_BlockedAuditKeepsInstalledSkill(t *testing.T) {
 	}
 	if got := after.Get("my-skill").Version; got != versionBefore {
 		t.Fatalf("metadata version changed on blocked update: %q -> %q", versionBefore, got)
+	}
+}
+
+// Grouped updates must fetch from the branch the skills were installed from,
+// not the remote default branch (issue #268).
+func TestUpdateSkillsFromRepo_UsesInstalledBranch(t *testing.T) {
+	repo := initTestRepo(t)
+	skillDir := filepath.Join(repo, "skills", "my-skill")
+	if err := os.MkdirAll(skillDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	skillFile := filepath.Join(skillDir, "SKILL.md")
+	if err := os.WriteFile(skillFile, []byte("---\nname: my-skill\n---\n# main\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	gitAdd(t, repo, ".")
+	gitCommit(t, repo, "main")
+
+	runGit(t, repo, "checkout", "-b", "dev")
+	if err := os.WriteFile(skillFile, []byte("---\nname: my-skill\n---\n# dev\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	gitAdd(t, repo, ".")
+	gitCommit(t, repo, "dev")
+	// Leave HEAD on the default branch so a branch-less clone would yield "main".
+	runGit(t, repo, "checkout", "-")
+
+	sourceDir := t.TempDir()
+	dest := filepath.Join(sourceDir, "my-skill")
+	result, err := UpdateSkillsFromRepo("file://"+repo, "dev",
+		map[string]string{"skills/my-skill": dest},
+		InstallOptions{Update: true, SkipAudit: true, SourceDir: sourceDir})
+	if err != nil {
+		t.Fatalf("UpdateSkillsFromRepo failed: %v", err)
+	}
+	if updateErr := result.Errors["skills/my-skill"]; updateErr != nil {
+		t.Fatalf("unexpected error: %v", updateErr)
+	}
+	data, err := os.ReadFile(filepath.Join(dest, "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "# dev") {
+		t.Fatalf("expected content from dev branch, got:\n%s", data)
 	}
 }

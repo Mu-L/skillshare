@@ -28,7 +28,8 @@ type BatchUpdateResult struct {
 //
 // skillTargets maps repo-internal subdir (meta.Subdir) → local absolute destination path.
 // This avoids assuming the local path mirrors the repo structure.
-func UpdateSkillsFromRepo(repoURL string, skillTargets map[string]string, opts InstallOptions) (*BatchUpdateResult, error) {
+// branch is the branch the skills were installed from (empty = remote default).
+func UpdateSkillsFromRepo(repoURL, branch string, skillTargets map[string]string, opts InstallOptions) (*BatchUpdateResult, error) {
 	if repoURL == "" {
 		return nil, fmt.Errorf("repoURL is required")
 	}
@@ -37,6 +38,7 @@ func UpdateSkillsFromRepo(repoURL string, skillTargets map[string]string, opts I
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse repo URL %q: %w", repoURL, err)
 	}
+	source.Branch = branch
 
 	// 1. Discover skills from the repo (clones once)
 	discovery, err := DiscoverFromGitWithProgress(source, opts.OnProgress)

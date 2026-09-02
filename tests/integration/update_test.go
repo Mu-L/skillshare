@@ -781,3 +781,60 @@ func TestUpdate_Diff_RegularSkill_NoChanges_ShowsMessage(t *testing.T) {
 	result2.AssertAnyOutputContains(t, "No file changes detected")
 	result2.AssertOutputNotContains(t, "Files Changed")
 }
+
+// Skills installed from a non-default branch must be updated from that branch
+// when they go through the grouped (one clone per repo) update path (issue #268).
+func TestUpdateAll_GroupedSkillsHonourInstalledBranch(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+	setupGlobalConfig(sb)
+
+	remoteRepo := filepath.Join(sb.Root, "multi.git")
+	workClone := filepath.Join(sb.Root, "multi-work")
+	gitInit(t, remoteRepo, true)
+	gitClone(t, remoteRepo, workClone)
+
+	names := []string{"alpha", "beta"}
+	writeSkills := func(marker string) {
+		for _, name := range names {
+			dir := filepath.Join(workClone, "skills", name)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			content := "---\nname: " + name + "\n---\n# " + name + " " + marker + "\n"
+			if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	writeSkills("main")
+	gitAddCommit(t, workClone, "main skills")
+	gitPush(t, workClone)
+
+	run(t, workClone, "git", "checkout", "-b", "dev")
+	writeSkills("dev-v1")
+	gitAddCommit(t, workClone, "dev skills")
+	gitPush(t, workClone)
+
+	for _, name := range names {
+		sb.RunCLI("install", "file://"+remoteRepo+"//skills/"+name, "-b", "dev", "--skip-audit").AssertSuccess(t)
+	}
+
+	writeSkills("dev-v2")
+	gitAddCommit(t, workClone, "dev skills v2")
+	gitPush(t, workClone)
+
+	result := sb.RunCLI("update", "--all", "--skip-audit")
+	result.AssertSuccess(t)
+
+	for _, name := range names {
+		data, err := os.ReadFile(filepath.Join(sb.SourcePath, name, "SKILL.md"))
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		if !strings.Contains(string(data), "dev-v2") {
+			t.Fatalf("%s: expected dev-v2 content after update --all, got:\n%s", name, data)
+		}
+	}
+}
