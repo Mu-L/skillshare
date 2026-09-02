@@ -9,6 +9,34 @@ All notable changes to skillshare are documented here. For the full commit histo
 
 ---
 
+## [0.20.27] - 2026-09-02
+
+### New Features
+
+- **Agents can declare which targets they belong to** — a `targets` list in an agent's frontmatter now restricts that agent to the listed tools, the same way `metadata.targets` works for skills. Agent files are copied verbatim and Claude Code, OpenCode, Cursor and Copilot read different frontmatter fields, so this lets you keep a per-tool variant of the same agent side by side. Agents without the field still sync everywhere; target aliases such as `claude-code` match `claude`. Applies to `sync agents`, the dashboard, `doctor` and the target summary. Refs: #267.
+
+  ```yaml
+  # ~/.config/skillshare/agents/reviewer.md
+  ---
+  targets: [claude]
+  tools: Read, Write, Bash(git log)
+  ---
+
+  # ~/.config/skillshare/agents/reviewer-opencode.md
+  ---
+  targets: [opencode]
+  mode: subagent
+  permission: { read: allow, write: allow, bash: ask }
+  ---
+  ```
+
+### Bug Fixes
+
+- **`update --all` no longer deletes a skill when the audit blocks its update** — when several skills from one repository were updated together, the existing skill directory was removed before the new content was copied in, and an audit block then cleaned up the new content as well, leaving nothing on disk and a stale metadata entry that later updates could not find. Grouped updates now stage the new content in a temporary directory, run the audit there, and only swap it into place once the audit passes, matching what `update <name>` already did. If a skill was already lost this way, `skillshare update <name> --force` reinstalls it. Refs: #271.
+- **Batch updates and the web UI follow the branch a skill was installed from** — `update --all` cloned the remote default branch for skills installed with `-b <branch>`, so they were reported stale or downgraded, and `--prune` moved them to trash. The dashboard's check and update did the same, comparing against the remote HEAD instead of the installed branch. All of these now group by repository and branch and fetch from the installed branch. Refs: #268.
+- **Windows drive-letter paths install as local skills** — `skillshare install D:\skills\my-skill` failed with `unrecognized source format` because only paths starting with `/`, `~`, `./` or `../` were treated as local. Drive-letter paths (`D:older`, `C:/Users/...`) and backslash-relative paths (`.\skill`) are now recognised in the CLI and the dashboard install page. Refs: #269.
+- **Dashboard labels non-GitHub git sources as Remote** — skills installed from Gitea, GitLab, self-hosted or SSH sources showed a **Local** badge because only GitHub metadata types were recognised. Any non-local git source now shows **Remote**, matching `skillshare list`. Tracked repos and GitHub sources keep their existing badges. Refs: #270.
+
 ## [0.20.26] - 2026-08-27
 
 ### Bug Fixes
