@@ -9,6 +9,23 @@ All notable changes to skillshare are documented here. For the full commit histo
 
 ---
 
+## [0.20.28] - 2026-09-09
+
+### New Features
+
+- **Visible `skillshare/` project directory** — repositories that treat skills as reviewable content, rather than tool state, can now use a visible `skillshare/` directory instead of the hidden `.skillshare/`.
+
+  ```bash
+  skillshare init -p --visible    # create skillshare/ instead of .skillshare/
+  ```
+
+  Everything lives inside whichever directory is in use: `config.yaml`, `skills/`, `agents/`, `extras/`, and the operational `trash/`, `backups/` and `logs/`. Detection checks `.skillshare/config.yaml` first and `skillshare/config.yaml` second, so existing projects are unaffected and `.skillshare/` wins when both exist. `init -p` without the flag still creates `.skillshare/`. To move an existing project, run `mv .skillshare skillshare` followed by `skillshare sync -p` to repair target symlinks, and update any `sources` paths in `config.yaml` that name `.skillshare/` explicitly. Refs: #256.
+
+### Bug Fixes
+
+- **`.skillignore` matches again when the file uses CRLF line endings** — rules were compiled with a trailing carriage return that could never equal a path segment, so a `.skillignore` saved on Windows silently ignored nothing while `status` still reported its patterns as loaded. Editing patterns was affected the same way: existing entries were not found, adding one duplicated it, and removing one failed. A regression since v0.17.4. Refs: #275.
+- **A directory symlink inside a skill no longer discards every file hash** — hashing stopped at the first entry that could not be read as a file and threw away the hashes computed so far, which left installed skills without the metadata used to detect local edits. Directory symlinks are skipped; file symlinks are still hashed, and real failures such as broken links still surface. Refs: #272.
+
 ## [0.20.27] - 2026-09-02
 
 ### New Features
