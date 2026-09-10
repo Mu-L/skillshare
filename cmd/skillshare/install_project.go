@@ -76,10 +76,6 @@ func cmdInstallProjectParsed(parsed *installArgs, root string) (installLogSummar
 			return summary, err
 		}
 		if !parsed.opts.DryRun {
-			freshStore, loadErr := install.LoadMetadata(runtime.sourcePath)
-			if loadErr == nil {
-				runtime.skillsStore = freshStore
-			}
 			return summary, reconcileProjectRemoteSkills(runtime)
 		}
 		return summary, nil
@@ -93,13 +89,6 @@ func cmdInstallProjectParsed(parsed *installArgs, root string) (installLogSummar
 
 	if parsed.opts.DryRun {
 		return summary, nil
-	}
-
-	// Reload metadata store: install may have written new entries via WriteMeta
-	// that the pre-install runtime doesn't know about.
-	freshStore, loadErr := install.LoadMetadata(runtime.sourcePath)
-	if loadErr == nil {
-		runtime.skillsStore = freshStore
 	}
 
 	return summary, reconcileProjectRemoteSkills(runtime)
