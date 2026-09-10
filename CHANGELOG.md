@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.20.29] - 2026-09-11
+
+### Bug Fixes
+
+- **`install -p` no longer removes the skills it just installed from `config.yaml`** — a project install driven by `config.yaml` reconciled against the metadata it had read before installing, so a skill that arrived as a plain copy — any source pointing at a subdirectory, which has no `.git` to fall back on — looked absent and its entry was pruned from the declarative list. The install itself reported success and the skill and its metadata landed correctly, but the entry was gone from `config.yaml`, which broke the `install -p && sync` flow for anyone setting the project up from a clean checkout. Metadata is now re-read from disk before reconciling, which also covers project-mode installs made through `search`. Refs: #280.
+
 ## [0.20.28] - 2026-09-09
 
 ### New Features
