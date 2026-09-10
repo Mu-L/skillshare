@@ -9,6 +9,7 @@ import {
   ArrowUpDown,
   Users,
   Globe,
+  Cloud,
   FolderOpen,
   LayoutGrid,
   List,
@@ -39,7 +40,7 @@ import { queryKeys, staleTimes } from '../lib/queryKeys';
 import { clearAuditCache } from '../lib/auditCache';
 import Badge from '../components/Badge';
 import KindBadge from '../components/KindBadge';
-import SourceBadge from '../components/SourceBadge';
+import SourceBadge, { resolveSource, type SourceType } from '../components/SourceBadge';
 import { Input, Select, type SelectOption } from '../components/Input';
 import { PageSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
@@ -533,7 +534,7 @@ function saveCollapsed(collapsed: Set<string>) {
 /* -- Filter, Sort & View types -------------------- */
 
 type ResourceTab = 'skills' | 'agents';
-type FilterType = 'all' | 'tracked' | 'github' | 'local';
+type FilterType = 'all' | SourceType;
 type StatusFilter = 'all' | 'enabled' | 'disabled';
 type SortType = 'name-asc' | 'name-desc' | 'newest' | 'oldest';
 type ViewType = 'grid' | 'grouped' | 'table';
@@ -542,6 +543,7 @@ const filterOptions: { key: FilterType; label: string; icon: React.ReactNode }[]
   { key: 'all', label: 'All', icon: <LayoutGrid size={14} strokeWidth={2.5} /> },
   { key: 'tracked', label: 'Tracked', icon: <Users size={14} strokeWidth={2.5} /> },
   { key: 'github', label: 'GitHub', icon: <Globe size={14} strokeWidth={2.5} /> },
+  { key: 'remote', label: 'Remote', icon: <Cloud size={14} strokeWidth={2.5} /> },
   { key: 'local', label: 'Local', icon: <FolderOpen size={14} strokeWidth={2.5} /> },
 ];
 
@@ -552,16 +554,8 @@ const statusOptions: { key: StatusFilter; label: string; icon: React.ReactNode }
 ];
 
 function matchFilter(skill: Skill, filterType: FilterType): boolean {
-  switch (filterType) {
-    case 'all':
-      return true;
-    case 'tracked':
-      return skill.isInRepo;
-    case 'github':
-      return (skill.type === 'github' || skill.type === 'github-subdir') && !skill.isInRepo;
-    case 'local':
-      return !skill.type && !skill.isInRepo;
-  }
+  if (filterType === 'all') return true;
+  return resolveSource(skill.type, skill.isInRepo) === filterType;
 }
 
 function matchStatus(skill: Skill, statusFilter: StatusFilter): boolean {
@@ -930,13 +924,10 @@ export default function SkillsPage() {
       all: tabSkills.length,
       tracked: 0,
       github: 0,
+      remote: 0,
       local: 0,
     };
-    for (const s of tabSkills) {
-      if (s.isInRepo) counts.tracked++;
-      if ((s.type === 'github' || s.type === 'github-subdir') && !s.isInRepo) counts.github++;
-      if (!s.type && !s.isInRepo) counts.local++;
-    }
+    for (const s of tabSkills) counts[resolveSource(s.type, s.isInRepo)]++;
     return counts;
   }, [skills, activeTab]);
 

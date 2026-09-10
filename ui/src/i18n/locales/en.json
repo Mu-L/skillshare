@@ -1092,6 +1092,7 @@
   "update.empty.title": "No updatable skills",
   "update.filter.all": "All",
   "update.filter.github": "GitHub",
+  "update.filter.remote": "Remote",
   "update.filter.tracked": "Tracked",
   "update.header.checkAll": "Check All",
   "update.header.checkSelected": "Check Selected",

@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   Users,
   Globe,
+  Cloud,
   FolderOpen,
   Puzzle,
   Bot,
@@ -37,29 +38,26 @@ import { PageSkeleton } from '../components/Skeleton';
 import { Virtuoso } from 'react-virtuoso';
 import { radius } from '../design';
 import KindBadge from '../components/KindBadge';
-import SourceBadge from '../components/SourceBadge';
+import SourceBadge, { resolveSource, type SourceType } from '../components/SourceBadge';
 import { globToRegex } from '../lib/glob';
 import { useT } from '../i18n';
 
 /* ── Types ──────────────────────────────────────────── */
 
-type FilterType = 'all' | 'tracked' | 'github' | 'local';
+type FilterType = 'all' | SourceType;
 type ResourceTab = 'skills' | 'agents';
 type Phase = 'selecting' | 'uninstalling' | 'done';
 
 function matchTypeFilter(skill: Skill, filterType: FilterType): boolean {
-  switch (filterType) {
-    case 'all': return true;
-    case 'tracked': return skill.isInRepo;
-    case 'github': return (skill.type === 'github' || skill.type === 'github-subdir') && !skill.isInRepo;
-    case 'local': return !skill.type && !skill.isInRepo;
-  }
+  if (filterType === 'all') return true;
+  return resolveSource(skill.type, skill.isInRepo) === filterType;
 }
 
 const typeFilterOptions: { key: FilterType; label: string; icon: React.ReactNode }[] = [
   { key: 'all', label: 'All', icon: <LayoutGrid size={14} strokeWidth={2.5} /> },
   { key: 'tracked', label: 'Tracked', icon: <Users size={14} strokeWidth={2.5} /> },
   { key: 'github', label: 'GitHub', icon: <Globe size={14} strokeWidth={2.5} /> },
+  { key: 'remote', label: 'Remote', icon: <Cloud size={14} strokeWidth={2.5} /> },
   { key: 'local', label: 'Local', icon: <FolderOpen size={14} strokeWidth={2.5} /> },
 ];
 
@@ -149,12 +147,8 @@ export default function BatchUninstallPage() {
 
   // Filter counts
   const filterCounts = useMemo(() => {
-    const counts: Record<FilterType, number> = { all: skills.length, tracked: 0, github: 0, local: 0 };
-    for (const s of skills) {
-      if (s.isInRepo) counts.tracked++;
-      if ((s.type === 'github' || s.type === 'github-subdir') && !s.isInRepo) counts.github++;
-      if (!s.type && !s.isInRepo) counts.local++;
-    }
+    const counts: Record<FilterType, number> = { all: skills.length, tracked: 0, github: 0, remote: 0, local: 0 };
+    for (const s of skills) counts[resolveSource(s.type, s.isInRepo)]++;
     return counts;
   }, [skills]);
 

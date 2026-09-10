@@ -1,6 +1,6 @@
 import Badge from './Badge';
 
-type SourceType = 'tracked' | 'github' | 'remote' | 'local';
+export type SourceType = 'tracked' | 'github' | 'remote' | 'local';
 
 interface SourceBadgeProps {
   type?: string;
@@ -10,7 +10,8 @@ interface SourceBadgeProps {
 
 // Metadata `type` values: github, github-subdir, git-https, git-ssh
 // (optionally -subdir), local, or empty for skills with no install source.
-function resolveSource(type?: string, isInRepo?: boolean): SourceType {
+// Exported so source filters classify skills exactly like the badge does.
+export function resolveSource(type?: string, isInRepo?: boolean): SourceType {
   if (isInRepo) return 'tracked';
   if (type?.startsWith('github')) return 'github';
   if (type && !type.startsWith('local')) return 'remote';

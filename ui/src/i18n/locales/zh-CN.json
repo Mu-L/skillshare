@@ -1266,6 +1266,7 @@
   "update.empty.title": "没有可更新的 skill",
   "update.filter.all": "全部",
   "update.filter.github": "GitHub",
+  "update.filter.remote": "Remote",
   "update.filter.tracked": "Tracked",
   "update.header.checkAll": "全部检查",
   "update.header.checkSelected": "检查所选",

@@ -1266,6 +1266,7 @@
   "update.empty.title": "업데이트 가능한 skills 없음",
   "update.filter.all": "전체",
   "update.filter.github": "GitHub",
+  "update.filter.remote": "Remote",
   "update.filter.tracked": "추적됨",
   "update.header.checkAll": "모두 확인",
   "update.header.checkSelected": "선택 항목 확인",

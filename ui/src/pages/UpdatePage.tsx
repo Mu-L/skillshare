@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowUpCircle, RefreshCw, Search, Check, Zap, Trash2,
   Circle, CheckCircle, XCircle, MinusCircle, ShieldAlert, Loader2,
-  LayoutGrid, Users, Globe, Puzzle, Bot, AlertTriangle, DownloadCloud,
+  LayoutGrid, Users, Globe, Cloud, Puzzle, Bot, AlertTriangle, DownloadCloud,
 } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import Card from '../components/Card';
@@ -16,7 +16,7 @@ import Badge from '../components/Badge';
 import SegmentedControl from '../components/SegmentedControl';
 import StreamProgressBar from '../components/StreamProgressBar';
 import KindBadge from '../components/KindBadge';
-import SourceBadge from '../components/SourceBadge';
+import SourceBadge, { resolveSource } from '../components/SourceBadge';
 import { PageSkeleton } from '../components/Skeleton';
 import { Input } from '../components/Input';
 import { Checkbox } from '../components/Checkbox';
@@ -57,7 +57,7 @@ interface StoredCheckCache {
   items: Record<string, CheckItemStatus>;
 }
 
-type TypeFilter = 'all' | 'tracked' | 'github';
+type TypeFilter = 'all' | 'tracked' | 'github' | 'remote';
 
 type ResourceTab = 'skills' | 'agents';
 
@@ -311,10 +311,10 @@ export default function UpdatePage() {
   /* ── Filtering ───────────────────────────────────── */
 
   const filterCounts = useMemo(() => {
-    const counts: Record<TypeFilter, number> = { all: updatableItems.length, tracked: 0, github: 0 };
+    const counts: Record<TypeFilter, number> = { all: updatableItems.length, tracked: 0, github: 0, remote: 0 };
     for (const item of updatableItems) {
-      if (item.isInRepo) counts.tracked++;
-      if ((item.type === 'github' || item.type === 'github-subdir') && !item.isInRepo) counts.github++;
+      const source = resolveSource(item.type, item.isInRepo);
+      if (source !== 'local') counts[source]++;
     }
     return counts;
   }, [updatableItems]);
@@ -325,10 +325,8 @@ export default function UpdatePage() {
       const re = globToRegex(deferredSearch.trim());
       list = list.filter((s) => re.test(s.name) || re.test(s.relPath));
     }
-    if (typeFilter === 'tracked') {
-      list = list.filter((s) => s.isInRepo);
-    } else if (typeFilter === 'github') {
-      list = list.filter((s) => (s.type === 'github' || s.type === 'github-subdir') && !s.isInRepo);
+    if (typeFilter !== 'all') {
+      list = list.filter((s) => resolveSource(s.type, s.isInRepo) === typeFilter);
     }
     // Sort by group (top-level directory of relPath) then by name
     return [...list].sort((a, b) => {
@@ -596,6 +594,11 @@ export default function UpdatePage() {
         value: 'github' as TypeFilter,
         label: <span className="inline-flex items-center gap-1.5"><Globe size={14} strokeWidth={2.5} />{t('update.filter.github')}</span>,
         count: filterCounts.github,
+      },
+      {
+        value: 'remote' as TypeFilter,
+        label: <span className="inline-flex items-center gap-1.5"><Cloud size={14} strokeWidth={2.5} />{t('update.filter.remote')}</span>,
+        count: filterCounts.remote,
       },
     ];
 

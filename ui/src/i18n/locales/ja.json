@@ -1266,6 +1266,7 @@
   "update.empty.title": "更新可能なスキルがありません",
   "update.filter.all": "すべて",
   "update.filter.github": "GitHub",
+  "update.filter.remote": "Remote",
   "update.filter.tracked": "追跡中",
   "update.header.checkAll": "すべて確認",
   "update.header.checkSelected": "選択した項目を確認",
