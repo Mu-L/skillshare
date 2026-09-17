@@ -21,7 +21,7 @@ export type FeatureGroup = {
 const C = '/docs/reference/commands/';
 const D = '/docs/';
 
-export const COMMAND_COUNT = 33;
+export const COMMAND_COUNT = 32;
 export const TARGET_COUNT = 66;
 
 export const FEATURE_GROUPS: FeatureGroup[] = [
@@ -133,7 +133,6 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       {cmd: 'analyze', what: 'Context window usage and skill quality per target', kw: 'tokens size budget quality', href: C + 'analyze'},
       {cmd: 'enable / disable', what: 'Turn skills off without removing them', kw: 'toggle off pause', href: C + 'enable'},
       {cmd: 'extras', what: 'Sync rules, commands and prompts alongside skills', kw: 'rules prompts agents non-skill', href: C + 'extras'},
-      {cmd: 'mcp', what: 'Portable MCP definitions synced into native agent settings', kw: 'mcp server config share', href: C + 'mcp'},
       {cmd: '.skillignore', what: 'Include, exclude and filter what gets synced', kw: 'filter ignore exclude include', href: D + 'reference/filtering'},
     ],
     guides: [
