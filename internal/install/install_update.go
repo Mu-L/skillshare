@@ -51,12 +51,15 @@ func handleUpdate(source *Source, destPath string, result *InstallResult, opts I
 		if !opts.SkipAudit {
 			afterHash, _ := getGitFullHash(destPath)
 			if afterHash != beforeHash {
-				scanResult, err := auditGateFailClosed(destPath, beforeHash, threshold, opts.AuditProjectRoot, opts.AuditOverride)
+				scanResult, err := auditGateFailClosed(opts.SourceDir, destPath, beforeHash, threshold, opts.AuditProjectRoot, opts.AuditOverride)
 				if err != nil {
 					return nil, err
 				}
 				result.AuditRiskScore = scanResult.RiskScore
 				result.AuditRiskLabel = scanResult.RiskLabel
+				if opts.AuditOverride {
+					result.Warnings = append(result.Warnings, recordAcceptedWarning(opts.SourceDir, destPath, scanResult, threshold)...)
+				}
 			}
 		} else {
 			result.AuditSkipped = true
@@ -115,6 +118,8 @@ func handleUpdate(source *Source, destPath string, result *InstallResult, opts I
 		SkipAudit:        opts.SkipAudit,
 		AuditThreshold:   opts.AuditThreshold,
 		AuditProjectRoot: opts.AuditProjectRoot,
+		AuditAcceptRoot:  opts.SourceDir,
+		AuditAcceptPath:  destPath,
 	})
 	if err != nil {
 		// Installation failed - original skill is preserved
@@ -234,6 +239,8 @@ func updateRepoRootOrchestrator(source *Source, destPath string, result *Install
 		SkipAudit:        opts.SkipAudit,
 		AuditThreshold:   opts.AuditThreshold,
 		AuditProjectRoot: opts.AuditProjectRoot,
+		AuditAcceptRoot:  opts.SourceDir,
+		AuditAcceptPath:  destPath,
 	}, false)
 	if err != nil {
 		return true, err

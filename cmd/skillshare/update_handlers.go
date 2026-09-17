@@ -16,6 +16,19 @@ import (
 	"skillshare/internal/ui"
 )
 
+// recordAcceptedFindings persists the findings the user just overrode so
+// later updates stop blocking on them.
+func recordAcceptedFindings(sourceDir, repoPath string, result *audit.Result, threshold string) {
+	n, err := install.RecordAcceptedFindings(sourceDir, repoPath, result, threshold)
+	if err != nil {
+		ui.Warning("Failed to record accepted findings: %v", err)
+		return
+	}
+	if n > 0 {
+		ui.Info("Recorded %d accepted finding(s); future updates won't block on them", n)
+	}
+}
+
 // auditScanFunc abstracts the audit scan call so the same gate logic
 // can be used for both global mode (audit.ScanSkill) and project mode
 // (audit.ScanSkillForProject with a captured projectRoot).
@@ -27,7 +40,7 @@ type auditScanFunc func(repoPath string) (*audit.Result, error)
 //   - Non-TTY mode: automatically resets to beforeHash and returns error.
 //
 // Returns the audit result (may be nil if skipped or on error) and any error.
-func auditGateAfterPull(repoPath, beforeHash string, skipAudit, force bool, threshold string, scanFn auditScanFunc) (*audit.Result, error) {
+func auditGateAfterPull(sourceDir, repoPath, beforeHash string, skipAudit, force bool, threshold string, scanFn auditScanFunc) (*audit.Result, error) {
 	if skipAudit {
 		return nil, nil
 	}
@@ -48,19 +61,23 @@ func auditGateAfterPull(repoPath, beforeHash string, skipAudit, force bool, thre
 		return nil, fmt.Errorf("security audit failed: %v — rolled back (use --skip-audit to bypass): %w", err, audit.ErrBlocked)
 	}
 
+	if n := install.ApplyAcceptedFindings(sourceDir, repoPath, result); n > 0 {
+		ui.Info("%d previously accepted finding(s) skipped", n)
+	}
 	if !result.HasSeverityAtOrAbove(normalizedThreshold) {
 		return result, nil
 	}
 
 	// Show findings
 	for _, f := range result.Findings {
-		if audit.SeverityRank(f.Severity) <= audit.SeverityRank(normalizedThreshold) {
+		if !f.Acknowledged && audit.SeverityRank(f.Severity) <= audit.SeverityRank(normalizedThreshold) {
 			ui.Warning("[%s] %s (%s:%d)", f.Severity, f.Message, f.File, f.Line)
 		}
 	}
 
 	if force {
 		ui.Warning("Findings at/above %s; proceeding due to --force", normalizedThreshold)
+		recordAcceptedFindings(sourceDir, repoPath, result, normalizedThreshold)
 		return result, nil
 	}
 
@@ -71,6 +88,7 @@ func auditGateAfterPull(repoPath, beforeHash string, skipAudit, force bool, thre
 		answer, _ := reader.ReadString('\n')
 		answer = strings.TrimSpace(strings.ToLower(answer))
 		if answer == "y" || answer == "yes" {
+			recordAcceptedFindings(sourceDir, repoPath, result, normalizedThreshold)
 			return result, nil
 		}
 		// User declined → rollback
@@ -207,7 +225,7 @@ func updateTrackedRepo(uc *updateContext, repoName string) (updateResult, error)
 
 	// Post-pull audit gate
 	scanFn := uc.auditScanFn()
-	if _, err := auditGateAfterPull(repoPath, info.BeforeHash, uc.opts.skipAudit, uc.opts.force, uc.opts.threshold, scanFn); err != nil {
+	if _, err := auditGateAfterPull(uc.sourcePath, repoPath, info.BeforeHash, uc.opts.skipAudit, uc.opts.force, uc.opts.threshold, scanFn); err != nil {
 		return updateResult{securityFailed: 1}, err
 	}
 
@@ -352,7 +370,7 @@ func updateTrackedRepoQuick(uc *updateContext, repoPath string) (bool, *audit.Re
 	}
 
 	// Post-pull audit gate
-	auditResult, auditErr := auditGateAfterPull(repoPath, info.BeforeHash, uc.opts.skipAudit, uc.opts.force, uc.opts.threshold, uc.auditScanFn())
+	auditResult, auditErr := auditGateAfterPull(uc.sourcePath, repoPath, info.BeforeHash, uc.opts.skipAudit, uc.opts.force, uc.opts.threshold, uc.auditScanFn())
 	if auditErr != nil {
 		return false, auditResult, auditErr
 	}

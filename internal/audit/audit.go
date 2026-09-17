@@ -120,11 +120,12 @@ type Finding struct {
 	Snippet  string `json:"snippet"` // trimmed matched line (no truncation)
 
 	// Phase 2 fields — analyzer traceability and deduplication.
-	RuleID      string  `json:"ruleId,omitempty"`      // stable rule identifier
-	Analyzer    string  `json:"analyzer,omitempty"`    // static|dataflow|tier|integrity|structure|cross-skill
-	Category    string  `json:"category,omitempty"`    // injection|exfiltration|credential|obfuscation|...
-	Confidence  float64 `json:"confidence,omitempty"`  // 0~1
-	Fingerprint string  `json:"fingerprint,omitempty"` // sha256 stable hash for deduplication
+	RuleID       string  `json:"ruleId,omitempty"`       // stable rule identifier
+	Analyzer     string  `json:"analyzer,omitempty"`     // static|dataflow|tier|integrity|structure|cross-skill
+	Category     string  `json:"category,omitempty"`     // injection|exfiltration|credential|obfuscation|...
+	Confidence   float64 `json:"confidence,omitempty"`   // 0~1
+	Fingerprint  string  `json:"fingerprint,omitempty"`  // sha256 stable hash for deduplication
+	Acknowledged bool    `json:"acknowledged,omitempty"` // previously accepted via --force; excluded from blocking
 }
 
 // Result holds all findings for a single skill.
@@ -166,6 +167,9 @@ func (r *Result) HasSeverityAtOrAbove(threshold string) bool {
 	}
 	cutoff := SeverityRank(normalized)
 	for _, f := range r.Findings {
+		if f.Acknowledged {
+			continue
+		}
 		if SeverityRank(f.Severity) <= cutoff {
 			return true
 		}

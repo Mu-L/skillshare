@@ -416,7 +416,11 @@ func installFromDiscoveryInternal(discovery *DiscoveryResult, skill SkillInfo, d
 
 	// Security audit — on block, cleanup only touches workDest, so a staged
 	// update leaves the existing install untouched.
-	if err := auditInstalledSkill(workDest, result, opts); err != nil {
+	auditOpts := opts
+	if auditOpts.AuditAcceptPath == "" {
+		auditOpts.AuditAcceptRoot, auditOpts.AuditAcceptPath = opts.SourceDir, destPath
+	}
+	if err := auditInstalledSkill(workDest, result, auditOpts); err != nil {
 		return nil, err
 	}
 
@@ -618,6 +622,8 @@ func UpdateAgentFromDiscovery(discovery *DiscoveryResult, agent AgentInfo, destD
 	innerOpts.DryRun = false
 	innerOpts.Update = false
 	innerOpts.SourceDir = tempDir
+	innerOpts.AuditAcceptRoot = opts.SourceDir
+	innerOpts.AuditAcceptPath = destFile
 
 	innerResult, err := installAgentFromDiscoveryInternal(discovery, agent, tempFile, innerOpts, false)
 	if err != nil {

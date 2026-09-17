@@ -44,6 +44,8 @@ func auditInstalledResource(
 		result.AuditRiskLabel = "CLEAN"
 	}
 	scanResult.Threshold = threshold
+	acceptRoot, acceptPath := opts.auditAcceptTarget(destPath)
+	ApplyAcceptedFindings(acceptRoot, acceptPath, scanResult)
 	scanResult.IsBlocked = scanResult.HasSeverityAtOrAbove(threshold)
 
 	if len(scanResult.Findings) == 0 {
@@ -52,6 +54,9 @@ func auditInstalledResource(
 
 	for _, f := range scanResult.Findings {
 		msg := fmt.Sprintf("audit %s: %s (%s:%d)", f.Severity, f.Message, f.File, f.Line)
+		if f.Acknowledged {
+			msg += " (accepted earlier)"
+		}
 		if f.Snippet != "" {
 			msg += fmt.Sprintf("\n       %q", f.Snippet)
 		}
@@ -81,6 +86,7 @@ func auditInstalledResource(
 	if scanResult.IsBlocked && opts.AuditOverride {
 		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("audit findings at/above block threshold (%s); proceeding due to --force", threshold))
+		result.Warnings = append(result.Warnings, recordAcceptedWarning(acceptRoot, acceptPath, scanResult, threshold)...)
 	} else if !scanResult.IsBlocked {
 		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("audit findings detected, but none at/above block threshold (%s)", threshold))
@@ -166,6 +172,8 @@ func auditTrackedRepo(repoPath string, result *TrackedRepoResult, opts InstallOp
 		result.AuditRiskLabel = "CLEAN"
 	}
 	scanResult.Threshold = threshold
+	acceptRoot, acceptPath := opts.auditAcceptTarget(repoPath)
+	ApplyAcceptedFindings(acceptRoot, acceptPath, scanResult)
 	scanResult.IsBlocked = scanResult.HasSeverityAtOrAbove(threshold)
 
 	if len(scanResult.Findings) == 0 {
@@ -174,6 +182,9 @@ func auditTrackedRepo(repoPath string, result *TrackedRepoResult, opts InstallOp
 
 	for _, f := range scanResult.Findings {
 		msg := fmt.Sprintf("audit %s: %s (%s:%d)", f.Severity, f.Message, f.File, f.Line)
+		if f.Acknowledged {
+			msg += " (accepted earlier)"
+		}
 		if f.Snippet != "" {
 			msg += fmt.Sprintf("\n       %q", f.Snippet)
 		}
@@ -203,6 +214,7 @@ func auditTrackedRepo(repoPath string, result *TrackedRepoResult, opts InstallOp
 	if scanResult.IsBlocked && opts.AuditOverride {
 		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("audit findings at/above block threshold (%s); proceeding due to --force", threshold))
+		result.Warnings = append(result.Warnings, recordAcceptedWarning(acceptRoot, acceptPath, scanResult, threshold)...)
 	} else if !scanResult.IsBlocked {
 		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("audit findings detected, but none at/above block threshold (%s)", threshold))
@@ -214,7 +226,7 @@ func auditTrackedRepo(repoPath string, result *TrackedRepoResult, opts InstallOp
 // auditGateFailClosed scans a repo after git pull and rolls back on scan
 // error or findings at/above threshold. Used by handleUpdate for non-tracked
 // skill updates where fail-closed is the only behaviour.
-func auditGateFailClosed(repoPath, beforeHash, threshold, projectRoot string, auditOverride bool) (*audit.Result, error) {
+func auditGateFailClosed(sourceDir, repoPath, beforeHash, threshold, projectRoot string, auditOverride bool) (*audit.Result, error) {
 	if beforeHash == "" {
 		return nil, fmt.Errorf(
 			"post-update audit failed — rollback commit unavailable, update aborted and repository state is unknown: %w",
@@ -240,6 +252,7 @@ func auditGateFailClosed(repoPath, beforeHash, threshold, projectRoot string, au
 		}
 		return nil, fmt.Errorf("post-update audit failed: %v — rolled back (use --skip-audit to bypass): %w", scanErr, audit.ErrBlocked)
 	}
+	ApplyAcceptedFindings(sourceDir, repoPath, scanResult)
 	// A scan that could not run stays fail-closed regardless of auditOverride:
 	// "I accept these findings" is not the same as "I could not be told any".
 	if scanResult.HasSeverityAtOrAbove(normalizedThreshold) && !auditOverride {
@@ -302,6 +315,8 @@ func auditTrackedRepoUpdate(repoPath, beforeHash string, result *TrackedRepoResu
 		result.AuditRiskLabel = "CLEAN"
 	}
 	scanResult.Threshold = threshold
+	acceptRoot, acceptPath := opts.auditAcceptTarget(repoPath)
+	ApplyAcceptedFindings(acceptRoot, acceptPath, scanResult)
 	scanResult.IsBlocked = scanResult.HasSeverityAtOrAbove(threshold)
 
 	if len(scanResult.Findings) == 0 {
@@ -310,6 +325,9 @@ func auditTrackedRepoUpdate(repoPath, beforeHash string, result *TrackedRepoResu
 
 	for _, f := range scanResult.Findings {
 		msg := fmt.Sprintf("audit %s: %s (%s:%d)", f.Severity, f.Message, f.File, f.Line)
+		if f.Acknowledged {
+			msg += " (accepted earlier)"
+		}
 		if f.Snippet != "" {
 			msg += fmt.Sprintf("\n       %q", f.Snippet)
 		}
@@ -343,6 +361,7 @@ func auditTrackedRepoUpdate(repoPath, beforeHash string, result *TrackedRepoResu
 	if scanResult.IsBlocked && opts.AuditOverride {
 		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("audit findings at/above block threshold (%s); proceeding due to --force", threshold))
+		result.Warnings = append(result.Warnings, recordAcceptedWarning(acceptRoot, acceptPath, scanResult, threshold)...)
 	} else if !scanResult.IsBlocked {
 		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("audit findings detected, but none at/above block threshold (%s)", threshold))
@@ -351,9 +370,25 @@ func auditTrackedRepoUpdate(repoPath, beforeHash string, result *TrackedRepoResu
 	return nil
 }
 
+// recordAcceptedWarning persists the findings a --force override just accepted
+// and returns a warning line describing the outcome.
+func recordAcceptedWarning(sourceDir, path string, res *audit.Result, threshold string) []string {
+	n, err := RecordAcceptedFindings(sourceDir, path, res, threshold)
+	if err != nil {
+		return []string{fmt.Sprintf("failed to record accepted findings: %v", err)}
+	}
+	if n == 0 {
+		return nil
+	}
+	return []string{fmt.Sprintf("recorded %d accepted finding(s); future updates won't block on them", n)}
+}
+
 func blockedFindingDetails(findings []audit.Finding, threshold string) []string {
 	var details []string
 	for _, f := range findings {
+		if f.Acknowledged {
+			continue
+		}
 		if audit.SeverityRank(f.Severity) <= audit.SeverityRank(threshold) {
 			detail := fmt.Sprintf("  %s: %s (%s:%d)", f.Severity, f.Message, f.File, f.Line)
 			if f.Snippet != "" {
