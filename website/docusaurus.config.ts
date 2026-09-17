@@ -176,6 +176,11 @@ const config: Config = {
           position: 'left',
         },
         {
+          to: '/features',
+          label: 'Feature map',
+          position: 'left',
+        },
+        {
           to: '/blog',
           label: 'Blog',
           position: 'left',
