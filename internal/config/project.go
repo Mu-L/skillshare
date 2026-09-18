@@ -255,8 +255,10 @@ func PruneStaleSkills(skills []SkillEntry, live map[string]bool, skillsOnly bool
 }
 
 // ProjectSources overrides default source directories for project resources.
-// Relative paths resolve from the project root, not from the project directory.
+// Relative paths resolve from the project root, not from the project directory,
+// except mcp, which resolves from the directory containing config.yaml.
 type ProjectSources struct {
+	MCP    string `yaml:"mcp,omitempty"`
 	Skills string `yaml:"skills,omitempty"`
 	Agents string `yaml:"agents,omitempty"`
 	Extras string `yaml:"extras,omitempty"`
@@ -269,6 +271,8 @@ func ProjectDir(projectRoot string) string {
 
 // ProjectConfig holds project-level config (<project-dir>/config.yaml).
 type ProjectConfig struct {
+	Plugins       yaml.Node            `yaml:"plugins,omitempty"`
+	MCP           *MCPConfig           `yaml:"mcp,omitempty"`
 	Sources       ProjectSources       `yaml:"sources,omitempty"`
 	Targets       []ProjectTargetEntry `yaml:"targets"`
 	Skills        []SkillEntry         `yaml:"skills,omitempty"`

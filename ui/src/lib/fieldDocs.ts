@@ -6,6 +6,81 @@ export interface FieldDoc {
 }
 
 export const fieldDocs: Record<string, FieldDoc> = {
+  plugins: { description: 'Complete native plugins managed by Skillshare. Use the Plugins page or plugin commands to add or import packages.', type: 'object', example: 'plugins:\n  packages: {}' },
+  'plugins.packages': { description: 'Named plugin packages. Each package has native bindings for its receiving tools.', type: 'object', example: 'packages:\n  review:\n    bindings:\n      claude:\n        id: review@team' },
+  'plugins.packages.bindings': { description: 'Native plugin identities per target (see plugin target capabilities). Plugin contents stay together.', type: 'object', example: 'bindings:\n  claude:\n    id: review@team\n    sync: true' },
+  'plugins.packages.bindings.id': { description: 'Native identifier: marketplace ID, local plugin name, package source, or file URL. Import existing installations instead of guessing this identifier.', type: 'string', example: 'id: review@team' },
+  'plugins.packages.bindings.sync': { description: 'Whether to sync this plugin to the target. False schedules removal on the next sync while retaining its definition. Does not change native enable settings.', type: 'boolean', example: 'sync: false' },
+  'plugins.packages.bindings.source': { description: 'Original directory or HTTPS Git repository used to acquire the complete package. Omitted for imported native installations.', type: 'string', example: 'source: https://github.com/example/plugins.git' },
+  'plugins.packages.bindings.source_ref': { description: 'Git branch, tag or commit selected when acquiring the source.', type: 'string', example: 'source_ref: v1.0.0' },
+  'plugins.packages.bindings.commit': { description: 'Resolved Git commit of the reviewed source snapshot. Managed by Skillshare.', type: 'string', example: 'commit: <git-sha>' },
+  'plugins.packages.bindings.entry': { description: 'Reviewed OpenCode JavaScript or TypeScript entry, relative to the package root.', type: 'string', example: 'entry: dist/index.js' },
+  'plugins.packages.bindings.plugin': { description: 'Selected plugin name within the source marketplace.', type: 'string', example: 'plugin: review' },
+  'plugins.packages.bindings.digest': { description: 'Recorded source content digest. Changed source content must be reviewed through plugin update.', type: 'string', example: 'digest: <sha256>' },
+  'plugins.packages.bindings.version': { description: 'Version declared by the source manifest or imported native installation; not proof of runtime activation.', type: 'string', example: 'version: 1.0.0' },
+  'plugins.packages.bindings.pending': { description: 'An unfinished native operation. Sync retries it; do not edit this field to bypass verification.', type: 'string', example: 'pending: install' },
+  'plugins.packages.bindings.components': { description: 'Component kinds observed in the source manifest and package tree. This inventory does not prove runtime activation.', type: 'string[]', example: 'components: [skills, mcpServers]' },
+  'sources.mcp': {
+    description: 'Optional MCP YAML file, relative to config.yaml or an absolute path. Its root contains servers. Use this instead of inline mcp.servers; do not define both.',
+    type: 'string', example: 'sources:\n  mcp: ./mcp.yaml',
+  },
+  mcp: {
+    description: 'MCP connection settings. Define servers here, or use sources.mcp for a separate file. Skillshare writes client configuration files; it does not run servers.',
+    type: 'object', example: 'mcp:\n  servers:\n    docs:\n      url: https://example.com/mcp\n      targets: [claude]',
+  },
+  'mcp.targets': {
+    description: 'Default MCP clients. Individual servers can override this list.',
+    type: 'string[]', example: 'targets: [claude, codex, cursor, vscode, opencode, grok, antigravity]',
+  },
+  'mcp.servers': {
+    description: 'Named MCP connections. Names such as docs are your own labels, not built-in services. Each connection needs a command or a URL.',
+    type: 'object', example: 'servers:\n  docs:\n    url: https://example.com/mcp',
+  },
+  'mcp.servers.command': {
+    description: 'Executable launched locally by the client for stdio. Use command or url, never both.',
+    type: 'string', example: 'command: my-mcp-server',
+  },
+  'mcp.servers.args': {
+    description: 'Arguments passed to the local command, one list item per argument.',
+    type: 'string[]', example: 'args: [--directory, /workspace]',
+  },
+  'mcp.servers.url': {
+    description: 'HTTP or HTTPS MCP endpoint. The client connects to this service. Do not put credentials in the URL.',
+    type: 'string', example: 'url: https://example.com/mcp',
+  },
+  'mcp.servers.piExtension': { description: 'Required when targeting Pi. Choose the third-party package installed in Pi: pi-mcp-adapter or pi-mcp-extension. Sync only writes configuration.', type: 'string', example: 'piExtension: pi-mcp-adapter' },
+  'mcp.servers.transport': {
+    description: 'Optional transport. Inferred from command (stdio) or url (streamable-http).',
+    type: 'string', allowedValues: ['stdio', 'streamable-http'], example: 'transport: stdio',
+  },
+  'mcp.servers.targets': {
+    description: 'Clients receiving this connection; overrides mcp.targets. An explicit list must not be empty.',
+    type: 'string[]', example: 'targets: [claude, codex]',
+  },
+  'mcp.servers.env': {
+    description: 'Environment variables for the local command. Use fromEnv for secrets, rather than storing their values.',
+    type: 'object', example: 'env:\n  API_TOKEN:\n    fromEnv: API_TOKEN',
+  },
+  'mcp.servers.env.fromEnv': {
+    description: 'Name of an environment variable available to the client. Skillshare stores a reference and does not read its secret value.',
+    type: 'string', example: 'fromEnv: API_TOKEN',
+  },
+  'mcp.servers.headers': {
+    description: 'HTTP request headers. Values can be literals or environment references; sensitive values require fromEnv.',
+    type: 'object', example: 'headers:\n  X-API-Key:\n    fromEnv: API_KEY',
+  },
+  'mcp.servers.headers.fromEnv': {
+    description: 'Environment variable supplying this HTTP header when the client connects.',
+    type: 'string', example: 'fromEnv: API_KEY',
+  },
+  'mcp.servers.bearerToken': {
+    description: 'Bearer authentication using an environment variable reference. Keep the token itself outside this file.',
+    type: 'object', example: 'bearerToken:\n  fromEnv: MCP_TOKEN',
+  },
+  'mcp.servers.bearerToken.fromEnv': {
+    description: 'Environment variable containing the bearer token, available to the client.',
+    type: 'string', example: 'fromEnv: MCP_TOKEN',
+  },
   // --- Top-level ---
   sync_mode: {
     description: 'Alias for "mode". Controls how skills are synced from source to target directories.',
@@ -24,7 +99,7 @@ export const fieldDocs: Record<string, FieldDoc> = {
     example: 'extras_source: ~/.config/skillshare/extras',
   },
   sources: {
-    description: 'Custom source directories. Each key (skills, agents, extras) overrides the default source path. All keys are optional. Project mode falls back to .skillshare/<type>/; global mode falls back to <base>/<type>/ (or the legacy source / agents_source / extras_source field if present).',
+    description: 'Custom source paths. skills, agents, and extras select directories; mcp selects an optional YAML file instead of inline mcp.servers. Directory defaults are .skillshare/<type>/ in project mode and <base>/<type>/ in global mode (or the legacy source fields).',
     type: 'object',
     example: 'sources:\n  skills: ./docs/skills\n  agents: ./docs/agents\n  extras: ./docs/extras',
   },

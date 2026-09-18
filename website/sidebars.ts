@@ -37,6 +37,8 @@ const sidebars: SidebarsConfig = {
           label: 'Daily Tasks',
           items: [
             'how-to/daily-tasks/daily-workflow',
+            'how-to/daily-tasks/sharing-mcp',
+            'how-to/daily-tasks/sharing-plugins',
             'how-to/daily-tasks/skill-discovery',
             'how-to/daily-tasks/backup-restore',
             'how-to/daily-tasks/project-workflow',
@@ -130,6 +132,8 @@ const sidebars: SidebarsConfig = {
                 'reference/commands/list',
                 'reference/commands/search',
                 'reference/commands/sync',
+                'reference/commands/mcp',
+                'reference/commands/plugin',
                 'reference/commands/status',
               ],
             },

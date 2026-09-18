@@ -374,6 +374,7 @@ func (s *Server) registerRoutes() {
 	// Resources (skills + agents)
 	s.mux.HandleFunc("GET /api/resources", s.handleListSkills)
 	s.mux.HandleFunc("GET /api/resources/templates", s.handleGetTemplates)
+	s.mux.HandleFunc("GET /api/resources/templates/preview", s.handlePreviewSkill)
 	s.mux.HandleFunc("POST /api/resources", s.handleCreateSkill)
 	s.mux.HandleFunc("GET /api/resources/{name}", s.handleGetSkill)
 	s.mux.HandleFunc("GET /api/resources/{name}/files/{filepath...}", s.handleGetSkillFile)
@@ -407,6 +408,14 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/collect", s.handleCollect)
 
 	// Hub
+	s.mux.HandleFunc("GET /api/hub/drafts", s.handleHubDrafts)
+	s.mux.HandleFunc("POST /api/hub/drafts", s.handleHubDrafts)
+	s.mux.HandleFunc("GET /api/hub/drafts/candidates", s.handleHubDraftCandidates)
+	s.mux.HandleFunc("POST /api/hub/drafts/import", s.handleHubDraftImport)
+	s.mux.HandleFunc("GET /api/hub/drafts/{id}", s.handleHubDraft)
+	s.mux.HandleFunc("PUT /api/hub/drafts/{id}", s.handleHubDraft)
+	s.mux.HandleFunc("DELETE /api/hub/drafts/{id}", s.handleHubDraft)
+	s.mux.HandleFunc("POST /api/hub/drafts/{id}/export", s.handleHubDraftExport)
 	s.mux.HandleFunc("GET /api/hub/index", s.handleHubIndex)
 	s.mux.HandleFunc("GET /api/hub/saved", s.handleGetHubSaved)
 	s.mux.HandleFunc("PUT /api/hub/saved", s.handlePutHubSaved)
@@ -454,6 +463,18 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/trash/empty", s.handleEmptyTrash)
 
 	// Extras
+	s.mux.HandleFunc("GET /api/plugins", s.requireLocalPlugin(s.handlePluginList))
+	s.mux.HandleFunc("GET /api/plugins/{name}/files", s.requireLocalPlugin(s.handlePluginFiles))
+	s.mux.HandleFunc("GET /api/plugins/{name}/files/{filepath...}", s.requireLocalPlugin(s.handlePluginFile))
+	s.mux.HandleFunc("POST /api/plugins/discover", s.requireLocalPlugin(s.handlePluginDiscover))
+	s.mux.HandleFunc("POST /api/plugins/preview", s.requireLocalPlugin(s.handlePluginPreview))
+	s.mux.HandleFunc("POST /api/plugins/apply", s.requireLocalPlugin(s.handlePluginApply))
+	s.mux.HandleFunc("GET /api/mcp", s.requireLocalMCP(s.handleMCPList))
+	s.mux.HandleFunc("POST /api/mcp", s.requireLocalMCP(s.handleMCPConfigure))
+	s.mux.HandleFunc("POST /api/mcp/preview", s.requireLocalMCP(s.handleMCPPreview))
+	s.mux.HandleFunc("POST /api/mcp/render", s.requireLocalMCP(s.handleMCPRender))
+	s.mux.HandleFunc("POST /api/mcp/import", s.requireLocalMCP(s.handleMCPImport))
+	s.mux.HandleFunc("POST /api/mcp/restore", s.requireLocalMCP(s.handleMCPRestore))
 	s.mux.HandleFunc("GET /api/extras", s.handleExtras)
 	s.mux.HandleFunc("GET /api/extras/extensions", s.handleExtrasExtensions)
 	s.mux.HandleFunc("GET /api/extras/diff", s.handleExtrasDiff)
@@ -482,6 +503,7 @@ func (s *Server) registerRoutes() {
 
 	// Audit
 	s.mux.HandleFunc("GET /api/audit/stream", s.handleAuditStream)
+	s.mux.HandleFunc("PATCH /api/audit/policy", s.handleAuditPolicy)
 	s.mux.HandleFunc("GET /api/audit/rules/compiled", s.handleGetCompiledRules)
 	s.mux.HandleFunc("POST /api/audit/rules/toggle", s.handleToggleRule)
 	s.mux.HandleFunc("POST /api/audit/rules/reset", s.handleResetRules)
@@ -502,6 +524,7 @@ func (s *Server) registerRoutes() {
 	// Config
 	s.mux.HandleFunc("GET /api/config", s.handleGetConfig)
 	s.mux.HandleFunc("PUT /api/config", s.handlePutConfig)
+	s.mux.HandleFunc("PATCH /api/config", s.handlePatchConfig)
 	s.mux.HandleFunc("GET /api/config/available-targets", s.handleAvailableTargets)
 
 	// Skillignore

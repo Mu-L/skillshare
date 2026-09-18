@@ -260,6 +260,7 @@ type ExtraConfig struct {
 // fall back to <BaseDir>/<type>/ defaults (or, for extras, the derivation
 // described in ExtrasParentDir).
 type GlobalSources struct {
+	MCP    string `yaml:"mcp,omitempty"`
 	Skills string `yaml:"skills,omitempty"`
 	Agents string `yaml:"agents,omitempty"`
 	Extras string `yaml:"extras,omitempty"`
@@ -267,6 +268,8 @@ type GlobalSources struct {
 
 // Config holds the application configuration
 type Config struct {
+	Plugins      yaml.Node     `yaml:"plugins,omitempty"`
+	MCP          *MCPConfig    `yaml:"mcp,omitempty"`
 	Source       string        `yaml:"source,omitempty"`
 	AgentsSource string        `yaml:"agents_source,omitempty"`
 	ExtrasSource string        `yaml:"extras_source,omitempty"`

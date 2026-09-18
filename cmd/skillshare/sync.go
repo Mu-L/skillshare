@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
 	"skillshare/internal/backup"
 	"skillshare/internal/config"
+	"skillshare/internal/mcp"
 	"skillshare/internal/oplog"
 	"skillshare/internal/skillignore"
 	"skillshare/internal/sync"
@@ -39,6 +41,7 @@ type syncJSONOutput struct {
 	Details       []syncJSONTargetDetail `json:"details"`
 	Extras        []syncExtrasJSONEntry  `json:"extras,omitempty"`
 	ContextCost   *contextCostJSON       `json:"context_cost,omitempty"`
+	MCP           *mcp.Result            `json:"mcp,omitempty"`
 }
 
 type syncJSONTargetDetail struct {
@@ -57,14 +60,21 @@ type syncModeStats struct {
 }
 
 func cmdSync(args []string) error {
+	if i := slices.Index(args, "plugins"); i >= 0 {
+		return cmdPlugin(append([]string{"sync"}, slices.Delete(slices.Clone(args), i, i+1)...))
+	}
+	// "mcp" is a subcommand in any position, e.g. "sync -g --dry-run mcp".
+	if i := slices.Index(args, "mcp"); i >= 0 {
+		return cmdSyncMCP(slices.Delete(slices.Clone(args), i, i+1))
+	}
 	if wantsHelp(args) {
 		printSyncHelp()
 		return nil
 	}
 
-	// Subcommand: sync extras
-	if len(args) > 0 && args[0] == "extras" {
-		return cmdSyncExtras(args[1:])
+	// Subcommand: sync extras, also after flags, e.g. "sync -g extras".
+	if i := slices.Index(args, "extras"); i >= 0 {
+		return cmdSyncExtras(slices.Delete(slices.Clone(args), i, i+1))
 	}
 
 	// Extract --all flag before mode parsing
@@ -101,10 +111,91 @@ func cmdSync(args []string) error {
 
 	applyModeLabel(mode)
 
-	// Extract kind filter (e.g. "skillshare sync agents").
+	// Extract kind filter (e.g. "skillshare sync agents"). Sync flags take no
+	// values, so the kind may also follow them: "sync --dry-run agents".
+	if i := slices.IndexFunc(rest, func(arg string) bool {
+		_, remaining := parseKindArg([]string{arg})
+		return len(remaining) == 0
+	}); i > 0 {
+		rest = append([]string{rest[i]}, slices.Delete(slices.Clone(rest), i, i+1)...)
+	}
 	kind, rest := parseKindArg(rest)
 
 	dryRun, force, jsonOutput, quiet := parseSyncFlags(rest)
+
+	var mcpResult *mcp.Result
+	var mcpService *mcp.Service
+	if hasAll {
+		preflightErr := func(err error) error {
+			if jsonOutput {
+				return writeJSONError(err)
+			}
+			return err
+		}
+		// Loading can migrate legacy skill/extras configuration. Complete that
+		// existing normalization before fingerprinting the MCP source.
+		if mode == modeProject {
+			_, err = config.LoadProject(cwd)
+		} else {
+			_, err = config.Load()
+		}
+		if err != nil {
+			return preflightErr(err)
+		}
+		scope := "-g"
+		if mode == modeProject {
+			scope = "-p"
+		}
+		mcpService, _, err = mcpContext([]string{scope})
+		if err != nil {
+			return preflightErr(err)
+		}
+		plan, planErr := mcpService.Preview()
+		if planErr != nil {
+			return preflightErr(fmt.Errorf("MCP preflight: %w", planErr))
+		}
+		mcpResult = &mcp.Result{Plan: plan, Applied: []string{}, BackupIDs: []string{}}
+		if plan.Blocked {
+			err = fmt.Errorf("MCP conflicts found; no resources synchronized")
+			if jsonOutput {
+				// Changes are credential-free and tell scripts which entries conflict.
+				return writeJSONResult(map[string]any{"error": err.Error(), "mcp": mcpResult}, err)
+			}
+			_ = printMCPPlan(plan, false)
+			return err
+		}
+	}
+	finishMCP := func(previous error) error {
+		if !hasAll {
+			return previous
+		}
+		if previous != nil {
+			// Keep MCP untouched after a resource failure; drop the preflight plan
+			// so JSON output does not look processed.
+			mcpResult = nil
+			if !jsonOutput {
+				ui.Warning("MCP settings were not applied because resource sync failed")
+			}
+			return previous
+		}
+		if len(mcpResult.Plan.Changes) == 0 {
+			return nil
+		}
+		var applyErr error
+		if !dryRun {
+			// Skills sync ran after the preflight; plan again under the MCP lock so
+			// unrelated config writes cannot fail the run with a stale revision.
+			mcpResult, applyErr = mcpService.Apply("")
+			logMCPOp(mcpService.ConfigPath, "sync mcp", start, applyErr)
+		}
+		if !jsonOutput && !quiet && mcpResult != nil {
+			_ = printMCPPlan(mcpResult.Plan, false)
+			for _, id := range mcpResult.BackupIDs {
+				ui.Info("MCP backup: %s", id)
+			}
+		}
+		return applyErr
+	}
 
 	prevDiagOutput := sync.DiagOutput
 	if jsonOutput {
@@ -141,6 +232,7 @@ func cmdSync(args []string) error {
 		}
 
 		if jsonOutput {
+			err = finishMCP(err)
 			if hasAll {
 				projCfg, loadErr := config.LoadProject(cwd)
 				if loadErr == nil && len(projCfg.Extras) > 0 {
@@ -148,12 +240,12 @@ func cmdSync(args []string) error {
 					extrasEntries := runExtrasSyncEntries(projCfg.Extras, func(extra config.ExtraConfig) string {
 						return config.ExtrasSourceDirProject(projCfg.EffectiveExtrasSource(cwd), extra.Name)
 					}, dryRun, force, cwd, agentPaths)
-					return syncOutputJSON(results, dryRun, start, projIgnoreStats, err, projCtxCost, extrasEntries)
+					return syncOutputJSON(results, dryRun, start, projIgnoreStats, err, projCtxCost, mcpResult, extrasEntries)
 				}
 			}
-			return syncOutputJSON(results, dryRun, start, projIgnoreStats, err, projCtxCost)
+			return syncOutputJSON(results, dryRun, start, projIgnoreStats, err, projCtxCost, mcpResult)
 		}
-		return err
+		return finishMCP(err)
 	}
 
 	cfg, err := config.Load()
@@ -289,7 +381,15 @@ func cmdSync(args []string) error {
 		Force:   force,
 	}, start, syncErr)
 
+	// Agents are included in --all in both human-readable and JSON output.
+	if kind == kindAll || hasAll {
+		if _, agentErr := syncAgentsGlobal(cfg, dryRun, force, jsonOutput, start); agentErr != nil && syncErr == nil {
+			syncErr = agentErr
+		}
+	}
+
 	if jsonOutput {
+		syncErr = finishMCP(syncErr)
 		var ctxCost *contextCostJSON
 		if analyzeErr == nil && len(analyzeEntries) > 0 {
 			ctxCost = buildContextCostJSON(analyzeEntries, cfg.ContextBudget)
@@ -299,16 +399,9 @@ func cmdSync(args []string) error {
 			extrasEntries := runExtrasSyncEntries(cfg.Extras, func(extra config.ExtraConfig) string {
 				return config.ResolveExtrasSourceDir(extra, cfg.EffectiveExtrasSource(), cfg.EffectiveSkillsSource())
 			}, dryRun, force, "", agentPaths)
-			return syncOutputJSON(results, dryRun, start, ignoreStats, syncErr, ctxCost, extrasEntries)
+			return syncOutputJSON(results, dryRun, start, ignoreStats, syncErr, ctxCost, mcpResult, extrasEntries)
 		}
-		return syncOutputJSON(results, dryRun, start, ignoreStats, syncErr, ctxCost)
-	}
-
-	// Agent sync when kind=all or --all (after skill sync)
-	if kind == kindAll || hasAll {
-		if _, agentErr := syncAgentsGlobal(cfg, dryRun, force, jsonOutput, start); agentErr != nil && syncErr == nil {
-			syncErr = agentErr
-		}
+		return syncOutputJSON(results, dryRun, start, ignoreStats, syncErr, ctxCost, mcpResult)
 	}
 
 	if hasAll {
@@ -317,7 +410,7 @@ func cmdSync(args []string) error {
 		}
 	}
 
-	return syncErr
+	return finishMCP(syncErr)
 }
 
 func parseSyncFlags(args []string) (dryRun, force, jsonOutput, quiet bool) {
@@ -405,7 +498,7 @@ func printIgnoredSkills(stats *skillignore.IgnoreStats) {
 
 // syncOutputJSON converts sync results to JSON and writes to stdout.
 // extras is optional and included when --all is used.
-func syncOutputJSON(results []syncTargetResult, dryRun bool, start time.Time, iStats *skillignore.IgnoreStats, syncErr error, ctxCost *contextCostJSON, extras ...[]syncExtrasJSONEntry) error {
+func syncOutputJSON(results []syncTargetResult, dryRun bool, start time.Time, iStats *skillignore.IgnoreStats, syncErr error, ctxCost *contextCostJSON, mcpResult *mcp.Result, extras ...[]syncExtrasJSONEntry) error {
 	var totals syncModeStats
 	var details []syncJSONTargetDetail
 	for _, r := range results {
@@ -443,6 +536,7 @@ func syncOutputJSON(results []syncTargetResult, dryRun bool, start time.Time, iS
 		output.Extras = extras[0]
 	}
 	output.ContextCost = ctxCost
+	output.MCP = mcpResult
 	return writeJSONResult(&output, syncErr)
 }
 
@@ -849,12 +943,12 @@ func syncSymlinkMode(name string, target config.TargetConfig, source string, dry
 }
 
 func printSyncHelp() {
-	fmt.Println(`Usage: skillshare sync [agents] [options]
+	fmt.Println(`Usage: skillshare sync [agents|extras|mcp|plugins] [options]
 
 Sync skills from source to all configured targets.
 
 Options:
-  --all             Sync skills, agents, and extras
+  --all             Sync skills, agents, extras, and MCP
   --dry-run, -n     Preview changes without applying
   --force, -f       Force sync (overwrite local changes)
   --json            Output results as JSON
@@ -864,12 +958,21 @@ Options:
   --help, -h        Show this help
 
 Subcommands:
+  agents            Sync only agents
+  plugins [name]    Apply plugin sync selection (see: skillshare plugin --help)
+  mcp               Sync only MCP settings (no --force; conflicts require review)
   extras            Sync only extras (see: skillshare sync extras --help)
 
 Examples:
   skillshare sync                Sync skills to all targets
   skillshare sync --dry-run      Preview sync changes
-  skillshare sync --all          Sync skills, agents, and extras
+  skillshare sync --all          Sync skills, agents, extras, and MCP
   skillshare sync -p             Sync project-level skills
-  skillshare sync agents         Sync agents only`)
+  skillshare sync agents         Sync agents only
+  skillshare sync plugins        Apply selected plugin installations/removals
+  skillshare sync plugins --dry-run --json   Preview plugin changes
+
+Plugins are not included in --all. Plugin sync uses its own options;
+--force and --quiet do not apply. Enable/disable saves selection only;
+run sync plugins to install selected targets or uninstall deselected targets.`)
 }

@@ -4,8 +4,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+// The devcontainer runs the API on its own port to stay clear of other projects.
+const API = `http://localhost:${process.env.SKILLSHARE_API_PORT || 19420}`
+
 // SSE endpoints need explicit Accept header to prevent Vite proxy from buffering responses.
-const SSE_PROXY = { target: 'http://localhost:19420', headers: { Accept: 'text/event-stream' } }
+const SSE_PROXY = { target: API, headers: { Accept: 'text/event-stream' } }
 
 export default defineConfig({
   base: './',
@@ -33,7 +36,9 @@ export default defineConfig({
       '/api/update/stream': SSE_PROXY,
       '/api/check/stream': SSE_PROXY,
       '/api/diff/stream': SSE_PROXY,
-      '/api': 'http://localhost:19420',
+      // Keep the browser's Host header: the MCP endpoints compare it against Origin,
+      // and changeOrigin (the string shorthand's default) would rewrite it to the target.
+      '/api': { target: API, changeOrigin: false },
     },
   },
   build: {
