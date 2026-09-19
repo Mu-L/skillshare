@@ -559,6 +559,51 @@ SKILLSHARE_AZURE_HOSTS=azuredevops.mycompany.com skillshare install \
   https://azuredevops.mycompany.com/Org/Project/_git/Repo
 ```
 
+### `gitea_hosts`
+
+Hostnames of self-hosted Gitea instances. Hosts containing `gitea` in the name, such as `gitea.com` or `gitea.company.com`, are detected automatically. This field is only needed for other custom domains.
+
+```yaml
+gitea_hosts:
+  - git.company.com
+```
+
+When a hostname is listed here:
+
+- `install` and `update` use [`GITEA_TOKEN`](/docs/reference/appendix/environment-variables#gitea_token) for HTTPS authentication on that host
+- `install` downloads a subdirectory through the Gitea Contents API when a sparse checkout is unavailable or fails, instead of cloning the whole repository. If the API call fails too, it falls back to a full clone.
+
+Entries must be bare hostnames (no scheme, path, or port). They are normalized to lowercase.
+
+#### Environment variable
+
+For CI/CD pipelines, use `SKILLSHARE_GITEA_HOSTS` (comma-separated):
+
+```bash
+SKILLSHARE_GITEA_HOSTS=git.company.com skillshare install https://git.company.com/team/skills/review
+```
+
+When both the config file and env var are set, their values are **merged** (deduplicated).
+
+### `cnb_hosts`
+
+Hostnames of self-hosted [CNB](https://cnb.cool) instances. `cnb.cool` is detected automatically. This field is only needed for a private deployment on another domain.
+
+```yaml
+cnb_hosts:
+  - cnb.company.com
+```
+
+A listed host uses [`CNB_TOKEN`](/docs/reference/appendix/environment-variables#cnb_token) for HTTPS authentication, and subdirectory installs can go through the CNB contents API with the same fallback to a full clone.
+
+Entries must be bare hostnames (no scheme, path, or port). They are normalized to lowercase.
+
+#### Environment variable
+
+```bash
+SKILLSHARE_CNB_HOSTS=cnb.company.com skillshare install https://cnb.company.com/team/skills/review
+```
+
 ### `audit`
 
 Security audit configuration.

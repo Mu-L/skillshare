@@ -481,6 +481,8 @@ skillshare install https://github.com/org/private-skills.git --track
 | GitLab | `GITLAB_TOKEN` | Personal access or CI job token |
 | Bitbucket | `BITBUCKET_TOKEN` | Repository token, or app password (with `BITBUCKET_USERNAME`) |
 | Azure DevOps | `AZURE_DEVOPS_TOKEN` | Personal Access Token (Code: Read scope) |
+| Gitea | `GITEA_TOKEN` | Access token (repository: Read) |
+| CNB | `CNB_TOKEN` | Access token with repository read permission |
 | Any host | `SKILLSHARE_GIT_TOKEN` | Generic fallback |
 
 Platform-specific variables take priority over `SKILLSHARE_GIT_TOKEN`.

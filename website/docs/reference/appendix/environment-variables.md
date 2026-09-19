@@ -114,6 +114,30 @@ When both the env var and config file [`azure_hosts`](/docs/reference/targets/co
 
 **Default:** _(none)_
 
+### SKILLSHARE_GITEA_HOSTS
+
+Comma-separated list of self-hosted Gitea hostnames. Hosts containing `gitea` in the name are detected without it.
+
+```bash
+SKILLSHARE_GITEA_HOSTS=git.company.com,code.internal.io
+```
+
+Merged with the config file's [`gitea_hosts`](/docs/reference/targets/configuration#gitea_hosts).
+
+**Default:** _(none)_
+
+### SKILLSHARE_CNB_HOSTS
+
+Comma-separated list of self-hosted CNB hostnames. `cnb.cool` is detected without it.
+
+```bash
+SKILLSHARE_CNB_HOSTS=cnb.company.com
+```
+
+Merged with the config file's [`cnb_hosts`](/docs/reference/targets/configuration#cnb_hosts).
+
+**Default:** _(none)_
+
 ---
 
 ## Web UI
@@ -277,6 +301,43 @@ skillshare install https://dev.azure.com/org/project/_git/repo --track
 $env:AZURE_DEVOPS_TOKEN = "your_pat_here"
 ```
 
+### GITEA_TOKEN
+
+Gitea access token. Used for HTTPS clone of private repos on `gitea.com` and self-hosted Gitea, and for the Gitea Contents API when a subdirectory is installed without a full clone.
+
+**Creating a token:**
+1. In Gitea, go to **Settings → Applications**
+2. Generate a new token
+3. Permissions: `repository: Read` (pull only) or `repository: Read and Write` (push & pull)
+
+```bash
+export GITEA_TOKEN=your_token
+skillshare install https://gitea.com/org/skills.git --track
+```
+
+**Windows:**
+```powershell
+$env:GITEA_TOKEN = "your_token"
+```
+
+The token is sent only to the host you install from. A self-hosted instance on a domain without `gitea` in its name needs [`gitea_hosts`](/docs/reference/targets/configuration#gitea_hosts), otherwise `SKILLSHARE_GIT_TOKEN` is used for it.
+
+### CNB_TOKEN
+
+[CNB](https://cnb.cool) access token with read permission on the repository. Used for HTTPS clone of private repos on `cnb.cool` and self-hosted CNB.
+
+```bash
+export CNB_TOKEN=your_token
+skillshare install https://cnb.cool/org/skills --track
+```
+
+**Windows:**
+```powershell
+$env:CNB_TOKEN = "your_token"
+```
+
+A private deployment on another domain needs [`cnb_hosts`](/docs/reference/targets/configuration#cnb_hosts).
+
 ### SKILLSHARE_GIT_TOKEN
 
 Generic fallback token for any HTTPS git host. Used when no platform-specific token is set.
@@ -291,7 +352,7 @@ skillshare install https://git.example.com/org/skills.git --track
 $env:SKILLSHARE_GIT_TOKEN = "your_token"
 ```
 
-**Token priority:** Platform-specific (`GITHUB_TOKEN`, `GITLAB_TOKEN`, `BITBUCKET_TOKEN`, `AZURE_DEVOPS_TOKEN`) > `SKILLSHARE_GIT_TOKEN`.
+**Token priority:** Platform-specific (`GITHUB_TOKEN`, `GITLAB_TOKEN`, `BITBUCKET_TOKEN`, `AZURE_DEVOPS_TOKEN`, `GITEA_TOKEN`, `CNB_TOKEN`) > `SKILLSHARE_GIT_TOKEN`.
 
 ---
 
@@ -379,6 +440,8 @@ export GITHUB_TOKEN="ghp_your_token_here"
 | `SKILLSHARE_UI_BASE_PATH` | Web UI sub-path for reverse proxy | None |
 | `SKILLSHARE_GITLAB_HOSTS` | Custom GitLab hostnames (comma-separated) | None |
 | `SKILLSHARE_AZURE_HOSTS` | Custom Azure DevOps Server hostnames (comma-separated) | None |
+| `SKILLSHARE_GITEA_HOSTS` | Custom Gitea hostnames (comma-separated) | None |
+| `SKILLSHARE_CNB_HOSTS` | Custom CNB hostnames (comma-separated) | None |
 | `XDG_CONFIG_HOME` | Base config directory | `~/.config` (Linux/macOS), `%AppData%` (Windows) |
 | `XDG_DATA_HOME` | Data directory (backups, trash) | `~/.local/share` |
 | `XDG_STATE_HOME` | State directory (logs) | `~/.local/state` |
@@ -389,6 +452,8 @@ export GITHUB_TOKEN="ghp_your_token_here"
 | `BITBUCKET_TOKEN` | Bitbucket git clone auth | None |
 | `BITBUCKET_USERNAME` | Bitbucket username for app password auth | None |
 | `AZURE_DEVOPS_TOKEN` | Azure DevOps git clone auth | None |
+| `GITEA_TOKEN` | Gitea git clone + Contents API auth | None |
+| `CNB_TOKEN` | CNB git clone + contents API auth | None |
 | `SKILLSHARE_GIT_TOKEN` | Generic git clone auth (fallback) | None |
 | `GIT_SSL_CAINFO` | Custom CA certificate bundle path | System default |
 | `GIT_SSL_NO_VERIFY` | Disable SSL certificate verification | `false` |

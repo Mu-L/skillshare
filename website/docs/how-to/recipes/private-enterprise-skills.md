@@ -22,6 +22,8 @@ skillshare detects tokens from environment variables, with platform-specific var
 | GitLab / Self-hosted GitLab | `GITLAB_TOKEN` |
 | Bitbucket | `BITBUCKET_TOKEN` (+ optional `BITBUCKET_USERNAME`) |
 | Azure DevOps | `AZURE_DEVOPS_TOKEN` |
+| Gitea / Self-hosted Gitea | `GITEA_TOKEN` |
+| CNB | `CNB_TOKEN` |
 | Any platform (fallback) | `SKILLSHARE_GIT_TOKEN` |
 
 ```bash
@@ -79,6 +81,7 @@ skillshare sync     # Push to targets
 - **Selective install**: `skillshare install your-org/internal-skills --track --skill code-review` installs only one skill
 - **CI/CD token**: In pipelines, set the platform-specific env var (e.g., `GITHUB_TOKEN`) from CI secrets
 - **Self-hosted GitLab**: Set `GITLAB_TOKEN` and use HTTPS URL: `skillshare install https://gitlab.internal.com/team/skills.git --track`
+- **Self-hosted Gitea**: Set `GITEA_TOKEN`. If the hostname does not contain `gitea`, also list it in [`gitea_hosts`](/docs/reference/targets/configuration#gitea_hosts)
 - **Gitee / AtomGit**: Supported via HTTPS URLs with `SKILLSHARE_GIT_TOKEN`
 
 ## Related

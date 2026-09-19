@@ -224,6 +224,18 @@ This tells skillshare to treat the full URL path as the repository, matching Git
 skillshare install git.company.com/team/frontend/ui.git
 ```
 
+
+## Gitea and CNB {#gitea-and-cnb}
+
+`gitea.com`, any host with `gitea` in its name, and `cnb.cool` are recognised. The path is read as `owner/repo`, and anything after it is the subdirectory:
+
+```bash
+skillshare install https://gitea.com/owner/repo/skills/review
+skillshare install https://cnb.cool/org/repo/skills
+```
+
+For a self-hosted instance on another domain, list the hostname in [`gitea_hosts`](../targets/configuration.md#gitea_hosts) or [`cnb_hosts`](../targets/configuration.md#cnb_hosts). Private repos use [`GITEA_TOKEN`](./environment-variables.md#gitea_token) and [`CNB_TOKEN`](./environment-variables.md#cnb_token).
+
 ## Custom Azure DevOps Domains {#custom-azure-domains}
 
 The built-in Azure DevOps patterns match `dev.azure.com` and `*.visualstudio.com` automatically.
