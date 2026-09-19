@@ -226,10 +226,10 @@ export default function NewSkillPage() {
           </div>
         </form>
 
-        {/* The preview stays in view while the form scrolls; the offset clears the fixed account avatar */}
-        <div className="sticky top-20 flex min-w-0 flex-col">
+        {/* The preview stays in view while the form scrolls */}
+        <div className="sticky top-6 flex min-w-0 flex-col">
           <div className="ss-sec"><h2 className="ss-h2">{t('newSkill.preview.title')}</h2></div>
-          <CodeView content={preview?.content ?? ''} lang="md" className="max-h-[calc(100vh-190px)] min-h-[330px]" />
+          <CodeView content={preview?.content ?? ''} lang="md" className="max-h-[calc(100vh-134px)] min-h-[330px]" />
           {preview && <p className="mt-2.5 truncate font-mono text-[13px] text-ink-3" title={preview.path}>{preview.path}</p>}
         </div>
       </div>

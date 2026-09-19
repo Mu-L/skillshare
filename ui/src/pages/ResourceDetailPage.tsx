@@ -320,7 +320,9 @@ export default function ResourceDetailPage() {
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-7">
+          {/* Stays in view while a long SKILL.md scrolls; scrolls on its own when the targets outgrow
+              the viewport. Padded by what it is pulled out by, so the scroll box does not clip shadows */}
+          <div className="sticky top-6 -mb-2 -mr-2 flex max-h-[calc(100vh-3rem)] flex-col gap-7 overflow-y-auto pb-2 pr-2">
             <MetaBox
               resource={resource}
               frontmatter={frontmatter}
@@ -621,9 +623,9 @@ function FilesTab({ resource, files, skillMd, tabSearch, components, raw, onRaw 
           {t(sorted.length === 1 ? 'resourceDetail.meta.file' : 'resourceDetail.meta.files', { count: sorted.length })}
         </p>
       </div>
-      {/* The viewer stays in view while a long file list scrolls the page. The offsets keep it clear of the
-          fixed account avatar (top right) and the scroll-to-top button (bottom right) */}
-      <div className="sticky top-20 flex h-[calc(100vh-160px)] min-h-[360px] min-w-0 flex-col gap-2.5">
+      {/* The viewer stays in view while a long file list scrolls the page. The height leaves room
+          below for the scroll-to-top button (bottom right) */}
+      <div className="sticky top-6 flex h-[calc(100vh-104px)] min-h-[360px] min-w-0 flex-col gap-2.5">
         <div className="flex min-h-8 items-center justify-between gap-3">
           <span className="truncate font-mono text-[13px] font-semibold">{selected}</span>
           <div className="flex shrink-0 items-center gap-2">
