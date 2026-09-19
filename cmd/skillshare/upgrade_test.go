@@ -66,6 +66,10 @@ func TestReexecWithSudo_ExecArgs(t *testing.T) {
 	}
 	defer func() { execFunc = orig }()
 
+	origTTY := stdinIsTTY
+	stdinIsTTY = func() bool { return true }
+	defer func() { stdinIsTTY = origTTY }()
+
 	// Fake sudo in PATH
 	dir := t.TempDir()
 	fakeSudo := filepath.Join(dir, "sudo")
@@ -93,5 +97,30 @@ func TestReexecWithSudo_ExecArgs(t *testing.T) {
 		if gotArgs[i] != w {
 			t.Errorf("args[%d] = %q, want %q", i, gotArgs[i], w)
 		}
+	}
+}
+
+func TestReexecWithSudo_NonInteractiveWithoutTTY(t *testing.T) {
+	var gotArgs []string
+	orig := execFunc
+	execFunc = func(_ string, argv []string, _ []string) error {
+		gotArgs = argv
+		return nil
+	}
+	defer func() { execFunc = orig }()
+
+	origTTY := stdinIsTTY
+	stdinIsTTY = func() bool { return false }
+	defer func() { stdinIsTTY = origTTY }()
+
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "sudo"), []byte("#!/bin/sh\n"), 0755)
+	t.Setenv("PATH", dir)
+
+	if err := reexecWithSudo("/usr/local/bin/skillshare"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(gotArgs) < 2 || gotArgs[1] != "-n" {
+		t.Errorf("args = %v, want sudo -n so a missing TTY fails fast", gotArgs)
 	}
 }
