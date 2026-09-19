@@ -43,6 +43,10 @@ Approved proposals will be added to the roadmap. Implementation is handled by th
 - [ ] Commit messages explain "why", not just "what"
 - [ ] Scope is focused — one concern per PR
 
+## Translated READMEs
+
+The language links at the top of each README are sorted by language code (`ja`, `ko`, `zh-CN`, `zh-TW`), with English first as the source. Add a new language at its place in that order, name the file `README-<code>.md`, and use the language's own name without a region or flag.
+
 ## Development Setup
 
 All development and testing should be done inside the **devcontainer**. This ensures a consistent environment (Go toolchain, Node.js, pnpm, and demo content are pre-configured).
