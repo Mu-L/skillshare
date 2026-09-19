@@ -33,7 +33,9 @@ import roocodeMono from '@lobehub/icons-static-svg/icons/roocode.svg?url';
 import windsurfMono from '@lobehub/icons-static-svg/icons/windsurf.svg?url';
 // Not in lobehub; from simple-icons (CC0).
 import kilocodeColor from '../assets/agents/kilocode-color.svg?url';
+import lmstudioColor from '../assets/agents/lmstudio-color.svg?url';
 import ompColor from '../assets/agents/omp-color.svg?url';
+import factoryMono from '../assets/agents/factory.svg?url';
 import warpMono from '../assets/agents/warp.svg?url';
 import zedMono from '../assets/agents/zed.svg?url';
 
@@ -55,6 +57,7 @@ const colored: Record<string, string> = {
   junie: junieColor,
   kilocode: kilocodeColor,
   kiro: kiroColor,
+  lmstudio: lmstudioColor,
   omp: ompColor,
   openclaw: openclawColor,
   qwen: qwenColor,
@@ -73,6 +76,7 @@ const mono: Record<string, string> = {
   cline: clineMono,
   copilot: githubcopilotMono,
   cursor: cursorMono,
+  factory: factoryMono,
   goose: gooseMono,
   grok: grokMono,
   hermes: nousresearchMono,
