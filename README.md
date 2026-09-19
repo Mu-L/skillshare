@@ -5,6 +5,10 @@
 <h1 align="center" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">skillshare</h1>
 
 <p align="center">
+  <a href="README.md">English</a> · <a href="README-zh-TW.md">繁體中文</a> · <a href="README-zh.md">简体中文</a> · <a href="README-ja.md">日本語</a> · <a href="README-ko.md">한국어</a>
+</p>
+
+<p align="center">
   <a href="https://skillshare.runkids.cc"><img src="https://img.shields.io/badge/Website-skillshare.runkids.cc-blue?logo=docusaurus" alt="Website"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://github.com/runkids/skillshare/releases"><img src="https://img.shields.io/github/v/release/runkids/skillshare" alt="Release"></a>

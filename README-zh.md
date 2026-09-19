@@ -5,16 +5,20 @@
 <h1 align="center" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">skillshare</h1>
 
 <p align="center">
-  <a href="https://skillshare.runkids.cc"><img src="https://img.shields.io/badge/Website-skillshare.runkids.cc-blue?logo=docusaurus" alt="网站"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/许可证-MIT-yellow.svg" alt="License: MIT"></a>
-  <a href="https://github.com/runkids/skillshare/releases"><img src="https://img.shields.io/github/v/release/runkids/skillshare" alt="发布版本"></a>
-  <img src="https://img.shields.io/badge/平台-macOS%20%7C%20Linux%20%7C%20Windows-blue" alt="平台">
-  <a href="https://goreportcard.com/report/github.com/runkids/skillshare"><img src="https://goreportcard.com/badge/github.com/runkids/skillshare" alt="Go 质量报告"></a>
-  <a href="https://deepwiki.com/runkids/skillshare"><img src="https://deepwiki.com/badge.svg" alt="DeepWiki 提问"></a>
+  <a href="README.md">English</a> · <a href="README-zh-TW.md">繁體中文</a> · <a href="README-zh.md">简体中文</a> · <a href="README-ja.md">日本語</a> · <a href="README-ko.md">한국어</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/runkids/skillshare/stargazers"><img src="https://img.shields.io/github/stars/runkids/skillshare?style=social" alt="在 GitHub 上点亮 Star"></a>
+  <a href="https://skillshare.runkids.cc"><img src="https://img.shields.io/badge/Website-skillshare.runkids.cc-blue?logo=docusaurus" alt="Website"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://github.com/runkids/skillshare/releases"><img src="https://img.shields.io/github/v/release/runkids/skillshare" alt="Release"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue" alt="Platform">
+  <a href="https://goreportcard.com/report/github.com/runkids/skillshare"><img src="https://goreportcard.com/badge/github.com/runkids/skillshare" alt="Go Report Card"></a>
+  <a href="https://deepwiki.com/runkids/skillshare"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/runkids/skillshare/stargazers"><img src="https://img.shields.io/github/stars/runkids/skillshare?style=social" alt="Star on GitHub"></a>
 </p>
 
 <p align="center">
@@ -22,56 +26,57 @@
 </p>
 
 <p align="center">
-  <strong>AI CLI 技能（Skills）、智能体（Agents）、规则（Rules）、命令（Commands）等资源的唯一事实来源。</strong><br>
-  一键同步到所有平台——从个人到组织级全覆盖。<br>
-  支持 Codex、Claude Code、OpenClaw、OpenCode 及 60+ 更多工具。
+  <strong>AI CLI 的 skills、agents、rules、commands 等资源，只需要一份来源。一条命令同步到所有工具，从个人到整个组织都适用。</strong><br>
+  支持 Codex、Claude Code、OpenClaw、OpenCode 等 60 多种工具。
 </p>
 
 <p align="center">
-  <img src=".github/assets/demo.gif" alt="skillshare 演示" width="960">
+  <img src=".github/assets/demo.gif" alt="skillshare demo" width="960">
 </p>
 
 <p align="center">
-  <a href="https://skillshare.runkids.cc">官网</a> •
+  <a href="https://skillshare.runkids.cc">官方网站</a> •
   <a href="#安装">安装</a> •
   <a href="#快速开始">快速开始</a> •
-  <a href="#亮点功能">亮点功能</a> •
-  <a href="#cli-和-ui-预览">截图预览</a> •
+  <a href="#功能亮点">功能亮点</a> •
+  <a href="#cli-与界面预览">界面截图</a> •
   <a href="https://skillshare.runkids.cc/docs">文档</a>
 </p>
 
 > [!NOTE]
-> **最新版本**: [v0.20.0](https://github.com/runkids/skillshare/releases/tag/v0.20.0) — 通过 git_root scope 选择 commit/push/pull 的版本范围（skills、agents、extras，或全部合并在一个仓库中）；extras 扩展转换在同步时将 Markdown 转换为原生格式（Gemini TOML 命令、Codex TOML 智能体）。[查看全部版本 →](https://github.com/runkids/skillshare/releases)
+> **最新版本**：每个版本的新功能与修复都列在 [Releases](https://github.com/runkids/skillshare/releases) 和[更新日志](https://skillshare.runkids.cc/changelog)。近期重点是 **MCP 连接**、**完整 plugin** 的安装与同步，以及**重新设计的网页仪表盘**。
 
-## 为什么选择 skillshare
+## 为什么用 skillshare
 
-每个 AI CLI 都有自己的技能目录。
-你在一个工具里编辑了技能，却忘了复制到另一个，最后记不清哪个在哪里。
+每个 AI CLI 都有自己的 skills 目录。
+你在其中一个里改了内容，忘了复制到另一个，最后分不清哪份才是最新的。
 
-skillshare 解决了这个问题：
+skillshare 解决这个问题：
 
-- **单一来源，覆盖所有智能体** — 一条 `skillshare sync` 命令同步到 Claude、Cursor、Codex 及 60+ 工具
-- **智能体管理** — 将自定义智能体与技能一起同步到支持智能体的目标端
-- **不止于技能** — 使用 [extras](https://skillshare.runkids.cc/docs/reference/targets/configuration#extras) 管理规则、命令、提示词及任何基于文件的资源
-- **从任何地方安装** — GitHub、GitLab、Bitbucket、Azure DevOps 或任何自托管的 Git 仓库
-- **内置安全** — 在使用前审计技能是否存在提示注入和数据泄露风险
-- **团队就绪** — 项目中通过 `.skillshare/` 管理技能，组织级技能通过代码仓库同步
-- **本地轻量** — 单一二进制文件，无需注册中心，无遥测，完全支持离线使用
-- **细粒度过滤** — 通过 [`.skillignore`](https://skillshare.runkids.cc/docs/how-to/daily-tasks/filtering-skills)、SKILL.md 中的 `targets` 字段以及按目标端的 include/exclude 配置，精确控制哪些技能同步到哪些目标端
+- **一份来源，所有 agent** — 用 `skillshare sync` 同步到 Claude、Cursor、Codex 等 60 多种工具
+- **Agent 管理** — 自定义 agent 和 skills 一起同步到支持 agent 的 target
+- **不只是 skills** — 用 [extras](https://skillshare.runkids.cc/docs/reference/targets/configuration#extras) 管理 rules、commands、prompts 和任何基于文件的资源
+- **MCP 连接** — 服务器只定义一次，用 [`sync mcp`](https://skillshare.runkids.cc/docs/how-to/daily-tasks/sharing-mcp) 写入每个 Agent 自己的配置格式
+- **完整 plugin** — plugin 的 skills、hooks 和 MCP 设置保持完整，用 [`plugin`](https://skillshare.runkids.cc/docs/how-to/daily-tasks/sharing-plugins) 选择哪些工具要安装
+- **从任何地方安装** — GitHub、GitLab、Bitbucket、Azure DevOps、Gitea、CNB，或任何自托管的 Git
+- **内置安全检查** — 使用前先审计 skills 是否含有 prompt injection 或数据外泄的内容
+- **适合团队** — 项目的 skills 放在 `.skillshare/`，组织共用的 skills 通过 tracked repo 发布
+- **本地、轻量** — 单一可执行文件，没有 registry，没有遥测，可完全离线使用
+- **细粒度过滤** — 用 [`.skillignore`](https://skillshare.runkids.cc/docs/how-to/daily-tasks/filtering-skills)、SKILL.md 的 `targets`，以及各 target 的 include/exclude，控制哪些 skills 到哪些 target
 
-> 从其他工具迁移？[迁移指南](https://skillshare.runkids.cc/docs/how-to/advanced/migration) · [功能对比](https://skillshare.runkids.cc/docs/understand/philosophy/comparison)
+> 从其他工具迁移过来？ [迁移指南](https://skillshare.runkids.cc/docs/how-to/advanced/migration) · [对比](https://skillshare.runkids.cc/docs/understand/philosophy/comparison)
 
 ## 工作原理
 
-- macOS / Linux：`~/.config/skillshare/`
-- Windows：`%AppData%\skillshare\`
+- macOS / Linux: `~/.config/skillshare/`
+- Windows: `%AppData%\skillshare\`
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    源目录                                    │
-│   ~/.config/skillshare/skills/    ← 技能（SKILL.md）         │
-│   ~/.config/skillshare/agents/    ← 智能体                    │
-│   ~/.config/skillshare/extras/    ← 规则、命令等              │
+│                    Source Directory                         │
+│   ~/.config/skillshare/skills/    ← skills (SKILL.md)       │
+│   ~/.config/skillshare/agents/    ← agents                  │
+│   ~/.config/skillshare/extras/    ← rules, commands, etc.   │
 └─────────────────────────────────────────────────────────────┘
                               │ sync
               ┌───────────────┼───────────────┐
@@ -81,30 +86,30 @@ skillshare 解决了这个问题：
        └───────────┘   └───────────┘   └───────────┘
 ```
 
-| 平台 | 技能源目录 | 智能体源目录 | 扩展资源源目录 | 链接方式 |
+| 平台 | Skills 来源 | Agents 来源 | Extras 来源 | 链接方式 |
 |----------|---------------|---------------|---------------|-----------|
-| macOS/Linux | `~/.config/skillshare/skills/` | `~/.config/skillshare/agents/` | `~/.config/skillshare/extras/` | 符号链接 |
-| Windows | `%AppData%\skillshare\skills\` | `%AppData%\skillshare\agents\` | `%AppData%\skillshare\extras\` | NTFS 交接点（无需管理员权限） |
+| macOS/Linux | `~/.config/skillshare/skills/` | `~/.config/skillshare/agents/` | `~/.config/skillshare/extras/` | Symlinks |
+| Windows | `%AppData%\skillshare\skills\` | `%AppData%\skillshare\agents\` | `%AppData%\skillshare\extras\` | NTFS Junction（不需要管理员权限） |
 
-| | 命令式（逐命令安装） | 声明式（skillshare） |
+| | 命令式（每次单独安装） | 声明式（skillshare） |
 |---|---|---|
-| **事实来源** | 技能各自独立复制 | 单一来源 → 符号链接（或复制） |
-| **新机器配置** | 重新手动执行每次安装 | `git clone` 配置 + `sync` |
-| **安全审计** | 无 | 内置 `audit` + 安装/更新时自动扫描 |
-| **Web 仪表盘** | 无 | `skillshare ui` |
-| **运行时依赖** | Node.js + npm | 无（单一 Go 二进制文件） |
+| **单一来源** | skills 各自复制，互不相关 | 一份来源，以 symlink（或复制）分发 |
+| **新电脑的配置** | 手动重跑每一次安装 | `git clone` 配置，再 `sync` |
+| **安全审计** | 无 | 内置 `audit`，install 和 update 时自动扫描 |
+| **网页仪表盘** | 无 | `skillshare ui` |
+| **运行时依赖** | Node.js + npm | 无（单一 Go 可执行文件） |
 
 > [完整对比 →](https://skillshare.runkids.cc/docs/understand/philosophy/comparison)
 
-## CLI 和 UI 预览
+## CLI 与界面预览
 
-| 技能详细页 | 安全审计 |
+| Skill 详情 | 安全审计 |
 |---|---|
-| <img src=".github/assets/skill-detail-tui.png" alt="CLI 同步输出" width="480" height="300"> | <img src=".github/assets/audit-tui.png" alt="CLI 安装附带安全审计" width="480" height="300"> |
+| <img src=".github/assets/skill-detail-tui.png" alt="Skill 详情" width="480" height="300"> | <img src=".github/assets/audit-tui.png" alt="安全审计" width="480" height="300"> |
 
-| UI 仪表盘 | UI 技能列表 |
+| 网页仪表盘 | 网页 Skills 页面 |
 |---|---|
-| <img src=".github/assets/ui/web-dashboard-demo.png" alt="Web 仪表盘概览" width="480"> | <img src=".github/assets/ui/web-skills-demo.png" alt="Web UI 技能页面" width="480"> |
+| <img src=".github/assets/ui/web-dashboard-demo.png" alt="网页仪表盘" width="480"> | <img src=".github/assets/ui/web-skills-demo.png" alt="网页 Skills 页面" width="480"> |
 
 ## 安装
 
@@ -126,7 +131,7 @@ irm https://raw.githubusercontent.com/runkids/skillshare/main/install.ps1 | iex
 brew install skillshare
 ```
 
-> **提示：** 运行 `skillshare upgrade` 即可更新到最新版本。它会自动检测你的安装方式并完成后续操作。
+> **提示：** 运行 `skillshare upgrade` 更新到最新版。它会自动判断你的安装方式并处理后续步骤。
 
 ### GitHub Actions
 
@@ -137,11 +142,11 @@ brew install skillshare
 - run: skillshare sync
 ```
 
-查看 [`setup-skillshare`](https://github.com/marketplace/actions/setup-skillshare) 获取所有选项（审计、项目模式、版本锁定等）。
+所有选项（audit、project 模式、锁定版本）请见 [`setup-skillshare`](https://github.com/marketplace/actions/setup-skillshare)。
 
-### 缩写别名（可选）
+### 简写（可选）
 
-在 shell 配置（`~/.zshrc` 或 `~/.bashrc`）中添加别名：
+在 shell 配置文件（`~/.zshrc` 或 `~/.bashrc`）中加上 alias：
 
 ```bash
 alias ss='skillshare'
@@ -150,154 +155,121 @@ alias ss='skillshare'
 ## 快速开始
 
 ```bash
-skillshare init            # 创建配置、源目录并检测目标端
-skillshare sync            # 将技能同步到所有目标端
+skillshare init            # 创建配置文件、来源目录，并检测已安装的 target
+skillshare sync            # 把 skills 同步到所有 target
 ```
 
-## 亮点功能
+## 功能亮点
 
-**安装和更新技能** — 从 GitHub、GitLab 或任何 Git 仓库
+**安装与更新 skills** — 来源可以是 GitHub、GitLab 或任何 Git 主机
 
 ```bash
 skillshare install github.com/reponame/skills
 skillshare update --all
-skillshare target claude --mode copy  # 如果符号链接不适用
+skillshare target claude --mode copy  # symlink 不能用的时候
 ```
 
-**符号链接有问题？** — 为每个目标端切换到复制模式
+**Symlink 有问题？** — 单个 target 可以改用 copy 模式
 
 ```bash
-skillshare target <名称> --mode copy
+skillshare target <name> --mode copy
 skillshare sync
 ```
 
-**安全审计** — 在技能到达智能体之前进行扫描
+**安全审计** — 在 skills 进入 agent 之前先扫描
 
 ```bash
 skillshare audit
 ```
 
-**项目级技能** — 按仓库管理，随代码一起提交
+**项目 skills** — 跟着 repo 走，和代码一起 commit
 
 ```bash
 skillshare init -p && skillshare sync
 ```
 
-**智能体** — 将自定义智能体同步到支持智能体的目标端
+**Agents** — 把自定义 agent 同步到支持 agent 的 target
 
 ```bash
-skillshare sync agents            # 仅同步智能体
-skillshare sync --all             # 同步技能 + 智能体 + 扩展资源
+skillshare sync agents            # 只同步 agents
+skillshare sync --all             # skills、agents、extras、MCP 一起同步
 ```
 
-**扩展资源** — 管理规则、命令、提示词等
+**Extras** — 管理 rules、commands、prompts 等资源
 
 ```bash
-skillshare extras init rules          # 创建一个 "rules" 扩展
-skillshare sync --all                 # 同步技能 + 扩展资源
-skillshare extras collect rules       # 将本地文件收集回源目录
+skillshare extras init rules          # 创建名为 "rules" 的 extra
+skillshare sync --all                 # skills、agents、extras、MCP 一起同步
+skillshare extras collect rules       # 把本地文件收回来源
 ```
 
-**Shell 自动补全** — Tab 键补全命令、标志和子命令
+**MCP 连接** — 配置一次，Claude Code、Codex、Cursor、VS Code、OpenCode 等工具都能用
 
 ```bash
-skillshare completion bash --install   # 也支持：zsh、fish、powershell、nushell
+skillshare mcp add                    # 引导式配置，输入 URL 或粘贴 JSON
+skillshare sync mcp --dry-run         # 预览各工具配置文件会有的变更
+skillshare sync mcp                   # 应用连接设置
 ```
 
-**本地检查点** — 提交源目录变更而不推送
+定义可以放在 `config.yaml`，或另外引用一个 `mcp.yaml`。
+示例、环境变量引用，以及导入已有连接的方式，请见 [MCP 配置](https://skillshare.runkids.cc/docs/how-to/daily-tasks/sharing-mcp)。
+
+**Plugins** — 安装完整的 plugin，并选择哪些工具要安装
 
 ```bash
-skillshare commit -m "更新审查技能"
+skillshare plugin add                 # 引导式：来源、plugin、target、确认
+skillshare plugin add owner/repo --target claude --target codex --no-tui
+skillshare sync plugins --dry-run     # plugin 的同步独立于 sync --all
+```
+
+工具里已经装好的 plugin 可以用 `plugin import` 纳入管理。
+请见[跨工具管理 plugin](https://skillshare.runkids.cc/docs/how-to/daily-tasks/sharing-plugins)。
+
+**Shell 自动补全** — 用 Tab 补全命令、flag 和子命令
+
+```bash
+skillshare completion bash --install   # 也支持 zsh、fish、powershell、nushell
+```
+
+**本地检查点** — commit 来源目录的变更，但不 push
+
+```bash
+skillshare commit -m "Update review skill"
 skillshare commit --dry-run
 ```
 
-**Web 仪表盘** — 可视化控制面板
+**网页仪表盘** — 可视化的控制面板
 
 ```bash
 skillshare ui
 ```
 
-[所有命令和指南 →](https://skillshare.runkids.cc/docs/reference/commands)
+[所有命令与指南 →](https://skillshare.runkids.cc/docs/reference/commands)
 
 ## 参与贡献
 
-欢迎贡献！请先提交 issue，然后提交带测试的草稿 PR。
-查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解开发环境设置。
+欢迎贡献！请先开 issue，再提交带测试的 draft PR。
+环境配置请见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ```bash
 git clone https://github.com/runkids/skillshare.git && cd skillshare
-make check  # 格式化 + 代码检查 + 测试
+make check  # format + lint + test
 ```
 
 > [!TIP]
-> 不知道从哪里开始？浏览 [open issues](https://github.com/runkids/skillshare/issues) 或尝试 [Playground](https://skillshare.runkids.cc/docs/learn/with-playground) 获取零配置开发环境。
+> 不知道从哪里开始？看看 [open issues](https://github.com/runkids/skillshare/issues)，或试试 [Playground](https://skillshare.runkids.cc/docs/learn/with-playground)，无需任何配置就有开发环境。
 
 ## 贡献者
 
-感谢所有帮助 skillshare 变得更好的人。
-
-<a href="https://github.com/leeeezx"><img src="https://github.com/leeeezx.png" width="50" style="border-radius:50%" alt="leeeezx"></a>
-<a href="https://github.com/Vergil333"><img src="https://github.com/Vergil333.png" width="50" style="border-radius:50%" alt="Vergil333"></a>
-<a href="https://github.com/romanr"><img src="https://github.com/romanr.png" width="50" style="border-radius:50%" alt="romanr"></a>
-<a href="https://github.com/xocasdashdash"><img src="https://github.com/xocasdashdash.png" width="50" style="border-radius:50%" alt="xocasdashdash"></a>
-<a href="https://github.com/philippe-granet"><img src="https://github.com/philippe-granet.png" width="50" style="border-radius:50%" alt="philippe-granet"></a>
-<a href="https://github.com/terranc"><img src="https://github.com/terranc.png" width="50" style="border-radius:50%" alt="terranc"></a>
-<a href="https://github.com/benrfairless"><img src="https://github.com/benrfairless.png" width="50" style="border-radius:50%" alt="benrfairless"></a>
-<a href="https://github.com/nerveband"><img src="https://github.com/nerveband.png" width="50" style="border-radius:50%" alt="nerveband"></a>
-<a href="https://github.com/EarthChen"><img src="https://github.com/EarthChen.png" width="50" style="border-radius:50%" alt="EarthChen"></a>
-<a href="https://github.com/gdm257"><img src="https://github.com/gdm257.png" width="50" style="border-radius:50%" alt="gdm257"></a>
-<a href="https://github.com/skovtunenko"><img src="https://github.com/skovtunenko.png" width="50" style="border-radius:50%" alt="skovtunenko"></a>
-<a href="https://github.com/TyceHerrman"><img src="https://github.com/TyceHerrman.png" width="50" style="border-radius:50%" alt="TyceHerrman"></a>
-<a href="https://github.com/1am2syman"><img src="https://github.com/1am2syman.png" width="50" style="border-radius:50%" alt="1am2syman"></a>
-<a href="https://github.com/thealokkr"><img src="https://github.com/thealokkr.png" width="50" style="border-radius:50%" alt="thealokkr"></a>
-<a href="https://github.com/JasonLandbridge"><img src="https://github.com/JasonLandbridge.png" width="50" style="border-radius:50%" alt="JasonLandbridge"></a>
-<a href="https://github.com/masonc15"><img src="https://github.com/masonc15.png" width="50" style="border-radius:50%" alt="masonc15"></a>
-<a href="https://github.com/richardwhatever"><img src="https://github.com/richardwhatever.png" width="50" style="border-radius:50%" alt="richardwhatever"></a>
-<a href="https://github.com/reneleonhardt"><img src="https://github.com/reneleonhardt.png" width="50" style="border-radius:50%" alt="reneleonhardt"></a>
-<a href="https://github.com/ndeybach"><img src="https://github.com/ndeybach.png" width="50" style="border-radius:50%" alt="ndeybach"></a>
-<a href="https://github.com/hhh2210"><img src="https://github.com/hhh2210.png" width="50" style="border-radius:50%" alt="hhh2210"></a>
-<a href="https://github.com/leoarry"><img src="https://github.com/leoarry.png" width="50" style="border-radius:50%" alt="leoarry"></a>
-<a href="https://github.com/salmonumbrella"><img src="https://github.com/salmonumbrella.png" width="50" style="border-radius:50%" alt="salmonumbrella"></a>
-<a href="https://github.com/daylamtayari"><img src="https://github.com/daylamtayari.png" width="50" style="border-radius:50%" alt="daylamtayari"></a>
-<a href="https://github.com/dstotijn"><img src="https://github.com/dstotijn.png" width="50" style="border-radius:50%" alt="dstotijn"></a>
-<a href="https://github.com/ipruning"><img src="https://github.com/ipruning.png" width="50" style="border-radius:50%" alt="ipruning"></a>
-<a href="https://github.com/massukio"><img src="https://github.com/massukio.png" width="50" style="border-radius:50%" alt="massukio"></a>
-<a href="https://github.com/kevincobain2000"><img src="https://github.com/kevincobain2000.png" width="50" style="border-radius:50%" alt="kevincobain2000"></a>
-<a href="https://github.com/StephenPAdams"><img src="https://github.com/StephenPAdams.png" width="50" style="border-radius:50%" alt="StephenPAdams"></a>
-<a href="https://github.com/mk-imagine"><img src="https://github.com/mk-imagine.png" width="50" style="border-radius:50%" alt="mk-imagine"></a>
-<a href="https://github.com/Curtion"><img src="https://github.com/Curtion.png" width="50" style="border-radius:50%" alt="Curtion"></a>
-<a href="https://github.com/amdoi7"><img src="https://github.com/amdoi7.png" width="50" style="border-radius:50%" alt="amdoi7"></a>
-<a href="https://github.com/jessica-engel"><img src="https://github.com/jessica-engel.png" width="50" style="border-radius:50%" alt="jessica-engel"></a>
-<a href="https://github.com/AlimuratYusup"><img src="https://github.com/AlimuratYusup.png" width="50" style="border-radius:50%" alt="AlimuratYusup"></a>
-<a href="https://github.com/thor-shuang"><img src="https://github.com/thor-shuang.png" width="50" style="border-radius:50%" alt="thor-shuang"></a>
-<a href="https://github.com/bishopmatthew"><img src="https://github.com/bishopmatthew.png" width="50" style="border-radius:50%" alt="bishopmatthew"></a>
-<a href="https://github.com/chaosky"><img src="https://github.com/chaosky.png" width="50" style="border-radius:50%" alt="chaosky"></a>
-<a href="https://github.com/iFwu"><img src="https://github.com/iFwu.png" width="50" style="border-radius:50%" alt="iFwu"></a>
-<a href="https://github.com/ildunari"><img src="https://github.com/ildunari.png" width="50" style="border-radius:50%" alt="ildunari"></a>
-<a href="https://github.com/aestilog"><img src="https://github.com/aestilog.png" width="50" style="border-radius:50%" alt="aestilog"></a>
-<a href="https://github.com/xarthurx"><img src="https://github.com/xarthurx.png" width="50" style="border-radius:50%" alt="xarthurx"></a>
-<a href="https://github.com/m0cun"><img src="https://github.com/m0cun.png" width="50" style="border-radius:50%" alt="m0cun"></a>
-<a href="https://github.com/bit3125"><img src="https://github.com/bit3125.png" width="50" style="border-radius:50%" alt="bit3125"></a>
-<a href="https://github.com/eekryuos"><img src="https://github.com/eekryuos.png" width="50" style="border-radius:50%" alt="eekryuos"></a>
-<a href="https://github.com/Bongseop-Kim"><img src="https://github.com/Bongseop-Kim.png" width="50" style="border-radius:50%" alt="Bongseop-Kim"></a>
-<a href="https://github.com/sophodex"><img src="https://github.com/sophodex.png" width="50" style="border-radius:50%" alt="sophodex"></a>
-<a href="https://github.com/PeterTianbuhan"><img src="https://github.com/PeterTianbuhan.png" width="50" style="border-radius:50%" alt="PeterTianbuhan"></a>
-<a href="https://github.com/dotned"><img src="https://github.com/dotned.png" width="50" style="border-radius:50%" alt="dotned"></a>
-<a href="https://github.com/ismferd"><img src="https://github.com/ismferd.png" width="50" style="border-radius:50%" alt="ismferd"></a>
-<a href="https://github.com/jblackburn21"><img src="https://github.com/jblackburn21.png" width="50" style="border-radius:50%" alt="jblackburn21"></a>
-<a href="https://github.com/jnhu76"><img src="https://github.com/jnhu76.png" width="50" style="border-radius:50%" alt="jnhu76"></a>
-<a href="https://github.com/jacobleft"><img src="https://github.com/jacobleft.png" width="50" style="border-radius:50%" alt="jacobleft"></a>
-<a href="https://github.com/rhysmcneill"><img src="https://github.com/rhysmcneill.png" width="50" style="border-radius:50%" alt="rhysmcneill"></a>
-<a href="https://github.com/druellan"><img src="https://github.com/druellan.png" width="50" style="border-radius:50%" alt="druellan"></a>
-<a href="https://github.com/12britz"><img src="https://github.com/12britz.png" width="50" style="border-radius:50%" alt="12britz"></a>
+感谢每一位让 skillshare 变得更好的人。完整名单在[英文版 README](README.md#contributors)。
 
 ---
 
-如果 skillshare 对你有帮助，不妨点个 ⭐ 支持一下
+如果 skillshare 对你有帮助，欢迎给个 ⭐
 
-## Star 历史
+## Star History
 
-[![Star 历史图](https://api.star-history.com/svg?repos=runkids/skillshare&type=date&legend=top-left)](https://www.star-history.com/#runkids/skillshare&type=date&legend=top-left)
+[![Star History Chart](https://star-history.dera.page/svg?repos=runkids/skillshare&type=date&legend=top-left)](https://star-history.dera.page/#runkids/skillshare&type=date&legend=top-left)
 
 ---
 
