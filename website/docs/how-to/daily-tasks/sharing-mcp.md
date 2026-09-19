@@ -197,6 +197,25 @@ It never overrides other conflicting native entries. In the MCP dashboard, each
 conflict offers an import action named after the Agent, such as **Import from
 cursor**, to adopt that version, or **Replace with source** to overwrite that entry.
 
+## Turn off a global server in one project
+
+A server in an Agent's global config loads in every project. To turn it off in
+one project, run this inside that project, using the name the server has in the
+Agent's global config:
+
+```bash
+skillshare mcp add company-docs --disabled --target opencode
+skillshare sync mcp
+```
+
+In the dashboard, open it from the project folder with `skillshare ui`, choose
+**Add server**, and pick **Off in this project**.
+
+This works with OpenCode, Kilo Code, and Pi with `pi-mcp-adapter`. Other Agents
+are refused. For Pi, add `--pi-extension pi-mcp-adapter`. The
+[command reference](../../reference/commands/mcp.md#turn-off-a-global-server-in-one-project)
+shows what is written for each Agent and why the others are not supported.
+
 ## Remove and restore
 
 ```bash

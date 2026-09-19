@@ -12,7 +12,11 @@ export interface MCPServer {
   env?: Record<string, MCPValue>;
   headers?: Record<string, MCPValue>;
   bearerToken?: { fromEnv: string };
+  /** Project mode: the whole entry, turning off a server the Agent's global config defines. */
+  disabled?: boolean;
 }
+/** Agents that merge a project entry over the global one by field, so a lone switch works. */
+export const mcpOffTargets: readonly string[] = ['opencode', 'kilocode', 'pi'];
 export interface MCPMutation {
   name?: string;
   server?: MCPServer;

@@ -49,6 +49,8 @@
   "mcp.importFromTarget": "從 target 匯入",
   "mcp.backupsButton": "備份",
   "mcp.transport": "傳輸方式",
+  "mcp.offHere": "在此專案關閉",
+  "mcp.offHint": "只在這個專案關掉 Agent 自己的全域設定裡定義的伺服器。名稱要和那邊的一樣。支援 OpenCode、Kilo Code，以及搭配 pi-mcp-adapter 的 Pi。",
   "mcp.command": "指令",
   "mcp.commandHint": "程式和它的參數，寫法跟在終端機輸入時一樣。",
   "mcp.environment": "環境變數",

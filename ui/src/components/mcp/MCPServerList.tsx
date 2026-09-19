@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react';
 import { Check, ChevronDown, Ellipsis, Plug } from 'lucide-react';
 import AgentIcon from '../AgentIcon';
 import { useT } from '../../i18n';
+import { mcpOffTargets } from '../../api/mcp';
 import { describeEndpoint, targetLabel, type MatrixRow } from './mcpView';
 
 const STACK = 6;
@@ -25,7 +26,9 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
   return (
     <div className="ss-list">
       {rows.map((row) => {
-        const selected = row.server ? targetsOf(row.name).filter((x) => targets.includes(x)) : [];
+        // A switch-only entry works in a few Agents, so it offers and counts only those.
+        const offered = row.server?.disabled ? targets.filter((x) => mcpOffTargets.includes(x)) : targets;
+        const selected = row.server ? targetsOf(row.name).filter((x) => offered.includes(x)) : [];
         const expanded = open.includes(row.name);
         const http = Boolean(row.server?.url);
         return (
@@ -39,7 +42,7 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
                   {!row.server && <span className="ss-st bad">{t('mcp.removedFromSource')}</span>}
                 </span>
                 {/* Transport and endpoint on one quiet line, the same shape as a plugin row. */}
-                <span className="truncate text-xs text-ink-3">{row.server ? <>{http ? 'http' : 'stdio'} · <span className="font-mono">{describeEndpoint(row.server)}</span></> : t('mcp.removedHint')}</span>
+                <span className="truncate text-xs text-ink-3">{!row.server ? t('mcp.removedHint') : row.server.disabled ? t('mcp.offHere') : <>{http ? 'http' : 'stdio'} · <span className="font-mono">{describeEndpoint(row.server)}</span></>}</span>
               </span>
               {row.server && (
                 <>
@@ -57,7 +60,7 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
                         ))}
                       </span>
                     )}
-                    {selected.length}/{targets.length}
+                    {selected.length}/{offered.length}
                     <ChevronDown size={14} className={expanded ? 'rotate-180' : ''} />
                   </button>
                   <button type="button" className="ss-ib" aria-label={t('mcp.moreActions', { name: row.name })} onClick={(e) => onMenu(e, row.name)}>
@@ -68,7 +71,7 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
             </div>
             {expanded && row.server && (
               <div className="ss-r fold !min-h-0 flex-wrap gap-x-6 gap-y-3.5 !py-3.5">
-                {targets.map((target) => {
+                {offered.map((target) => {
                   const on = selected.includes(target);
                   return (
                     <button

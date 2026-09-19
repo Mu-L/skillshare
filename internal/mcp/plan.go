@@ -124,6 +124,9 @@ func (s *Service) render(source *Source) (map[string]map[string]map[string]any, 
 		if len(selected) == 0 {
 			return nil, nil, fmt.Errorf("MCP %s has no targets; select at least one Agent", name)
 		}
+		if server.Disabled && s.ProjectRoot == "" {
+			return nil, nil, fmt.Errorf("MCP %s: disabled only applies in project mode, where it turns off a server from the Agent's global config; here, unselect the Agent instead", name)
+		}
 		for _, target := range selected {
 			if target == "pi" {
 				if s.ProjectRoot == "" && s.ConfigDirs["pi"] != "" && server.PiExtension == "pi-mcp-extension" {

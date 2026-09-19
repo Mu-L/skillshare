@@ -49,6 +49,7 @@ export const fieldDocs: Record<string, FieldDoc> = {
     type: 'string', example: 'url: https://example.com/mcp',
   },
   'mcp.servers.piExtension': { description: 'Required when targeting Pi. Choose the third-party package installed in Pi: pi-mcp-adapter or pi-mcp-extension. Sync only writes configuration.', type: 'string', example: 'piExtension: pi-mcp-adapter' },
+  'mcp.servers.disabled': { description: 'Project mode only. Turns off a server that the Agent\'s own global config defines, by writing only the switch. Use it alone with targets. Works with opencode, kilocode and pi with pi-mcp-adapter.', type: 'boolean', allowedValues: ['true'], example: 'disabled: true' },
   'mcp.servers.transport': {
     description: 'Optional transport. Inferred from command (stdio) or url (streamable-http).',
     type: 'string', allowedValues: ['stdio', 'streamable-http'], example: 'transport: stdio',

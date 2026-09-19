@@ -26,6 +26,9 @@ func (i mcpListItem) FilterValue() string { return i.name + " " + i.description 
 
 // Lists never expose arguments or credential values, including URL queries.
 func mcpConnectionSummary(server mcp.Server) string {
+	if server.Disabled {
+		return "off in this project"
+	}
 	if server.Command != "" {
 		return "stdio · " + server.Command
 	}

@@ -17,7 +17,7 @@ type mcpOptions struct {
 	name, url, from, file, revision, piExtension string
 	targets                                      []string
 	command                                      []string
-	sync, dryRun, json, replace, noTUI           bool
+	sync, dryRun, json, replace, noTUI, disabled bool
 }
 
 func parseMCPOptions(args []string) (mcpOptions, error) {
@@ -57,6 +57,8 @@ func parseMCPOptions(args []string) (mcpOptions, error) {
 			o.noTUI = true
 		case "--replace":
 			o.replace = true
+		case "--disabled":
+			o.disabled = true
 		default:
 			if strings.HasPrefix(a, "-") || o.name != "" {
 				return o, fmt.Errorf("unknown MCP argument %q", a)
@@ -229,6 +231,8 @@ Options:
   --from <client>    Native client ID (see mcp documentation for destinations)
   --file <path>      Native configuration file to import
   --url <url>        Streamable HTTP endpoint
+  --disabled        Project mode: turn off a server from the Agent's global config
+                    (add NAME --disabled --target opencode; opencode, kilocode, pi)
   --sync            Save and synchronize (non-interactive default: save only)
   --replace         Replace an existing source entry; on import, also rewrite
                     the imported client's entry when it differs

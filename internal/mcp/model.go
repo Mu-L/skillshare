@@ -77,6 +77,10 @@ type Server struct {
 	Headers     map[string]Value `yaml:"headers,omitempty" json:"headers,omitempty"`
 	BearerToken *Value           `yaml:"bearerToken,omitempty" json:"bearerToken,omitempty"`
 	Targets     []string         `yaml:"targets,omitempty" json:"targets,omitempty"`
+	// Disabled is the whole entry: it turns off, for one project, a server that the
+	// Agent's global config defines. Unselecting an Agent already covers a server
+	// Skillshare defines, so a disabled server carries no command or url.
+	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 }
 
 var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
@@ -131,6 +135,12 @@ func (s Server) Validate(name string) error {
 	}
 	if !serverName.MatchString(name) {
 		return fmt.Errorf("invalid MCP name %q: use letters, digits, dots, underscores or hyphens", name)
+	}
+	if s.Disabled {
+		if s.Command != "" || s.URL != "" || s.Transport != "" || s.BearerToken != nil || len(s.Args)+len(s.Env)+len(s.Headers) > 0 {
+			return fmt.Errorf("MCP %s: disabled turns off a server the Agent already has; leave out its command, url and settings", name)
+		}
+		return validateTargets(s.Targets)
 	}
 	if (s.Command == "") == (s.URL == "") {
 		return fmt.Errorf("MCP %s requires exactly one of command or url", name)

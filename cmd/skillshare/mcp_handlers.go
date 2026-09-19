@@ -12,13 +12,16 @@ import (
 )
 
 func runMCPAdd(service *mcp.Service, o mcpOptions) error {
-	if o.name == "" || o.url == "" && len(o.command) == 0 {
+	if o.disabled && (o.name == "" || o.url != "" || len(o.command) > 0) {
+		return fmt.Errorf("--disabled takes a name and --target only: it turns off a server the Agent already has")
+	}
+	if o.name == "" || o.url == "" && len(o.command) == 0 && !o.disabled {
 		if !mcpInteractive(o) {
 			return fmt.Errorf("provide a name and --url URL or -- command args; run without flags in a terminal for guided setup")
 		}
 		return mcpAddWizard(service, o)
 	}
-	server := mcp.Server{URL: o.url, Targets: o.targets, PiExtension: o.piExtension}
+	server := mcp.Server{URL: o.url, Targets: o.targets, PiExtension: o.piExtension, Disabled: o.disabled}
 	if len(o.command) > 0 {
 		server.Command, server.Args = o.command[0], o.command[1:]
 	}

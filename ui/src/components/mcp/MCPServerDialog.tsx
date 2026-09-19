@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, KeyRound, Link2, Plus, SquareTerminal, X } from 'lucide-react';
-import { mcpApi, mcpTargets, type MCPServer, type MCPValue } from '../../api/mcp';
+import { mcpApi, mcpOffTargets, mcpTargets, type MCPServer, type MCPValue } from '../../api/mcp';
+import { useAppContext } from '../../context/AppContext';
 import AgentIcon from '../AgentIcon';
 import Button from '../Button';
 import DialogShell from '../DialogShell';
@@ -80,7 +81,9 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
   const server = initial?.server;
   const [piExtension, setPiExtension] = useState(server?.piExtension ?? defaultPiExtension);
   const [name, setName] = useState(initial?.name ?? '');
+  const { isProjectMode } = useAppContext();
   const [http, setHttp] = useState(Boolean(server?.url));
+  const [off, setOff] = useState(Boolean(server?.disabled));
   const [command, setCommand] = useState(server?.command ? joinCommand([server.command, ...(server.args ?? [])]) : '');
   const [env, setEnv] = useState(() => envRows(server?.env));
   const [headers, setHeaders] = useState(() => envRows(server?.headers));
@@ -95,13 +98,14 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
   const taken = !initial && existingNames.includes(trimmed);
   const nameError = trimmed && !NAME.test(trimmed) ? t('mcp.nameHint') : taken ? t('mcp.nameTaken') : '';
   const words = splitCommand(command);
-  const canSave = Boolean(trimmed) && !nameError && targets.length > 0 && (http ? url.trim() !== '' : words.length > 0) && (!targets.includes('pi') || Boolean(piExtension)) && !saving;
+  const canSave = Boolean(trimmed) && !nameError && targets.length > 0 && (off || (http ? url.trim() !== '' : words.length > 0)) && (!targets.includes('pi') || off || Boolean(piExtension)) && !saving;
   const title = t(initial ? 'mcp.editServer' : 'mcp.addServer');
-  const visibleTargets = new Set([...availableTargets, ...targets]);
+  const visibleTargets = new Set([...availableTargets, ...targets].filter((x) => !off || mcpOffTargets.includes(x)));
 
   /** The server as the fields describe it right now. */
   const build = (): MCPServer => {
     const [cmd, ...args] = words;
+    if (off) return { disabled: true, ...(targets.includes('pi') && { piExtension: 'pi-mcp-adapter' }) };
     const next: MCPServer = http
       ? {
           url: url.trim(),
@@ -119,7 +123,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
     return next;
   };
   const ordered = mcpTargets.filter((x) => targets.includes(x));
-  const complete = Boolean(trimmed) && !nameError && ordered.length > 0 && (http ? url.trim() !== '' : words.length > 0);
+  const complete = Boolean(trimmed) && !nameError && ordered.length > 0 && (off || (http ? url.trim() !== '' : words.length > 0));
   const mutation = { name: trimmed, server: { ...build(), targets: ordered } };
 
   const save = async () => {
@@ -127,7 +131,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
     const next = build();
     // A server without its own targets keeps inheriting while the selection matches
     const inherited = !server?.targets && targets.length === defaultTargets.length && targets.every((x) => defaultTargets.includes(x));
-    if (!inherited) next.targets = ordered;
+    if (!inherited || off) next.targets = ordered;
     setSaving(true);
     setError('');
     try {
@@ -167,14 +171,18 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
             <span className="text-[13px] font-semibold">{t('mcp.transport')}</span>
             <SegmentedControl
               className="self-start"
-              value={http ? 'streamable-http' : 'stdio'}
-              onChange={(v) => setHttp(v === 'streamable-http')}
-              options={[{ value: 'stdio', label: 'stdio' }, { value: 'streamable-http', label: 'streamable-http' }]}
+              value={off ? 'off' : http ? 'streamable-http' : 'stdio'}
+              onChange={(v) => {
+                setOff(v === 'off');
+                if (v === 'off') setTargets(targets.filter((x) => mcpOffTargets.includes(x)));
+                else setHttp(v === 'streamable-http');
+              }}
+              options={[{ value: 'stdio', label: 'stdio' }, { value: 'streamable-http', label: 'streamable-http' }, ...(isProjectMode || off ? [{ value: 'off', label: t('mcp.offHere') }] : [])]}
             />
           </div>
         </div>
 
-        {http ? (
+        {off ? <div className="ss-note inf"><span className="flex-1">{t('mcp.offHint')}</span></div> : http ? (
           <>
             <div className="ss-fld">
               <label htmlFor="mcp-url">URL</label>
@@ -229,7 +237,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
             })}
           </div>
         </div>
-        {targets.includes('pi') && <PiExtensionField value={piExtension} onChange={setPiExtension} disabled={saving} />}
+        {targets.includes('pi') && !off && <PiExtensionField value={piExtension} onChange={setPiExtension} disabled={saving} />}
         {error && <div className="ss-note bad"><span className="flex-1">{error}</span></div>}
       </form>}
       {viewing ? <div className="df"><Button variant="secondary" onClick={() => setViewing(false)}>{t('common.back')}</Button></div> : <div className="df">

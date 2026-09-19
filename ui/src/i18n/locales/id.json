@@ -49,6 +49,8 @@
   "mcp.importFromTarget": "Impor dari target",
   "mcp.backupsButton": "Cadangan",
   "mcp.transport": "Transport",
+  "mcp.offHere": "Mati di proyek ini",
+  "mcp.offHint": "Mematikan, hanya untuk proyek ini, server yang didefinisikan di konfigurasi global Agent. Gunakan nama yang sama seperti di sana. Berfungsi dengan OpenCode, Kilo Code, dan Pi dengan pi-mcp-adapter.",
   "mcp.command": "Perintah",
   "mcp.commandHint": "Program dan argumennya, seperti yang Anda ketik di terminal.",
   "mcp.environment": "Environment",

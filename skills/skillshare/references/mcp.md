@@ -40,6 +40,26 @@ Skillshare does not manage stays unmanaged until imported. A differing one needs
 `mcp import --replace` or an explicit entry replacement; `--force` cannot bypass it.
 `sync --all` includes MCP as well as skills, agents and extras.
 
+## Turn off a global server in one project
+
+Project mode only. Writes just the switch, so the Agent keeps its global command or URL.
+NAME must be the name in the Agent's own global config.
+
+| Target | Supported | Written |
+|---|---|---|
+| `opencode`, `kilocode` | Yes | `{"enabled": false}` |
+| `pi` + `--pi-extension pi-mcp-adapter` | Yes | `{"disabled": true}` |
+| `pi` + `pi-mcp-extension`, all other targets | No | Error, nothing written |
+
+```bash
+skillshare mcp add NAME --disabled --target opencode -p --no-tui
+skillshare mcp add NAME --disabled --target pi --pi-extension pi-mcp-adapter -p --no-tui
+skillshare sync mcp -p
+```
+
+`--disabled` cannot be combined with `--url` or `-- command`. `piExtension` is only
+read for Pi. For a server Skillshare defines, unselect the Agent instead.
+
 ## Automation rules
 
 Use `--no-tui` or `--json` and provide all required inputs. Receiving clients use

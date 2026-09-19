@@ -31,6 +31,7 @@ skillshare sync --all
 | `--target CLIENT` | Receiving client; repeat to select multiple clients |
 | `--url URL` | Streamable HTTP endpoint for `add` |
 | `-- command args...` | Local executable and literal arguments for `add` |
+| `--disabled` | Project mode, with `add`: turn off a server the Agent's global config defines. See [below](#turn-off-a-global-server-in-one-project) |
 | `--from CLIENT` | Existing client to import, or the format of `--file` |
 | `--file PATH` | Native JSON/JSONC, TOML or Goose YAML; `.toml` defaults to Codex, other formats are detected from their MCP section; use `--from` for an explicit dialect |
 | `--sync` | Save and synchronize; noninteractive add/import/remove otherwise save only |
@@ -111,6 +112,7 @@ Skillshare config. The schema is `schemas/mcp.schema.json` in the repository.
 | `bearerToken` | `{fromEnv: VARIABLE}`; cannot coexist with an Authorization header |
 | `transport` | Optional `stdio` or `streamable-http`; inferred when omitted |
 | `targets` | Optional receiving clients; overrides `mcp.targets` |
+| `disabled` | `true` only, project mode only, and no other connection fields. See [below](#turn-off-a-global-server-in-one-project) |
 
 Client IDs are `claude`, `codex`, `cursor`, `vscode`, `opencode`, `kilocode`,
 `grok`, `antigravity`, `amp`, `claude-desktop`, `cline`, `copilot`, `factory`, `gemini`,
@@ -235,6 +237,82 @@ Global Claude, Codex, Grok and Copilot paths respect `CLAUDE_CONFIG_DIR`, `CODEX
 platforms using their `.config` paths.
 Project destinations are relative to the selected project root. Project trust,
 server approval and authentication remain the receiving Agent's responsibility.
+
+## Turn off a global server in one project
+
+An Agent reads its own global MCP file and the project's file together. A server
+defined in the global file therefore loads in every project. To stop it loading in
+one project, add an entry **with the same name the Agent's global file uses** and
+mark it `disabled`.
+
+This works with three clients only:
+
+| Client | Supported | What Skillshare writes to the project file |
+|---|---|---|
+| OpenCode | Yes | `opencode.json`: `"NAME": {"enabled": false}` |
+| Kilo Code | Yes | `kilo.jsonc`: `"NAME": {"enabled": false}` |
+| Pi with `pi-mcp-adapter` | Yes | `.pi/mcp.json`: `"NAME": {"disabled": true}` |
+| Pi with `pi-mcp-extension` | No | It has no disable field |
+| Every other client | No | Selecting one is an error; nothing is written |
+
+Only the switch is written. The Agent keeps the command or URL from its global
+entry. The other clients are refused because they replace the whole global entry
+with the project one, or have no project file, so a lone switch would break the
+server instead of turning it off.
+
+### OpenCode and Kilo Code
+
+```bash
+cd my-project
+skillshare mcp add company-docs --disabled --target opencode --target kilocode
+skillshare sync mcp
+```
+
+```yaml
+# .skillshare/config.yaml
+mcp:
+  servers:
+    company-docs:
+      disabled: true
+      targets: [opencode, kilocode]
+```
+
+### Pi
+
+Pi needs `piExtension`, as every Pi entry does, and it must be `pi-mcp-adapter`.
+OpenCode and Kilo Code ignore that field, so one entry can cover all three:
+
+```bash
+skillshare mcp add company-docs --disabled --target pi --pi-extension pi-mcp-adapter
+```
+
+```yaml
+mcp:
+  servers:
+    company-docs:
+      disabled: true
+      piExtension: pi-mcp-adapter
+      targets: [opencode, pi]
+```
+
+### Rules
+
+- **Project mode only.** Run it inside a project that has `.skillshare/config.yaml`
+  (created by `skillshare init -p`), or pass `-p`. In global mode it is refused.
+- **`disabled` stands alone.** The entry takes `targets` and, for Pi, `piExtension`.
+  Adding `command`, `url`, `env` or `headers` is an error.
+- **`targets` should be listed.** Without it the entry inherits `mcp.targets`, and
+  any unsupported client in that list is an error.
+- **The name must match.** Skillshare does not read the Agent's global file, so it
+  cannot check that a server with this name exists there. A name that matches
+  nothing is harmless: the Agent ignores it.
+- **To turn it back on**, remove the entry (`skillshare mcp remove company-docs`)
+  and sync. The switch is removed from the project file.
+- **A server Skillshare itself defines does not need this.** Unselect the Agent on
+  that server instead, and the next sync removes its entry.
+
+In the dashboard, this is the **Off in this project** choice beside `stdio` and
+`streamable-http` when adding a server. It appears only in project mode.
 
 ## Safety and limitations
 

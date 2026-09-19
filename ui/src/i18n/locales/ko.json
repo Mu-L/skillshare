@@ -49,6 +49,8 @@
   "mcp.importFromTarget": "target에서 가져오기",
   "mcp.backupsButton": "백업",
   "mcp.transport": "전송 방식",
+  "mcp.offHere": "이 프로젝트에서 끄기",
+  "mcp.offHint": "Agent의 전역 설정에 정의된 서버를 이 프로젝트에서만 끕니다. 이름은 그쪽과 똑같이 입력하세요. OpenCode, Kilo Code, pi-mcp-adapter를 쓰는 Pi에서 동작합니다.",
   "mcp.command": "명령",
   "mcp.commandHint": "터미널에 입력하듯 프로그램과 인수를 적으세요.",
   "mcp.environment": "환경 변수",

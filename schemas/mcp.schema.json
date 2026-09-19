@@ -36,11 +36,13 @@
         "env": {"type": "object", "additionalProperties": {"$ref": "#/$defs/value"}},
         "headers": {"type": "object", "additionalProperties": {"$ref": "#/$defs/value"}},
         "bearerToken": {"$ref": "#/$defs/reference"},
-        "targets": {"$ref": "#/$defs/targets"}
+        "targets": {"$ref": "#/$defs/targets"},
+        "disabled": {"const": true, "description": "Project mode only: turn off a server that the Agent's global config defines. Supported by opencode, kilocode and pi with pi-mcp-adapter."}
       },
       "oneOf": [
-        {"required": ["command"], "not": {"anyOf": [{"required": ["url"]}, {"required": ["headers"]}, {"required": ["bearerToken"]}]}, "properties": {"transport": {"const": "stdio"}}},
-        {"required": ["url"], "not": {"anyOf": [{"required": ["command"]}, {"required": ["args"]}, {"required": ["env"]}]}, "properties": {"transport": {"const": "streamable-http"}}}
+        {"required": ["disabled"], "not": {"anyOf": [{"required": ["command"]}, {"required": ["url"]}, {"required": ["args"]}, {"required": ["env"]}, {"required": ["headers"]}, {"required": ["bearerToken"]}, {"required": ["transport"]}]}},
+        {"required": ["command"], "not": {"anyOf": [{"required": ["disabled"]}, {"required": ["url"]}, {"required": ["headers"]}, {"required": ["bearerToken"]}]}, "properties": {"transport": {"const": "stdio"}}},
+        {"required": ["url"], "not": {"anyOf": [{"required": ["disabled"]}, {"required": ["command"]}, {"required": ["args"]}, {"required": ["env"]}]}, "properties": {"transport": {"const": "streamable-http"}}}
       ]
     }
   }

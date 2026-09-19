@@ -49,6 +49,8 @@
   "mcp.importFromTarget": "درون‌ریزی از یک target",
   "mcp.backupsButton": "پشتیبان‌ها",
   "mcp.transport": "انتقال",
+  "mcp.offHere": "خاموش در این پروژه",
+  "mcp.offHint": "سروری را که در تنظیمات سراسری خود Agent تعریف شده، فقط برای این پروژه خاموش می‌کند. همان نامی را که آنجا دارد به کار ببرید. با OpenCode، Kilo Code و Pi همراه pi-mcp-adapter کار می‌کند.",
   "mcp.command": "فرمان",
   "mcp.commandHint": "برنامه و آرگومان‌هایش، همان‌طور که در ترمینال می‌نویسید.",
   "mcp.environment": "محیط",

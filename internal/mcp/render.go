@@ -5,6 +5,19 @@ import (
 	"sort"
 )
 
+// renderDisabled writes only the switch. That works where the Agent merges its project
+// file over its global one field by field, so the global command or url survives. Agents
+// that replace the whole entry, or reject one without a transport, would break instead.
+func renderDisabled(target string, s Server) (map[string]any, error) {
+	switch {
+	case openCodeFormat(target):
+		return map[string]any{"enabled": false}, nil
+	case target == "pi" && s.PiExtension == "pi-mcp-adapter":
+		return map[string]any{"disabled": true}, nil
+	}
+	return nil, fmt.Errorf("%s cannot turn off a global server from a project file; disabled supports opencode, kilocode and pi with pi-mcp-adapter", target)
+}
+
 // Render converts a portable definition to a native entry without reading env.
 func Render(target string, s Server) (map[string]any, error) {
 	if !validTarget(target) {
@@ -12,6 +25,9 @@ func Render(target string, s Server) (map[string]any, error) {
 	}
 	if err := s.Validate("server"); err != nil {
 		return nil, err
+	}
+	if s.Disabled {
+		return renderDisabled(target, s)
 	}
 	if target == "pi" {
 		return renderPi(s)

@@ -49,6 +49,8 @@
   "mcp.importFromTarget": "Importar desde un target",
   "mcp.backupsButton": "Copias de seguridad",
   "mcp.transport": "Transporte",
+  "mcp.offHere": "Desactivado en este proyecto",
+  "mcp.offHint": "Desactiva, solo en este proyecto, un servidor definido en la configuración global del Agent. Usa el mismo nombre que tiene allí. Funciona con OpenCode, Kilo Code y Pi con pi-mcp-adapter.",
   "mcp.command": "Comando",
   "mcp.commandHint": "El programa y sus argumentos, tal como los escribirías en una terminal.",
   "mcp.environment": "Entorno",

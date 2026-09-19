@@ -49,6 +49,8 @@
   "mcp.importFromTarget": "target からインポート",
   "mcp.backupsButton": "バックアップ",
   "mcp.transport": "トランスポート",
+  "mcp.offHere": "このプロジェクトでオフ",
+  "mcp.offHint": "Agent 自身のグローバル設定にあるサーバーを、このプロジェクトだけでオフにします。名前はそちらと同じものを使ってください。OpenCode、Kilo Code、pi-mcp-adapter を使う Pi に対応しています。",
   "mcp.command": "コマンド",
   "mcp.commandHint": "ターミナルで入力するときと同じ、プログラムと引数。",
   "mcp.environment": "環境変数",
