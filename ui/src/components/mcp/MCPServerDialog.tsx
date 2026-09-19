@@ -227,7 +227,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
                   role="checkbox"
                   aria-checked={on}
                   className={`ss-tgl ${on ? 'on' : ''}`}
-                  onClick={() => setTargets(on ? targets.filter((x) => x !== target) : [...targets, target])}
+                  onClick={() => setTargets((prev) => (prev.includes(target) ? prev.filter((x) => x !== target) : [...prev, target]))}
                   disabled={saving || (target === 'claude-desktop' && http && !on)}
                 >
                   <span className="ic"><AgentIcon target={target} size={20} /><i><Check size={9} strokeWidth={3.5} /></i></span>

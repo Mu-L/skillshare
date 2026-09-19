@@ -1,6 +1,7 @@
 import ampColor from '@lobehub/icons-static-svg/icons/amp-color.svg?url';
 import antigravityColor from '@lobehub/icons-static-svg/icons/antigravity-color.svg?url';
 import baiduColor from '@lobehub/icons-static-svg/icons/baidu-color.svg?url';
+import claudeColor from '@lobehub/icons-static-svg/icons/claude-color.svg?url';
 import claudecodeColor from '@lobehub/icons-static-svg/icons/claudecode-color.svg?url';
 import codebuddyColor from '@lobehub/icons-static-svg/icons/codebuddy-color.svg?url';
 import codexColor from '@lobehub/icons-static-svg/icons/codex-color.svg?url';
@@ -46,6 +47,7 @@ const colored: Record<string, string> = {
   antigravity: antigravityColor,
   'antigravity-cli': antigravityColor,
   claude: claudecodeColor,
+  'claude-desktop': claudeColor,
   codearts: huaweiColor,
   codebuddy: codebuddyColor,
   codex: codexColor,

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useId } from 'react';
+import { useState, useRef, useEffect, useCallback, useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 
@@ -6,6 +6,7 @@ export interface SelectOption {
   value: string;
   label: string;
   description?: string;
+  icon?: ReactNode;
 }
 
 interface SelectProps {
@@ -43,6 +44,7 @@ export function Select({ label, value, onChange, options, className = '', size =
 
   const selected = options.find((o) => o.value === value);
   const selectedLabel = selected?.label ?? value;
+  const selectedIcon = selected?.icon;
   // Options with descriptions need room to read; widen the popup to ~15rem
   // (matching the dropdownWidth estimate below) so descriptions wrap nicely.
   const hasDescriptions = options.some((o) => o.description);
@@ -185,6 +187,7 @@ export function Select({ label, value, onChange, options, className = '', size =
       >
         <span className="flex items-center gap-1.5 min-w-0">
           {prefix && <span className="text-ink-3 shrink-0">{prefix}</span>}
+          {selectedIcon && <span className="flex shrink-0 items-center">{selectedIcon}</span>}
           <span className="truncate">{selectedLabel}</span>
         </span>
         <ChevronDown
@@ -225,6 +228,7 @@ export function Select({ label, value, onChange, options, className = '', size =
                 <span className="w-4 shrink-0 flex items-center justify-center">
                   {isSelected && <Check size={size === 'sm' ? 12 : 14} />}
                 </span>
+                {opt.icon && <span className="flex shrink-0 items-center">{opt.icon}</span>}
                 <span className="flex-1 min-w-0">
                   <span className={`block truncate ${isSelected ? 'font-medium' : ''}`}>
                     {opt.label}

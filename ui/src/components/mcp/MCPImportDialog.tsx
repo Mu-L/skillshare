@@ -147,7 +147,7 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
             <Select
               value={from}
               onChange={(v) => { setFrom(v); reset(); }}
-              options={availableTargets.map((x) => ({ value: x, label: `${targetLabel(x)}  ${shortenHome(paths[x])}` }))}
+              options={availableTargets.map((x) => ({ value: x, label: `${targetLabel(x)}  ${shortenHome(paths[x])}`, icon: <AgentIcon target={x} size={16} /> }))}
               disabled={saving}
             />
             <span className="hp">{t('mcp.fromTargetHint')}</span>
@@ -271,7 +271,7 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
                   role="checkbox"
                   aria-checked={on}
                   className={`ss-tgl ${on ? 'on' : ''}`}
-                  onClick={() => setTargets(on ? targets.filter((x) => x !== target) : [...targets, target])}
+                  onClick={() => setTargets((prev) => (prev.includes(target) ? prev.filter((x) => x !== target) : [...prev, target]))}
                   disabled={saving}
                 >
                   <span className="ic"><AgentIcon target={target} size={20} /><i><Check size={9} strokeWidth={3.5} /></i></span>
