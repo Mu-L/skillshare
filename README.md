@@ -341,6 +341,9 @@ Thanks to everyone who helped shape skillshare.
 <a href="https://github.com/cescox"><img src="https://github.com/cescox.png" width="50" style="border-radius:50%" alt="cescox"></a>
 <a href="https://github.com/hhdebb"><img src="https://github.com/hhdebb.png" width="50" style="border-radius:50%" alt="hhdebb"></a>
 <a href="https://github.com/Snurppa"><img src="https://github.com/Snurppa.png" width="50" style="border-radius:50%" alt="Snurppa"></a>
+<a href="https://github.com/s0undt3ch"><img src="https://github.com/s0undt3ch.png" width="50" style="border-radius:50%" alt="s0undt3ch"></a>
+<a href="https://github.com/danscheer"><img src="https://github.com/danscheer.png" width="50" style="border-radius:50%" alt="danscheer"></a>
+<a href="https://github.com/7zq12lvm-b"><img src="https://github.com/7zq12lvm-b.png" width="50" style="border-radius:50%" alt="7zq12lvm-b"></a>
 
 ---
 
