@@ -35,7 +35,10 @@ func (s *Service) nativePath(target string) (string, error) {
 			return filepath.Join(s.ProjectRoot, ".agents", "mcp_config.json"), nil
 		}
 		if target == "opencode" {
-			return openCodePath(s.ProjectRoot)
+			return jsoncPath("opencode", s.ProjectRoot)
+		}
+		if target == "kilocode" {
+			return jsoncPath("kilo", s.ProjectRoot, filepath.Join(s.ProjectRoot, ".kilo"))
 		}
 		if target == "grok" {
 			return filepath.Join(s.ProjectRoot, ".grok", "config.toml"), nil
@@ -66,12 +69,15 @@ func (s *Service) nativePath(target string) (string, error) {
 		return filepath.Join(home, ".gemini", "config", "mcp_config.json"), nil
 	case "grok":
 		return filepath.Join(home, ".grok", "config.toml"), nil
-	case "opencode":
+	case "opencode", "kilocode":
 		base := s.ConfigDirs["xdg"]
 		if base == "" {
 			base = filepath.Join(home, ".config")
 		}
-		return openCodePath(filepath.Join(base, "opencode"))
+		if target == "kilocode" {
+			return jsoncPath("kilo", filepath.Join(base, "kilo"))
+		}
+		return jsoncPath("opencode", filepath.Join(base, "opencode"))
 	case "claude":
 		return filepath.Join(home, ".claude.json"), nil
 	case "codex":
@@ -102,25 +108,33 @@ func (s *Service) nativePath(target string) (string, error) {
 	}
 }
 
-func openCodePath(dir string) (string, error) {
-	// Prefer the existing JSONC file; never create a second configuration that
-	// would mask entries in an existing file. Ambiguous pairs need consolidation.
+// jsoncPath resolves the config file of an OpenCode-format client. These clients read
+// <name>.json and <name>.jsonc from every dir and merge them, so an existing file is
+// reused wherever it is, and a second one is never created beside it: entries would
+// mask each other. More than one existing file needs consolidating by the user.
+func jsoncPath(name string, dirs ...string) (string, error) {
 	var existing []string
-	for _, name := range []string{"opencode.json", "opencode.jsonc"} {
-		path := filepath.Join(dir, name)
-		if _, err := os.Lstat(path); err == nil {
-			existing = append(existing, path)
-		} else if !os.IsNotExist(err) {
-			return "", err
+	for _, dir := range dirs {
+		for _, ext := range []string{".jsonc", ".json"} {
+			path := filepath.Join(dir, name+ext)
+			if _, err := os.Lstat(path); err == nil {
+				existing = append(existing, path)
+			} else if !os.IsNotExist(err) {
+				return "", err
+			}
 		}
 	}
 	if len(existing) > 1 {
-		return "", fmt.Errorf("both opencode.json and opencode.jsonc exist in %s; consolidate them before MCP sync", dir)
+		return "", fmt.Errorf("%s all exist; consolidate them into one file before MCP sync", strings.Join(existing, " and "))
 	}
 	if len(existing) == 1 {
 		return existing[0], nil
 	}
-	return filepath.Join(dir, "opencode.json"), nil
+	// OpenCode's docs create opencode.json, Kilo's create kilo.jsonc.
+	if name == "kilo" {
+		return filepath.Join(dirs[0], "kilo.jsonc"), nil
+	}
+	return filepath.Join(dirs[0], name+".json"), nil
 }
 
 func (s *Service) statePath() string { return filepath.Join(s.StateDir, "mcp", "state.json") }

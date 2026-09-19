@@ -36,7 +36,7 @@ func Render(target string, s Server) (map[string]any, error) {
 		if v.FromEnv == "" {
 			return v.Literal
 		}
-		if target == "opencode" {
+		if openCodeFormat(target) {
 			return "{env:" + v.FromEnv + "}"
 		}
 		if target == "claude" || target == "grok" {
@@ -71,7 +71,7 @@ func Render(target string, s Server) (map[string]any, error) {
 			sort.Strings(forwarded)
 			out["env_vars"] = forwarded
 		}
-		if target == "opencode" {
+		if openCodeFormat(target) {
 			out["type"] = "local"
 			out["command"] = append([]string{s.Command}, s.Args...)
 			delete(out, "args")
@@ -86,7 +86,7 @@ func Render(target string, s Server) (map[string]any, error) {
 			out["serverUrl"] = s.URL
 			delete(out, "url")
 		}
-		if target == "opencode" {
+		if openCodeFormat(target) {
 			out["type"] = "remote"
 		}
 		if target == "claude" || target == "vscode" {

@@ -181,8 +181,8 @@ targets:
       project: ".junie/skills"
   - name: kilocode
     skills:
-      global: "~/.kilocode/skills"
-      project: ".kilocode/skills"
+      global: "~/.kilo/skills"
+      project: ".kilo/skills"
     aliases: [kilo]
   - name: kimi
     skills:

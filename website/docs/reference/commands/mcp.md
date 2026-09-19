@@ -112,8 +112,8 @@ Skillshare config. The schema is `schemas/mcp.schema.json` in the repository.
 | `transport` | Optional `stdio` or `streamable-http`; inferred when omitted |
 | `targets` | Optional receiving clients; overrides `mcp.targets` |
 
-Client IDs are `claude`, `codex`, `cursor`, `vscode`, `opencode`, `grok`,
-`antigravity`, `amp`, `claude-desktop`, `cline`, `copilot`, `factory`, `gemini`,
+Client IDs are `claude`, `codex`, `cursor`, `vscode`, `opencode`, `kilocode`,
+`grok`, `antigravity`, `amp`, `claude-desktop`, `cline`, `copilot`, `factory`, `gemini`,
 `goose`, `junie`, `kiro`, `lmstudio`, `warp`, `windsurf`, and `pi`.
 `grok` means the official xAI Grok CLI. Server names use letters,
 digits, dots, underscores and hyphens. A server must select at least one client
@@ -132,6 +132,7 @@ Names such as `company-docs` work across all supported clients.
 | Cursor | `~/.cursor/mcp.json` | `.cursor/mcp.json` | `mcpServers` |
 | VS Code | User `mcp.json` (below) | `.vscode/mcp.json` | `servers` |
 | OpenCode | `~/.config/opencode/opencode.json` | `opencode.json` | `mcp` |
+| Kilo Code | `~/.config/kilo/kilo.jsonc` | `kilo.jsonc` | `mcp` |
 | Grok CLI | `~/.grok/config.toml` | `.grok/config.toml` | `mcp_servers` |
 | Antigravity (AGY) | `~/.gemini/config/mcp_config.json` | `.agents/mcp_config.json` | `mcpServers` |
 | [Amp](https://ampcode.com/docs/customize/mcp) | `~/.config/amp/settings.json` | `.amp/settings.json` | `amp.mcpServers` (literal key) |
@@ -208,7 +209,14 @@ the selected directory, consolidate them before syncing. Custom OpenCode config
 paths, directory overrides, inline config and inherited ancestor files are not
 managed. They may override the selected destination in OpenCode.
 
-OpenCode uses `local`/`remote` types and `{env:VARIABLE}` references; Grok uses
+Kilo Code uses the same format as OpenCode. It reads `kilo.jsonc` and `kilo.json`
+from the project root and from `.kilo/`, and merges them, so Skillshare writes to
+whichever one already exists and creates `kilo.jsonc` only when there is none. If
+more than one exists, consolidate them before syncing. `KILO_CONFIG`,
+`KILO_CONFIG_DIR` and the `mcp_settings.json` of the older VS Code extension are
+not managed.
+
+OpenCode and Kilo Code use `local`/`remote` types and `{env:VARIABLE}` references; Grok uses
 `${VARIABLE}` references. Skillshare converts these automatically. Claude's
 `"type": "streamable-http"` imports as HTTP. Disabled connections block import.
 Other native options without a portable equivalent, such as Codex

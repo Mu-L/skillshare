@@ -158,7 +158,7 @@ func Import(target string, data []byte, singleName string) ([]Candidate, error) 
 				delete(entry, key)
 			}
 		}
-		if target == "opencode" {
+		if openCodeFormat(target) {
 			if command, exists := entry["command"]; exists {
 				var words []string
 				data, _ := json.Marshal(command)
@@ -235,7 +235,7 @@ func Import(target string, data []byte, singleName string) ([]Candidate, error) 
 					c.Problems = append(c.Problems, key+" values must be strings")
 					continue
 				}
-				if target == "opencode" {
+				if openCodeFormat(target) {
 					prefix := ""
 					candidate := value
 					if strings.EqualFold(k, "Authorization") && strings.HasPrefix(value, "Bearer ") {

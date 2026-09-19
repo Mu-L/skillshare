@@ -23,7 +23,6 @@ import githubcopilotMono from '@lobehub/icons-static-svg/icons/githubcopilot.svg
 import gooseMono from '@lobehub/icons-static-svg/icons/goose.svg?url';
 import grokMono from '@lobehub/icons-static-svg/icons/grok.svg?url';
 import ibmMono from '@lobehub/icons-static-svg/icons/ibm.svg?url';
-import kilocodeMono from '@lobehub/icons-static-svg/icons/kilocode.svg?url';
 import kimiMono from '@lobehub/icons-static-svg/icons/kimi.svg?url';
 import nousresearchMono from '@lobehub/icons-static-svg/icons/nousresearch.svg?url';
 import opencodeMono from '@lobehub/icons-static-svg/icons/opencode.svg?url';
@@ -33,6 +32,8 @@ import qoderMono from '@lobehub/icons-static-svg/icons/qoder.svg?url';
 import roocodeMono from '@lobehub/icons-static-svg/icons/roocode.svg?url';
 import windsurfMono from '@lobehub/icons-static-svg/icons/windsurf.svg?url';
 // Not in lobehub; from simple-icons (CC0).
+import kilocodeColor from '../assets/agents/kilocode-color.svg?url';
+import ompColor from '../assets/agents/omp-color.svg?url';
 import warpMono from '../assets/agents/warp.svg?url';
 import zedMono from '../assets/agents/zed.svg?url';
 
@@ -52,7 +53,9 @@ const colored: Record<string, string> = {
   devin: devinColor,
   gemini: geminiColor,
   junie: junieColor,
+  kilocode: kilocodeColor,
   kiro: kiroColor,
+  omp: ompColor,
   openclaw: openclawColor,
   qwen: qwenColor,
   replit: replitColor,
@@ -73,7 +76,6 @@ const mono: Record<string, string> = {
   goose: gooseMono,
   grok: grokMono,
   hermes: nousresearchMono,
-  kilocode: kilocodeMono,
   kimi: kimiMono,
   opencode: opencodeMono,
   openhands: openhandsMono,

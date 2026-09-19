@@ -14,8 +14,8 @@ skillshare mcp restore BACKUP_ID --dry-run --json     # Preview entry-level rest
 skillshare mcp restore BACKUP_ID --no-tui            # Apply restoration; source stays unchanged
 ```
 
-MCP supports 20 clients including Claude Code, Codex, Cursor, VS Code, OpenCode,
-Grok, Antigravity, Amp, Cline, Copilot CLI, Factory, Gemini CLI, Goose, Junie,
+MCP supports 21 clients including Claude Code, Codex, Cursor, VS Code, OpenCode,
+Kilo Code, Grok, Antigravity, Amp, Cline, Copilot CLI, Factory, Gemini CLI, Goose, Junie,
 Kiro, LM Studio, Warp, Windsurf, Claude Desktop and Pi (with a third-party MCP extension). Client scope and transport
 support vary; see the MCP command reference for native destinations and limits.
 Interactive `mcp` provides search, details, add/edit/remove, sync and backup

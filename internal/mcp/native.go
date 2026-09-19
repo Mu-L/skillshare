@@ -32,7 +32,7 @@ func nativeKey(target string) string {
 	if isTOMLTarget(target) {
 		return "mcp_servers"
 	}
-	if target == "opencode" {
+	if openCodeFormat(target) {
 		return "mcp"
 	}
 	if target == "vscode" {
@@ -284,6 +284,7 @@ var managedFields = map[string][]string{
 	"cursor":      {"type", "command", "args", "env", "url", "headers", "enabled", "disabled"},
 	"vscode":      {"type", "command", "args", "env", "url", "headers", "enabled", "disabled"},
 	"opencode":    {"type", "command", "environment", "url", "headers", "enabled", "disabled"},
+	"kilocode":    {"type", "command", "environment", "url", "headers", "enabled", "disabled"},
 	"codex":       {"command", "args", "env", "env_vars", "url", "http_headers", "env_http_headers", "bearer_token_env_var", "enabled", "disabled"},
 	"grok":        {"command", "args", "env", "url", "headers", "enabled", "disabled"},
 }

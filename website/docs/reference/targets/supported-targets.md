@@ -128,7 +128,7 @@ These are auto-detected during `skillshare init`:
 <tr id="target-hermes"><td>hermes</td><td><code>&#126;/.hermes/skills</code></td><td><code>.hermes/skills</code></td></tr>
 <tr id="target-iflow"><td>iflow</td><td><code>&#126;/.iflow/skills</code></td><td><code>.iflow/skills</code></td></tr>
 <tr id="target-junie"><td>junie</td><td><code>&#126;/.junie/skills</code></td><td><code>.junie/skills</code></td></tr>
-<tr id="target-kilocode"><td>kilocode</td><td><code>&#126;/.kilocode/skills</code></td><td><code>.kilocode/skills</code></td></tr>
+<tr id="target-kilocode"><td>kilocode</td><td><code>&#126;/.kilo/skills</code></td><td><code>.kilo/skills</code></td></tr>
 <tr id="target-kimi"><td>kimi</td><td><code>&#126;/.config/agents/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-kiro"><td>kiro</td><td><code>&#126;/.kiro/skills</code></td><td><code>.kiro/skills</code></td></tr>
 <tr id="target-kode"><td>kode</td><td><code>&#126;/.kode/skills</code></td><td><code>.kode/skills</code></td></tr>

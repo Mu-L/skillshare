@@ -1,6 +1,6 @@
 import { apiFetch } from './client';
 
-export const mcpTargets = ['claude', 'codex', 'cursor', 'vscode', 'opencode', 'grok', 'antigravity', 'amp', 'claude-desktop', 'cline', 'copilot', 'factory', 'gemini', 'goose', 'junie', 'kiro', 'lmstudio', 'warp', 'windsurf', 'pi'] as const;
+export const mcpTargets = ['claude', 'codex', 'cursor', 'vscode', 'opencode', 'kilocode', 'grok', 'antigravity', 'amp', 'claude-desktop', 'cline', 'copilot', 'factory', 'gemini', 'goose', 'junie', 'kiro', 'lmstudio', 'warp', 'windsurf', 'pi'] as const;
 export type MCPValue = string | { fromEnv: string };
 export interface MCPServer {
   piExtension?: string;

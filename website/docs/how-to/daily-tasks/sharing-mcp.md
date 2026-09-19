@@ -9,7 +9,7 @@ stores the connection settings once and writes each supported Agent's native
 configuration. It does not run a gateway or keep a background server alive.
 
 Supported MCP clients include Claude Code, Codex, Cursor, VS Code, OpenCode,
-Grok CLI, Antigravity (AGY), Amp, Claude Desktop, Cline, Copilot CLI, Factory,
+Kilo Code, Grok CLI, Antigravity (AGY), Amp, Claude Desktop, Cline, Copilot CLI, Factory,
 Gemini CLI, Goose, Junie, Kiro, LM Studio, Warp and Windsurf. Pi works through a
 third-party MCP extension that you
 [choose explicitly](/docs/reference/commands/mcp#pi-choose-your-mcp-extension). See the

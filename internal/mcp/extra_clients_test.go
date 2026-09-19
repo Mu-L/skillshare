@@ -8,7 +8,7 @@ import (
 )
 
 func TestAdditionalClients(t *testing.T) {
-	for _, target := range []string{"opencode", "grok"} {
+	for _, target := range []string{"opencode", "kilocode", "grok"} {
 		t.Run(target, func(t *testing.T) {
 			server := Server{Command: "tool", Args: []string{"serve"}, Env: map[string]Value{"TOKEN": {FromEnv: "API_TOKEN"}}}
 			entry, err := Render(target, server)
@@ -16,7 +16,7 @@ func TestAdditionalClients(t *testing.T) {
 				t.Fatal(err)
 			}
 			raw := []byte("# keep\nmodel = 'example'\n")
-			if target == "opencode" {
+			if openCodeFormat(target) {
 				raw = []byte("{\n// keep\n\"model\":\"example\"\n}\n")
 			}
 			native, err := ParseNative(target, raw)
@@ -73,6 +73,35 @@ func TestOpenCodeJSONCPath(t *testing.T) {
 	got, err := s.nativePath("opencode")
 	if err != nil || got != path {
 		t.Fatalf("path %q: %v", got, err)
+	}
+}
+
+// Kilo merges every config file it finds, so an existing file is reused wherever it
+// is, a new one goes where Kilo's docs put it, and two candidates are ambiguous.
+func TestKiloCodePath(t *testing.T) {
+	s := testService(t)
+	if got, err := s.nativePath("kilocode"); err != nil || got != filepath.Join(s.Home, ".config", "kilo", "kilo.jsonc") {
+		t.Fatalf("global %q: %v", got, err)
+	}
+	s.ProjectRoot = t.TempDir()
+	if got, err := s.nativePath("kilocode"); err != nil || got != filepath.Join(s.ProjectRoot, "kilo.jsonc") {
+		t.Fatalf("new project file %q: %v", got, err)
+	}
+	nested := filepath.Join(s.ProjectRoot, ".kilo", "kilo.jsonc")
+	if err := os.MkdirAll(filepath.Dir(nested), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(nested, []byte("{}"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.nativePath("kilocode"); err != nil || got != nested {
+		t.Fatalf("existing .kilo file %q: %v", got, err)
+	}
+	if err := os.WriteFile(filepath.Join(s.ProjectRoot, "kilo.json"), []byte("{}"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.nativePath("kilocode"); err == nil || !strings.Contains(err.Error(), "consolidate") {
+		t.Fatalf("two files must be refused: %v", err)
 	}
 }
 

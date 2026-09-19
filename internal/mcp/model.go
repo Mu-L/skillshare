@@ -83,11 +83,15 @@ var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 var serverName = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$`)
 
 // Targets are MCP clients, independently of installed skill targets.
-var Targets = []string{"claude", "codex", "cursor", "vscode", "opencode", "grok", "antigravity", "amp", "claude-desktop", "cline", "copilot", "factory", "gemini", "goose", "junie", "kiro", "lmstudio", "warp", "windsurf", "pi"}
+var Targets = []string{"claude", "codex", "cursor", "vscode", "opencode", "kilocode", "grok", "antigravity", "amp", "claude-desktop", "cline", "copilot", "factory", "gemini", "goose", "junie", "kiro", "lmstudio", "warp", "windsurf", "pi"}
 
 func hasInterpolation(value string) bool {
 	return strings.Contains(value, "${") || strings.Contains(value, "{env:") || strings.Contains(value, "{file:")
 }
+
+// openCodeFormat reports the clients that read OpenCode's config shape: Kilo Code is an
+// OpenCode fork and keeps the same "mcp" section, entry fields and {env:} references.
+func openCodeFormat(target string) bool { return target == "opencode" || target == "kilocode" }
 
 func validTarget(target string) bool {
 	for _, name := range Targets {
