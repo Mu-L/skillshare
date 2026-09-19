@@ -10,7 +10,9 @@ _skillshare() {
         'uninstall:Remove skills/agents from source directory'
         'list:List installed skills'
         'search:Search or browse GitHub for skills'
-        'sync:Sync skills/agents/extras to targets'
+        'sync:Sync skills/agents/extras/MCP to targets'
+        'plugin:Manage complete native plugins'
+        'mcp:Manage MCP connections'
         'status:Show status of all targets'
         'diff:Show differences between source and targets'
         'backup:Create backup of targets'
@@ -86,6 +88,39 @@ _skillshare() {
                         '--help[Show help]' \
                         '-h[Show help]'
                     ;;
+                mcp)
+                    _arguments \
+                        '1:command:(add edit import list remove restore)' \
+                        '--pi-extension[MCP extension installed in Pi]:extension:(pi-mcp-adapter pi-mcp-extension)' \
+                        '--target[Receiving client]:target:' \
+                        '--from[Import client]:target:' \
+                        '--url[MCP endpoint]:url:' \
+                        '--file[Import file]:file:_files' \
+                        '--sync[Sync after saving]' \
+                        '--replace[Replace an existing entry]' \
+                        '--revision[Preview revision]:revision:' \
+                        '--dry-run[Preview changes]' \
+                        '--json[JSON output]' \
+                        '--no-tui[Disable interactive menus]' \
+                        $global_flags \
+                        '--help[Show help]'
+                    ;;
+                plugin)
+                    _arguments \
+                        '1:command:(add discover import list inspect sync check update enable disable remove)' \
+                        '--target[Receiving target]:target:(claude codex cursor antigravity agy antigravity-cli copilot grok kimi hermes devin pi opencode)' \
+                        '--from[Import target]:target:(claude codex cursor antigravity agy antigravity-cli copilot grok kimi hermes devin pi opencode)' \
+                        '--plugin[Source plugin]:name:' \
+                        '--name[Logical package name]:name:' \
+                        '--source-ref[Git branch, tag or commit]:ref:' \
+                        '--entry[OpenCode entry path]:path:' \
+                        '--revision[Preview revision]:revision:' \
+                        '--dry-run[Preview changes]' \
+                        '--json[JSON output]' \
+                        '--no-tui[Disable interactive menus]' \
+                        $global_flags \
+                        '--help[Show help]'
+                    ;;
                 install)
                     _arguments \
                         '1:source:_files' \
@@ -145,6 +180,7 @@ _skillshare() {
                         '--no-tui[Skip interactive TUI]' \
                         '--type[Filter by type]:type:(tracked local github)' \
                         '-t[Filter by type]:type:(tracked local github)' \
+                        '--status[Filter by status]:status:(all enabled disabled)' \
                         '--sort[Sort by]:order:(name newest oldest)' \
                         '-s[Sort by]:order:(name newest oldest)' \
                         '--all[List skills + agents]' \
@@ -154,7 +190,7 @@ _skillshare() {
                     ;;
                 sync)
                     _arguments \
-                        '1:scope:(agents extras)' \
+                        '1:scope:(agents extras mcp plugins)' \
                         '--all[Sync skills + agents + extras]' \
                         '--dry-run[Preview changes]' \
                         '-n[Preview changes]' \

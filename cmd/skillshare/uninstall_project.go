@@ -18,6 +18,7 @@ import (
 // within a project's .skillshare/skills directory.
 func resolveProjectUninstallTarget(skillName, sourceDir string) (*uninstallTarget, error) {
 	skillName = strings.TrimRight(strings.TrimSpace(skillName), `/\`)
+	skillName = normalizeUninstallName(skillName)
 	if skillName == "" || skillName == "." {
 		return nil, fmt.Errorf("invalid skill name: %q", skillName)
 	}
@@ -80,10 +81,8 @@ func cmdUninstallProject(args []string, root string) error {
 		return err
 	}
 
-	if !projectConfigExists(root) {
-		if err := performProjectInit(root, projectInitOptions{}); err != nil {
-			return err
-		}
+	if err := ensureProjectConfig(root); err != nil {
+		return err
 	}
 
 	projectCfg, loadErr := config.LoadProject(root)

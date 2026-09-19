@@ -2,16 +2,19 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/runkids/skillshare/main/schemas/project-config.schema.json",
   "title": "Skillshare Project Configuration",
-  "description": "Project-level configuration for skillshare. Location: .skillshare/config.yaml",
+  "description": "Project-level configuration for skillshare. Location: .skillshare/config.yaml, or skillshare/config.yaml for a visible project directory.",
   "type": "object",
   "required": ["targets"],
   "additionalProperties": false,
+  "allOf": [{"not": {"required": ["sources", "mcp"], "properties": {"sources": {"required": ["mcp"]}, "mcp": {"required": ["servers"]}}}}],
   "properties": {
+    "mcp": {"$ref": "mcp.schema.json#/$defs/configuration"},
     "sources": {
       "type": "object",
-      "description": "Custom source directories for project resources. Each key overrides the default .skillshare/{key}/ path. Relative paths resolve from the project root.",
+      "description": "Custom source directories for project resources. Each key overrides the default <project-dir>/{key}/ path. Relative paths resolve from the project root.",
       "additionalProperties": false,
       "properties": {
+        "mcp": {"type": "string", "minLength": 1, "description": "External MCP YAML file. Relative to this config.yaml (unlike directory sources); mutually exclusive with mcp.servers."},
         "skills": {
           "type": "string",
           "description": "Custom skills source directory. Default: .skillshare/skills/",
@@ -63,6 +66,15 @@
           { "name": "next-best-practices", "source": "vercel-labs/next-skills/next-best-practices", "group": "frontend" }
         ]
       ]
+    },
+    "ignore": {
+      "type": "array",
+      "description": "Glob patterns for artifact files to skip during copy-mode sync.",
+      "items": {
+        "type": "string"
+      },
+      "default": [".DS_Store", ".git/", "__pycache__/"],
+      "examples": [[".DS_Store", ".git/", "__pycache__/", "node_modules/"]]
     },
     "audit": {
       "$ref": "#/$defs/auditConfig"

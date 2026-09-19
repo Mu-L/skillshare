@@ -6,6 +6,10 @@ sidebar_position: 2
 
 Push skills from source to all targets.
 
+Use `skillshare sync mcp` for MCP connection settings, or `skillshare sync --all`
+to include skills, agents, extras and MCP. MCP synchronization uses entry
+ownership and conflict checks rather than skill symlinks. See [mcp](/docs/reference/commands/mcp).
+
 :::info Why is sync a separate command?
 Operations like `install` and `uninstall` only modify source — sync propagates to targets. This lets you batch changes, preview with `--dry-run`, and control when targets update. See [Why Sync is a Separate Step](/docs/understand/source-and-targets#why-sync-is-a-separate-step).
 :::
@@ -87,7 +91,7 @@ Push skills from source to all targets.
 ```bash
 skillshare sync              # Sync skills to all targets
 skillshare sync agents       # Sync agents only
-skillshare sync --all        # Sync skills + agents + extras
+skillshare sync --all        # Sync skills + agents + extras + MCP
 skillshare sync --dry-run    # Preview changes
 skillshare sync -n           # Short form
 skillshare sync --force      # Overwrite all managed skills
@@ -96,7 +100,7 @@ skillshare sync -f           # Short form
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--all` | | Also sync agents and extras after skills |
+| `--all` | | Also sync agents, extras, and MCP after skills (excludes plugins) |
 | `--dry-run` | `-n` | Preview changes without writing |
 | `--force` | `-f` | Overwrite all managed entries regardless of checksum (copy mode) or replace existing directories with symlinks (merge mode) |
 | `--json` | | Output as JSON |
@@ -283,7 +287,7 @@ skillshare target <name> --mode copy
 skillshare sync
 ```
 
-When `sync` prints a compatibility hint, the example target is chosen in this priority:
+The compatibility hint is printed by [`doctor`](./doctor.md), not by `sync`. Its example target is chosen in this priority:
 `cursor` → `antigravity` → `copilot` → `opencode`.
 If none of these targets exist (or they already run `copy`), no compatibility hint is shown.
 
@@ -443,6 +447,8 @@ Backups are created **automatically** before `sync` and `target remove`.
 
 Location: `~/.local/share/skillshare/backups/<timestamp>/`
 
+A snapshot captures only **local** target content. Merge-mode symlinks are skipped — they point into your source and `sync` recreates them — so snapshots stay small no matter how large your skills are. Retention is applied automatically after each sync. See [What Gets Backed Up](/docs/reference/commands/backup#what-gets-backed-up) and [Backups & Disk Space](/docs/reference/commands/backup#backups--disk-space).
+
 ### Manual Backup
 
 ```bash
@@ -492,12 +498,12 @@ flowchart TD
 
 ## Agent Sync {#agent-sync}
 
-Agents are synced separately from skills. Use `sync agents` for agent-only sync, or `sync --all` to sync everything:
+Agents are synced separately from skills. Use `sync agents` for agent-only sync, or `sync --all` to include skills, agents, extras, and MCP:
 
 ```bash
 skillshare sync              # Sync skills only (default)
 skillshare sync agents       # Sync agents only
-skillshare sync --all        # Sync skills + agents + extras
+skillshare sync --all        # Sync skills + agents + extras + MCP
 ```
 
 Agent sync supports all three modes (merge, copy, symlink), matching the target's configured mode. Only targets with an `agents` path definition receive agent syncs — currently Claude, Cursor, OpenCode, and Augment. See [Agents — Supported Targets](/docs/understand/agents#supported-targets) for the full list.
@@ -505,6 +511,24 @@ Agent sync supports all three modes (merge, copy, symlink), matching the target'
 Orphan cleanup, `.agentignore` filtering, and per-target include/exclude filters all work the same way as for skills.
 
 ---
+
+## Sync Plugins
+
+`sync plugins [name]` is an alias for [`plugin sync`](./plugin.md). Plugins are
+**excluded from `sync --all`** and use native installation operations instead of
+skill sync modes.
+
+```bash
+skillshare sync plugins --dry-run --json
+skillshare sync plugins demo --target claude --no-tui
+```
+
+`plugin enable` and `plugin disable` save target selection only. The next plugin
+sync installs selected bindings and uninstalls deselected ones while keeping their
+definitions. Unmanaged plugins are unaffected. Plugin sync accepts `--target`,
+`--dry-run`, `--json`, `--no-tui`, `--revision`, and mode flags; ordinary sync options
+such as `--force`, `--quiet`, and `--all` do not apply. See [plugin](./plugin.md) for
+native client requirements, project scope, and partial-failure recovery.
 
 ## Sync Extras {#sync-extras}
 
@@ -514,7 +538,7 @@ Sync non-skill resources (rules, commands, prompts, etc.) to arbitrary directori
 skillshare sync extras            # Sync all configured extras
 skillshare sync extras --dry-run  # Preview changes
 skillshare sync extras --force    # Overwrite conflicting files
-skillshare sync --all             # Sync skills + extras in one command
+skillshare sync --all             # Sync skills + agents + extras + MCP
 ```
 
 | Flag | Short | Description |
@@ -523,7 +547,7 @@ skillshare sync --all             # Sync skills + extras in one command
 | `--force` | `-f` | Overwrite conflicting files at target |
 
 :::info Both modes supported
-`sync extras` works in both global and project mode. Use `sync --all` to sync skills + extras together, or `sync extras` to sync extras only. In project mode, extras source is `.skillshare/extras/<name>/`.
+`sync extras` works in both global and project mode. Use `sync --all` to sync skills, agents, extras, and MCP together, or `sync extras` to sync extras only. In project mode, extras source is `.skillshare/extras/<name>/`.
 :::
 
 ### Configuration

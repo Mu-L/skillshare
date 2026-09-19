@@ -51,12 +51,15 @@ func handleUpdate(source *Source, destPath string, result *InstallResult, opts I
 		if !opts.SkipAudit {
 			afterHash, _ := getGitFullHash(destPath)
 			if afterHash != beforeHash {
-				scanResult, err := auditGateFailClosed(destPath, beforeHash, threshold, opts.AuditProjectRoot)
+				scanResult, err := auditGateFailClosed(opts.SourceDir, destPath, beforeHash, threshold, opts.AuditProjectRoot, opts.AuditOverride)
 				if err != nil {
 					return nil, err
 				}
 				result.AuditRiskScore = scanResult.RiskScore
 				result.AuditRiskLabel = scanResult.RiskLabel
+				if opts.AuditOverride {
+					result.Warnings = append(result.Warnings, recordAcceptedWarning(opts.SourceDir, destPath, scanResult, threshold)...)
+				}
 			}
 		} else {
 			result.AuditSkipped = true
@@ -103,17 +106,20 @@ func handleUpdate(source *Source, destPath string, result *InstallResult, opts I
 
 	// Install to temp location first.
 	// Force is NOT set: tempDest is fresh, so no overwrite needed.
-	// This lets auditInstalledSkill properly gate on findings at/above threshold,
-	// consistent with auditGateAfterPull for tracked repos.
+	// AuditOverride is forwarded so --force can still override the audit gate
+	// without granting overwrite semantics.
 	innerResult, err := Install(source, tempDest, InstallOptions{
 		Name:             opts.Name,
 		Force:            false,
+		AuditOverride:    opts.AuditOverride,
 		DryRun:           false,
 		Update:           false,
 		OnProgress:       opts.OnProgress,
 		SkipAudit:        opts.SkipAudit,
 		AuditThreshold:   opts.AuditThreshold,
 		AuditProjectRoot: opts.AuditProjectRoot,
+		AuditAcceptRoot:  opts.SourceDir,
+		AuditAcceptPath:  destPath,
 	})
 	if err != nil {
 		// Installation failed - original skill is preserved
@@ -226,12 +232,15 @@ func updateRepoRootOrchestrator(source *Source, destPath string, result *Install
 	innerResult, err := installFromDiscoveryInternal(discovery, rootSkill, tempDest, InstallOptions{
 		Name:             opts.Name,
 		Force:            false,
+		AuditOverride:    opts.AuditOverride,
 		DryRun:           false,
 		Update:           false,
 		OnProgress:       opts.OnProgress,
 		SkipAudit:        opts.SkipAudit,
 		AuditThreshold:   opts.AuditThreshold,
 		AuditProjectRoot: opts.AuditProjectRoot,
+		AuditAcceptRoot:  opts.SourceDir,
+		AuditAcceptPath:  destPath,
 	}, false)
 	if err != nil {
 		return true, err

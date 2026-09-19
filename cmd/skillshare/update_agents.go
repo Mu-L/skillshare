@@ -345,6 +345,7 @@ func batchUpdateAgents(agentsDir string, agents []check.AgentCheckResult, opts *
 			installOpts := install.InstallOptions{
 				Kind:             "agent",
 				Force:            opts.force,
+				AuditOverride:    opts.force,
 				Update:           true,
 				SkipAudit:        opts.skipAudit,
 				AuditThreshold:   opts.threshold,
@@ -470,6 +471,7 @@ func reinstallAgent(agentsDir string, r check.AgentCheckResult, store *install.M
 	installOpts := install.InstallOptions{
 		Kind:             "agent",
 		Force:            opts.force,
+		AuditOverride:    opts.force,
 		Update:           true,
 		SkipAudit:        opts.skipAudit,
 		AuditThreshold:   opts.threshold,
@@ -735,10 +737,8 @@ func cmdUpdateAgentsProject(args []string, projectRoot string, start time.Time) 
 		return err
 	}
 
-	if !projectConfigExists(projectRoot) {
-		if err := performProjectInit(projectRoot, projectInitOptions{}); err != nil {
-			return failJSON(err)
-		}
+	if err := ensureProjectConfig(projectRoot); err != nil {
+		return failJSON(err)
 	}
 
 	runtime, err := loadProjectRuntime(projectRoot)

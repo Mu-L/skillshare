@@ -40,7 +40,7 @@
 </p>
 
 > [!NOTE]
-> **Latest**: [v0.20.0](https://github.com/runkids/skillshare/releases/tag/v0.20.0) — choose what `commit`/`push`/`pull` version with **git_root scope** (skills, agents, extras, or all together in one repo); extras **extension transforms** convert Markdown to native formats (Gemini TOML commands, Codex TOML agents) during sync. [All releases →](https://github.com/runkids/skillshare/releases)
+> **Latest**: [v0.21.0](https://github.com/runkids/skillshare/releases/tag/v0.21.0) — define **MCP connections** once and sync them into each Agent's native config; install and sync **complete plugins** across Claude, Codex, Cursor and more; and a **redesigned web dashboard** with Clean and Playful styles. [All releases →](https://github.com/runkids/skillshare/releases)
 
 ## Why skillshare
 
@@ -52,6 +52,8 @@ skillshare fixes this:
 - **One source, every agent** — sync to Claude, Cursor, Codex & 60+ more with `skillshare sync`
 - **Agent management** — sync custom agents alongside skills to agent-capable targets
 - **More than skills** — manage rules, commands, prompts & any file-based resource with [extras](https://skillshare.runkids.cc/docs/reference/targets/configuration#extras)
+- **MCP connections** — define a server once, sync it into each Agent's own config format with [`sync mcp`](https://skillshare.runkids.cc/docs/how-to/daily-tasks/sharing-mcp)
+- **Complete plugins** — keep a plugin's skills, hooks and MCP settings together and choose which tools receive it with [`plugin`](https://skillshare.runkids.cc/docs/how-to/daily-tasks/sharing-plugins)
 - **Install from anywhere** — GitHub, GitLab, Bitbucket, Azure DevOps, or any self-hosted Git
 - **Built-in security** — audit skills for prompt injection and data exfiltration before use
 - **Team-ready** — project skills in `.skillshare/`, org-wide skills via tracked repos
@@ -186,16 +188,39 @@ skillshare init -p && skillshare sync
 
 ```bash
 skillshare sync agents            # sync agents only
-skillshare sync --all             # sync skills + agents + extras together
+skillshare sync --all             # sync skills + agents + extras + MCP together
 ```
 
 **Extras** —manage rules, commands, prompts & more
 
 ```bash
 skillshare extras init rules          # create a "rules" extra
-skillshare sync --all                 # sync skills + extras together
+skillshare sync --all                 # sync skills + agents + extras + MCP together
 skillshare extras collect rules       # collect local files back to source
 ```
+
+**MCP connections** —configure once for Claude Code, Codex, Cursor, VS Code, OpenCode and more
+
+```bash
+skillshare mcp add                    # guided URL or JSON setup
+skillshare sync mcp --dry-run         # preview native configuration changes
+skillshare sync mcp                   # apply connection settings
+```
+
+Keep definitions in `config.yaml` or reference a separate `mcp.yaml`.
+See [MCP setup](https://skillshare.runkids.cc/docs/how-to/daily-tasks/sharing-mcp)
+for examples, environment references and importing existing connections.
+
+**Plugins** —install a complete plugin and pick which tools receive it
+
+```bash
+skillshare plugin add                 # guided: source, plugin, targets, review
+skillshare plugin add owner/repo --target claude --target codex --no-tui
+skillshare sync plugins --dry-run     # plugins sync separately from sync --all
+```
+
+Existing native installations can be adopted with `plugin import`.
+See [Manage plugins across tools](https://skillshare.runkids.cc/docs/how-to/daily-tasks/sharing-plugins).
 
 **Shell completion** —tab-complete commands, flags, and subcommands
 
@@ -289,6 +314,36 @@ Thanks to everyone who helped shape skillshare.
 <a href="https://github.com/rhysmcneill"><img src="https://github.com/rhysmcneill.png" width="50" style="border-radius:50%" alt="rhysmcneill"></a>
 <a href="https://github.com/druellan"><img src="https://github.com/druellan.png" width="50" style="border-radius:50%" alt="druellan"></a>
 <a href="https://github.com/12britz"><img src="https://github.com/12britz.png" width="50" style="border-radius:50%" alt="12britz"></a>
+<a href="https://github.com/askpatrickw"><img src="https://github.com/askpatrickw.png" width="50" style="border-radius:50%" alt="askpatrickw"></a>
+<a href="https://github.com/Almost42"><img src="https://github.com/Almost42.png" width="50" style="border-radius:50%" alt="Almost42"></a>
+<a href="https://github.com/Brett-Best"><img src="https://github.com/Brett-Best.png" width="50" style="border-radius:50%" alt="Brett-Best"></a>
+<a href="https://github.com/isCopyman"><img src="https://github.com/isCopyman.png" width="50" style="border-radius:50%" alt="isCopyman"></a>
+<a href="https://github.com/svob"><img src="https://github.com/svob.png" width="50" style="border-radius:50%" alt="svob"></a>
+<a href="https://github.com/michal-grzelak"><img src="https://github.com/michal-grzelak.png" width="50" style="border-radius:50%" alt="michal-grzelak"></a>
+<a href="https://github.com/shikbupt"><img src="https://github.com/shikbupt.png" width="50" style="border-radius:50%" alt="shikbupt"></a>
+<a href="https://github.com/LeoYeAI"><img src="https://github.com/LeoYeAI.png" width="50" style="border-radius:50%" alt="LeoYeAI"></a>
+<a href="https://github.com/TIR44"><img src="https://github.com/TIR44.png" width="50" style="border-radius:50%" alt="TIR44"></a>
+<a href="https://github.com/Ajaymamtora"><img src="https://github.com/Ajaymamtora.png" width="50" style="border-radius:50%" alt="Ajaymamtora"></a>
+<a href="https://github.com/vishaldialpad"><img src="https://github.com/vishaldialpad.png" width="50" style="border-radius:50%" alt="vishaldialpad"></a>
+<a href="https://github.com/kankan0829"><img src="https://github.com/kankan0829.png" width="50" style="border-radius:50%" alt="kankan0829"></a>
+<a href="https://github.com/dnabb"><img src="https://github.com/dnabb.png" width="50" style="border-radius:50%" alt="dnabb"></a>
+<a href="https://github.com/thinhngotony"><img src="https://github.com/thinhngotony.png" width="50" style="border-radius:50%" alt="thinhngotony"></a>
+<a href="https://github.com/skaurus"><img src="https://github.com/skaurus.png" width="50" style="border-radius:50%" alt="skaurus"></a>
+<a href="https://github.com/jamesbraza"><img src="https://github.com/jamesbraza.png" width="50" style="border-radius:50%" alt="jamesbraza"></a>
+<a href="https://github.com/2BAB"><img src="https://github.com/2BAB.png" width="50" style="border-radius:50%" alt="2BAB"></a>
+<a href="https://github.com/zdlldz"><img src="https://github.com/zdlldz.png" width="50" style="border-radius:50%" alt="zdlldz"></a>
+<a href="https://github.com/elstiaan"><img src="https://github.com/elstiaan.png" width="50" style="border-radius:50%" alt="elstiaan"></a>
+<a href="https://github.com/EriaWalker"><img src="https://github.com/EriaWalker.png" width="50" style="border-radius:50%" alt="EriaWalker"></a>
+<a href="https://github.com/FaintFlower"><img src="https://github.com/FaintFlower.png" width="50" style="border-radius:50%" alt="FaintFlower"></a>
+<a href="https://github.com/yantinglin21"><img src="https://github.com/yantinglin21.png" width="50" style="border-radius:50%" alt="yantinglin21"></a>
+<a href="https://github.com/chung1912"><img src="https://github.com/chung1912.png" width="50" style="border-radius:50%" alt="chung1912"></a>
+<a href="https://github.com/r-fynn"><img src="https://github.com/r-fynn.png" width="50" style="border-radius:50%" alt="r-fynn"></a>
+<a href="https://github.com/cescox"><img src="https://github.com/cescox.png" width="50" style="border-radius:50%" alt="cescox"></a>
+<a href="https://github.com/hhdebb"><img src="https://github.com/hhdebb.png" width="50" style="border-radius:50%" alt="hhdebb"></a>
+<a href="https://github.com/Snurppa"><img src="https://github.com/Snurppa.png" width="50" style="border-radius:50%" alt="Snurppa"></a>
+<a href="https://github.com/s0undt3ch"><img src="https://github.com/s0undt3ch.png" width="50" style="border-radius:50%" alt="s0undt3ch"></a>
+<a href="https://github.com/danscheer"><img src="https://github.com/danscheer.png" width="50" style="border-radius:50%" alt="danscheer"></a>
+<a href="https://github.com/7zq12lvm-b"><img src="https://github.com/7zq12lvm-b.png" width="50" style="border-radius:50%" alt="7zq12lvm-b"></a>
 
 ---
 
@@ -296,7 +351,7 @@ If you find skillshare useful, consider giving it a ⭐
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=runkids/skillshare&type=date&legend=top-left)](https://www.star-history.com/#runkids/skillshare&type=date&legend=top-left)
+[![Star History Chart](https://star-history.dera.page/svg?repos=runkids/skillshare&type=date&legend=top-left)](https://star-history.dera.page/#runkids/skillshare&type=date&legend=top-left)
 
 ---
 

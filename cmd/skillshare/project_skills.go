@@ -2,8 +2,15 @@ package main
 
 import (
 	"skillshare/internal/config"
+	"skillshare/internal/install"
 )
 
 func reconcileProjectRemoteSkills(runtime *projectRuntime) error {
+	// Installs write .metadata.json directly, so the store loaded before the
+	// install is stale. Reconciling with it prunes config entries for skills it
+	// never saw (#280) — always reload from disk first.
+	if fresh, err := install.LoadMetadata(runtime.sourcePath); err == nil {
+		runtime.skillsStore = fresh
+	}
 	return config.ReconcileProjectSkills(runtime.root, runtime.config, runtime.skillsStore, runtime.sourcePath)
 }

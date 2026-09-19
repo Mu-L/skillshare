@@ -25,6 +25,10 @@ const (
 type MetadataStore struct {
 	Version int                       `json:"version"`
 	Entries map[string]*MetadataEntry `json:"entries"`
+	// AuditAccepted maps a resource relPath to audit.AcceptKey values the user
+	// accepted via --force. Kept outside Entries so it survives entry rewrites
+	// and works for tracked repos that have no entry of their own.
+	AuditAccepted map[string][]string `json:"audit_accepted,omitempty"`
 }
 
 // MetadataEntry merges the old SkillMeta + RegistryEntry fields.
@@ -68,6 +72,7 @@ func (s *MetadataStore) Set(name string, entry *MetadataEntry) {
 // Remove deletes an entry by name.
 func (s *MetadataStore) Remove(name string) {
 	delete(s.Entries, name)
+	delete(s.AuditAccepted, name)
 }
 
 // Has returns true if an entry exists for the given name.

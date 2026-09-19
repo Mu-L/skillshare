@@ -14,7 +14,7 @@ _skillshare() {
         cword=$COMP_CWORD
     fi
 
-    local commands="init install uninstall list search sync status diff backup restore collect pull push commit doctor target upgrade update check new trash analyze audit hub log ui tui extras enable disable completion version help"
+    local commands="init install uninstall list search sync mcp plugin status diff backup restore collect pull push commit doctor target upgrade update check new trash analyze audit hub log ui tui extras enable disable completion version help"
 
     local global_flags="--project -p --global -g"
 
@@ -31,8 +31,9 @@ _skillshare() {
     local init_flags="--source -s --remote --copy-from -c --no-copy --targets -t --all-targets --no-targets --mode -m --git --no-git --skill --no-skill --discover -d --select --subdir --dry-run -n --help -h"
     local install_flags="--source -s --name --force -f --update -u --dry-run -n --skip-audit --audit-verbose --audit-threshold --threshold -T --branch -b --track -t --kind --agent -a --skill --exclude --into --all --yes -y --json --help -h"
     local uninstall_flags="--all --force -f --dry-run -n --json --group -G --help -h"
-    local list_flags="--verbose -v --json -j --no-tui --type -t --sort -s --all --help -h"
+    local list_flags="--verbose -v --json -j --no-tui --type -t --status --sort -s --all --help -h"
     local sync_flags="--all --dry-run -n --force -f --json --help -h"
+    local mcp_flags="--pi-extension --url --target --from --file --sync --replace --revision --dry-run -n --json --help -h"
     local diff_flags="--no-tui --patch --stat --json --help -h"
     local backup_flags="--list -l --cleanup -c --dry-run -n --target -t --help -h"
     local restore_flags="--from -f --force --dry-run -n --no-tui --help -h"
@@ -67,6 +68,16 @@ _skillshare() {
 
     local cmd="${words[1]}"
 
+    if [[ "${cmd}" == plugin && ( "${prev}" == --target || "${prev}" == --from ) ]]; then
+        COMPREPLY=($(compgen -W "claude codex cursor antigravity agy antigravity-cli copilot grok kimi hermes devin pi opencode" -- "${cur}"))
+        return
+    fi
+
+    if [[ "${cmd}" == mcp && "${prev}" == --pi-extension ]]; then
+        COMPREPLY=($(compgen -W "pi-mcp-adapter pi-mcp-extension" -- "${cur}"))
+        return
+    fi
+
     # Handle subcommands (cword == 2)
     if [[ ${cword} -eq 2 ]]; then
         case "${cmd}" in
@@ -99,7 +110,7 @@ _skillshare() {
                 return
                 ;;
             sync)
-                COMPREPLY=($(compgen -W "agents extras ${sync_flags} ${global_flags}" -- "${cur}"))
+                COMPREPLY=($(compgen -W "agents extras mcp plugins ${sync_flags} ${global_flags}" -- "${cur}"))
                 return
                 ;;
             list)
@@ -151,6 +162,8 @@ _skillshare() {
         uninstall)  COMPREPLY=($(compgen -W "${uninstall_flags} ${global_flags}" -- "${cur}")) ;;
         list)       COMPREPLY=($(compgen -W "${list_flags} ${global_flags}" -- "${cur}")) ;;
         sync)       COMPREPLY=($(compgen -W "${sync_flags} ${global_flags}" -- "${cur}")) ;;
+        plugin)     COMPREPLY=($(compgen -W "add discover import list inspect sync check update enable disable remove --target --from --plugin --name --source-ref --entry --revision --dry-run --json --no-tui ${global_flags}" -- "${cur}")) ;;
+        mcp)        COMPREPLY=($(compgen -W "add import list remove restore ${mcp_flags} ${global_flags}" -- "${cur}")) ;;
         status)     COMPREPLY=($(compgen -W "${global_flags}" -- "${cur}")) ;;
         diff)       COMPREPLY=($(compgen -W "${diff_flags} ${global_flags}" -- "${cur}")) ;;
         backup)     COMPREPLY=($(compgen -W "${backup_flags} ${global_flags}" -- "${cur}")) ;;

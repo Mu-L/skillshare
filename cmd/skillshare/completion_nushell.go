@@ -9,7 +9,9 @@ def "nu-complete skillshare commands" [] {
         { value: "uninstall", description: "Remove skills/agents from source directory" }
         { value: "list", description: "List installed skills" }
         { value: "search", description: "Search or browse GitHub for skills" }
-        { value: "sync", description: "Sync skills/agents/extras to targets" }
+        { value: "sync", description: "Sync skills/agents/extras/MCP to targets" }
+        { value: "plugin", description: "Manage complete native plugins" }
+        { value: "mcp", description: "Manage MCP connections" }
         { value: "status", description: "Show status of all targets" }
         { value: "diff", description: "Show differences between source and targets" }
         { value: "backup", description: "Create backup of targets" }
@@ -39,6 +41,51 @@ def "nu-complete skillshare commands" [] {
         { value: "help", description: "Show help" }
     ]
 }
+
+def "nu-complete skillshare plugin" [] {
+    [add discover import list inspect sync check update enable disable remove]
+}
+
+def "nu-complete skillshare plugin-target" [] {
+    [claude codex cursor antigravity agy antigravity-cli copilot grok kimi hermes devin pi opencode]
+}
+
+export extern "skillshare mcp" [
+    command?: string
+    name?: string
+    --pi-extension: string # pi-mcp-adapter or pi-mcp-extension
+    --target: string
+    --from: string
+    --url: string
+    --file: string
+    --revision: string
+    --sync
+    --replace
+    --dry-run(-n)
+    --json
+    --no-tui
+    --project(-p)
+    --global(-g)
+    --help(-h)
+]
+
+export extern "skillshare plugin" [
+    command?: string@"nu-complete skillshare plugin"
+    value?: string
+    --target: string@"nu-complete skillshare plugin-target"
+    --from: string@"nu-complete skillshare plugin-target"
+    --plugin: string
+    --name: string
+    --source-ref: string
+    --entry: string
+    --revision: string
+    --dry-run(-n)
+    --json
+    --no-tui
+    --global(-g)
+    --project(-p)
+    --help(-h)
+]
 
 def "nu-complete skillshare target" [] {
     [
@@ -131,6 +178,10 @@ def "nu-complete skillshare list-sort" [] {
     ["name" "newest" "oldest"]
 }
 
+def "nu-complete skillshare list-status" [] {
+    ["all" "enabled" "disabled"]
+}
+
 # Main command
 export extern "skillshare" [
     command?: string@"nu-complete skillshare commands"
@@ -209,6 +260,7 @@ export extern "skillshare list" [
     --json(-j)               # JSON output
     --no-tui                 # Skip interactive TUI
     --type(-t): string@"nu-complete skillshare list-type"
+    --status: string@"nu-complete skillshare list-status"
     --sort(-s): string@"nu-complete skillshare list-sort"
     --all                    # List skills + agents
     --project(-p)            # Use project-level config
@@ -218,7 +270,7 @@ export extern "skillshare list" [
 
 # Sync
 export extern "skillshare sync" [
-    scope?: string           # agents, extras
+    scope?: string           # agents, extras, mcp, plugins
     --all                    # Sync skills + agents + extras
     --dry-run(-n)            # Preview changes
     --force(-f)              # Force sync

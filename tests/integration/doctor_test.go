@@ -156,6 +156,25 @@ targets:
 	result.AssertOutputNotContains(t, "Symlink compatibility")
 }
 
+func TestDoctor_NoSymlinkCompatHint_WhenNoKnownIncompatTarget(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	claudePath := sb.CreateTarget("claude")
+
+	sb.WriteConfig(`source: ` + sb.SourcePath + `
+mode: merge
+targets:
+  claude:
+    path: ` + claudePath + `
+`)
+
+	result := sb.RunCLI("doctor")
+
+	result.AssertSuccess(t)
+	result.AssertOutputNotContains(t, "Symlink compatibility")
+}
+
 func TestDoctor_TargetIssues_ShowsProblems(t *testing.T) {
 	sb := testutil.NewSandbox(t)
 	defer sb.Cleanup()
@@ -896,4 +915,71 @@ targets: {}
 	if out.Summary.Info == 0 {
 		t.Error("expected summary.info > 0 when .skillignore is absent")
 	}
+}
+
+// Regression for issue #251: doctor -p must resolve relative symlinks against
+// the link's parent directory, not the current working directory.
+func TestDoctorProject_RelativeSymlink_NoFalsePositives(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	projectDir := sb.SetupProjectDir()
+	sb.CreateProjectSkill(projectDir, "my-skill", map[string]string{
+		"SKILL.md": "---\nname: my-skill\n---\n# Content",
+	})
+	sb.WriteProjectConfig(projectDir, `targets:
+  - name: claude
+    skills:
+      path: .claude/skills
+      mode: symlink
+  - name: codex
+    skills:
+      path: .agents/skills
+      mode: symlink
+`)
+	sb.WriteConfig(`source: ` + sb.SourcePath + "\ntargets: {}\n")
+
+	sb.RunCLIInDir(projectDir, "sync", "-p").AssertSuccess(t)
+
+	link := filepath.Join(projectDir, ".claude", "skills")
+	if target := sb.SymlinkTarget(link); filepath.IsAbs(target) {
+		t.Fatalf("expected relative symlink, got %q", target)
+	}
+
+	result := sb.RunCLIInDir(projectDir, "doctor", "-p")
+	result.AssertSuccess(t)
+	if out := result.Output(); strings.Contains(out, "wrong location") || strings.Contains(out, "Duplicate skills") {
+		t.Errorf("doctor -p misreported valid relative symlinks:\n%s", out)
+	}
+}
+
+func TestDoctor_CopyModeExternalSymlink_ChecksDuplicateSkills(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	sb.CreateSkill("duplicate-skill", map[string]string{"SKILL.md": "# Source"})
+
+	realTarget := sb.CreateTarget("real-copy-target")
+	localSkill := filepath.Join(realTarget, "duplicate-skill")
+	if err := os.MkdirAll(localSkill, 0755); err != nil {
+		t.Fatal(err)
+	}
+	sb.WriteFile(filepath.Join(localSkill, "SKILL.md"), "# Local")
+
+	linkedTarget := filepath.Join(sb.Home, "linked-copy-target")
+	if err := os.Symlink(realTarget, linkedTarget); err != nil {
+		t.Skipf("symlink not supported: %v", err)
+	}
+
+	sb.WriteConfig(`source: ` + sb.SourcePath + `
+targets:
+  copilot:
+    path: ` + linkedTarget + `
+    mode: copy
+`)
+
+	result := sb.RunCLI("doctor", "-g")
+	result.AssertSuccess(t)
+	result.AssertOutputContains(t, "Duplicate skills")
+	result.AssertOutputContains(t, "duplicate-skill")
 }

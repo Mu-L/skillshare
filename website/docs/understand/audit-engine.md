@@ -44,6 +44,8 @@ flowchart TD
 
 The `audit` command acts as a **gatekeeper** — scanning skill content for known threat patterns before they reach your AI assistant. It runs automatically during `install` and can be invoked manually at any time.
 
+Overriding a block with `--force` records the accepted findings (rule, file, and matched text) in `.metadata.json`, so later `update` runs stop blocking on them while still catching anything new. See [update — Accepted Findings](/docs/reference/commands/update#accepted-findings).
+
 ## What It Detects
 
 The audit engine scans every text-based file in a skill directory against 100+ built-in rules (regex patterns, table-driven credential detection, structural checks, and content integrity verification), organized into 5 severity levels.

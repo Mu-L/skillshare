@@ -20,10 +20,8 @@ func cmdSyncProject(root string, dryRun, force, jsonOutput, quiet bool) (syncLog
 		ProjectScope: true,
 	}
 
-	if !projectConfigExists(root) {
-		if err := performProjectInit(root, projectInitOptions{}); err != nil {
-			return stats, nil, nil, nil, err
-		}
+	if err := ensureProjectConfig(root); err != nil {
+		return stats, nil, nil, nil, err
 	}
 
 	runtime, err := loadProjectRuntime(root)
@@ -95,10 +93,11 @@ func cmdSyncProject(root string, dryRun, force, jsonOutput, quiet bool) (syncLog
 
 	var results []syncTargetResult
 	var failedTargets int
+	ignorePatterns := sync.EffectiveFileIgnorePatterns(runtime.config.Ignore)
 	if jsonOutput {
-		results, failedTargets = runParallelSyncQuiet(entries, runtime.sourcePath, discoveredSkills, dryRun, force, root)
+		results, failedTargets = runParallelSyncQuiet(entries, runtime.sourcePath, discoveredSkills, ignorePatterns, dryRun, force, root)
 	} else {
-		results, failedTargets = runParallelSync(entries, runtime.sourcePath, discoveredSkills, dryRun, force, root)
+		results, failedTargets = runParallelSync(entries, runtime.sourcePath, discoveredSkills, ignorePatterns, dryRun, force, root)
 	}
 	failedTargets += notFoundCount
 

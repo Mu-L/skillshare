@@ -1,5 +1,282 @@
 # Changelog
 
+## [0.21.1] - 2026-09-20
+
+### New Features
+
+#### MCP connections
+
+- **Turn off a global MCP server in one project** — a server in an Agent's global config loads in every project. In project mode, add an entry with the same name and mark it `disabled` to stop it loading in that project only. The Agent keeps the command or URL from its global entry.
+
+  ```bash
+  cd my-project
+  skillshare mcp add company-docs --disabled --target claude --target opencode
+  skillshare sync mcp
+  ```
+
+  ```yaml
+  # .skillshare/config.yaml
+  mcp:
+    servers:
+      company-docs:
+        disabled: true
+        targets: [claude, opencode]
+  ```
+
+  Works with Claude Code, OpenCode, Kilo Code, and Pi with `pi-mcp-adapter`. OpenCode, Kilo Code and Pi get a lone switch in their project file. Claude Code takes a whole entry from one scope, so Skillshare adds the name to that project's off list in `~/.claude.json`, the one the `/mcp` panel edits; a name you turned off yourself is never claimed or removed. Other clients are refused, because a lone switch would replace the server instead of turning it off. In the dashboard, open it from the project folder, choose **Add server** and pick **Off in this project**. Refs: #286.
+- **Kilo Code is an MCP client** — `kilocode` joins the supported clients, in global and project scope. It uses OpenCode's format; Skillshare writes to whichever `kilo.jsonc` or `kilo.json` already exists and creates `kilo.jsonc` when there is none. Kilo ignores a project config that holds an environment reference, so `fromEnv` and `bearerToken` are refused for Kilo in project mode before anything is written. Refs: #287.
+- **Claude Code local scope servers are reported** — a server added with `claude mcp add` and no `--scope` wins, whole, over one of the same name in `.mcp.json` or the user scope. In project mode the plan and the dashboard now point out such a server next to the entry it hides, with the command that removes it. The sync is not blocked.
+- **Limits of each client are caught before the write** — Claude Code skips the reserved names `workspace`, `claude-in-chrome` and `computer-use`, and reads its own credentials such as `ANTHROPIC_API_KEY` as empty in a remote server's `url` and `headers`; both are now refused for Claude with a message that says what to do. The dashboard's config preview refuses the same things saving would.
+
+#### Dashboard
+
+- **Manual only skills are visible** — a skill with `disable-model-invocation: true` carries a **manual only** tag in the skills list, on its tile and on its detail page, matching the badge the list TUI shows after `M`. Refs: #283.
+- **Add field explains each frontmatter field** — the skill editor's **Add field** menu shows what each field does under its name, instead of bare keys such as `context` and `shell`.
+- **Agent icons in the MCP import picker** — the Agent dropdown in **Import from a target** shows each Agent's logo. Factory, LM Studio, Kilo Code and Claude Desktop now have their own icons.
+
+### Bug Fixes
+
+- **The MCP page detects Agents that have no MCP file yet** — detection looked only for the MCP file, so a fresh Claude Code install showed as not detected. An Agent's own settings folder now counts. In project mode the page listed every Agent as detected; it now lists those with a project MCP file or a global install.
+- **Cline's MCP settings are found again** — Cline moved its settings to `~/.cline/data/settings/`, shared by the VS Code extension, the CLI and the SDK. Skillshare now writes there and honors `CLINE_MCP_SETTINGS_PATH`, `CLINE_DATA_DIR` and `CLINE_DIR`. The old VS Code extension path is still used while it is the only one that exists.
+- **An MCP entry owned by a deleted config can be taken over** — an entry managed by a Skillshare config that was later moved or deleted stayed blocked forever as "managed by another Skillshare config". An explicit import or replace now takes it over, and the conflict names the owning file.
+- **`--disabled` is refused where it does nothing** — only `mcp add` uses the flag, but the other `mcp` commands and `sync mcp` accepted it and ignored it.
+- **A relative `XDG_CONFIG_HOME` is ignored for MCP paths** — as the XDG specification requires, instead of producing a path relative to the current directory.
+- **Skill detail and new skill pages** — the file viewer no longer leaves a gap above it when it sticks while scrolling, and the info column beside a long `SKILL.md` stays in view.
+
+### Breaking Changes
+
+- **The `kilocode` skills target moved to `.kilo/skills`** — from `.kilocode/skills`, in both global and project scope, because that is the only location Kilo Code's documentation lists now. Run `skillshare sync` once to write skills to the new location.
+
+## [0.21.0] - 2026-09-19
+
+### New Features
+
+#### MCP connections
+
+- **Define an MCP server once, sync it into each Agent's own config** — a server lives in `config.yaml` (or a separate `mcp.yaml`) as a portable definition, and `sync mcp` writes it in the format each client expects: JSON, JSONC, TOML or YAML, under that client's own key. Nothing is started or proxied; Skillshare only manages the settings.
+
+  ```bash
+  skillshare mcp add                                   # guided: URL, command, or pasted JSON
+  skillshare mcp add docs --url https://example.com/mcp --target claude --target cursor
+  skillshare mcp import docs --from claude --sync      # adopt what an Agent already has
+  skillshare sync mcp --dry-run                        # preview every file that would change
+  skillshare sync mcp
+  ```
+
+  Supported clients: Claude Code, Codex, Cursor, VS Code, OpenCode, Grok CLI, Antigravity, Amp, Claude Desktop, Cline, Copilot CLI, Factory, Gemini CLI, Goose, Junie, Kiro, LM Studio, Warp, Windsurf and Pi. Global and project scope are both supported where the client has them. `skillshare mcp` without arguments opens a TUI for browsing, editing and syncing.
+
+- **Secrets stay out of the files** — headers and environment values are written as `{fromEnv: VARIABLE}` references and rendered in each client's own reference syntax. On import, literal tokens and values carrying a URL password, such as database DSNs, are turned into references, and credential-like arguments are flagged.
+- **Only entries Skillshare wrote are ever changed** — ownership is tracked per entry. An entry you wrote by hand is left alone even when it matches the source, and stays that way until you `import` it. A managed entry edited in the Agent is reported as a conflict instead of being overwritten, Agent-only fields such as timeouts survive a sync, and previews stay valid while an Agent rewrites unrelated settings in the same file.
+- **Backups and restore** — every write backs up the Agent file first, keeping the newest 20 per file.
+
+  ```bash
+  skillshare mcp restore BACKUP_ID --dry-run
+  skillshare mcp restore BACKUP_ID
+  ```
+
+- **Pasted snippets are recognised by shape** — `mcp import --file` and the add wizard pick the client format from the top-level key, so VS Code `servers` and OpenCode `mcp` snippets copied from a provider's docs import without naming a client. TOML still needs `--from`, because Codex and Grok share the format.
+- **Pi through a chosen extension** — Pi has no built-in MCP support, so a server targeting Pi names the third-party package that reads the file, `pi-mcp-adapter` or `pi-mcp-extension`. Install one in Pi yourself; Skillshare only writes its configuration.
+
+  ```bash
+  skillshare mcp add docs --url https://example.com/mcp --target pi --pi-extension pi-mcp-adapter --no-tui
+  ```
+
+- **`sync --all` includes MCP** — it syncs skills, agents, extras and MCP settings together, and `--json` reports the MCP plan alongside the rest.
+
+#### Plugins
+
+- **Install a complete plugin and choose which tools receive it** — a plugin bundles skills, hooks, MCP settings and scripts that only work together. `plugin` keeps that package intact and installs it through each Agent's own CLI, so native formats and unrelated installations are untouched.
+
+  ```bash
+  skillshare plugin add                                          # guided: source, plugin, targets, review
+  skillshare plugin add owner/repo --target claude --target codex --no-tui
+  skillshare plugin import review@team --from claude             # adopt an existing native installation
+  skillshare plugin disable review --target codex                # save the selection only
+  skillshare sync plugins --dry-run                              # then install or remove on sync
+  skillshare plugin check review
+  skillshare plugin update review --target claude
+  ```
+
+  Install targets: Claude Code, Codex, Cursor, Antigravity Desktop, Antigravity CLI, GitHub Copilot CLI, Pi and OpenCode. Grok Build supports import and removal, with install and trust handled in Grok. Sources can be a local folder, `owner/repo` or an HTTPS Git URL, pinned with `--source-ref`. Plugins are synced with `sync plugins` and are not part of `sync --all`.
+
+#### Dashboard
+
+- **Redesigned in two styles** — the dashboard now comes in **Clean** and **Playful**, each in light and dark, switched from the theme menu. Skills and Agents are separate pages that hold their own install, search, updates and trash, and General, Backup, Log, Health, Extensions and Files are collected into one Settings page. Old routes redirect.
+- **MCP page** — one row per server with its Agents as toggles. Add a server from a URL, a command, a pasted snippet or a file, or import what an installed Agent already has. Conflicts explain their cause and offer Import or Replace, backups are grouped by day with a preview before restoring, and **View what each Agent gets** shows exactly what each Agent would receive, including edits you have not saved yet. MCP settings are only served when the dashboard is opened through `localhost` or an IP address.
+- **Plugins page** — one row per plugin with its Agents as toggles, the same as MCP. Expanding a row also lists the other Agents the source supports, so ticking one previews an install there. **View files** opens a read-only browser of the local copy Skillshare reviewed.
+- **Hubs page** — browse a hub and install from it, or assemble your own index from installed skills, validate it and export it, all at `/hubs`. A draft can be browsed straight away, before it is hosted anywhere.
+- **Filter skills and agents by target**, and a **Remote** source filter for skills from GitLab, Gitea, self-hosted and SSH sources, which previously matched no filter. Refs: #278.
+- **Config editors explain themselves** — the Files tab and the audit rules editor keep a panel beside the YAML showing what the field under the cursor does and the unsaved changes. Audit rules also get a **Test** tab that runs a rule's regex against pasted lines.
+- Dashboard source counts link to their pages, and plugins are counted alongside the other kinds.
+
+#### Audit
+
+- **Findings accepted with `--force` are remembered** — a skill that legitimately quotes attack strings, such as a security scanner or red-team notes, no longer has to be forced on every `update --all`. The accepted findings are recorded for that skill, and later updates treat the same rule matching the same text as acknowledged. Any new finding, or the same rule matching different text, still blocks. Refs: #279.
+
+#### List TUI
+
+- **Press `M` to make a skill manual only** — toggles `disable-model-invocation` in the selected skill's `SKILL.md`, so the skill stays installed and can be invoked by name but is no longer loaded by the model on its own. The detail panel shows a **manual only** badge. For a tracked or installed skill the TUI asks first, because the edit counts as a local change; pressing `M` again restores the file exactly. Refs: #283.
+
+### Bug Fixes
+
+- **`sync --dry-run agents` and `sync -g extras` no longer sync skills** — the resource kind was only recognised as the first argument, so putting a flag before it silently synced skills instead. The kind now matches in any position.
+- **A mistake in the `mcp` section no longer breaks every command** — an invalid MCP setting is reported by MCP commands and the config editor, while `sync`, `install`, `list` and the dashboard keep working.
+- **Web UI: saving the config keeps flow-style YAML** — a hand-written `targets: [claude, codex]` is no longer expanded into a block list on every save. Indentation is still normalised and comments are preserved.
+
+## [0.20.29] - 2026-09-11
+
+### Bug Fixes
+
+- **`install -p` no longer removes the skills it just installed from `config.yaml`** — a project install driven by `config.yaml` reconciled against the metadata it had read before installing, so a skill that arrived as a plain copy — any source pointing at a subdirectory, which has no `.git` to fall back on — looked absent and its entry was pruned from the declarative list. The install itself reported success and the skill and its metadata landed correctly, but the entry was gone from `config.yaml`, which broke the `install -p && sync` flow for anyone setting the project up from a clean checkout. Metadata is now re-read from disk before reconciling, which also covers project-mode installs made through `search`. Refs: #280.
+
+## [0.20.28] - 2026-09-09
+
+### New Features
+
+- **Visible `skillshare/` project directory** — repositories that treat skills as reviewable content, rather than tool state, can now use a visible `skillshare/` directory instead of the hidden `.skillshare/`.
+
+  ```bash
+  skillshare init -p --visible    # create skillshare/ instead of .skillshare/
+  ```
+
+  Everything lives inside whichever directory is in use: `config.yaml`, `skills/`, `agents/`, `extras/`, and the operational `trash/`, `backups/` and `logs/`. Detection checks `.skillshare/config.yaml` first and `skillshare/config.yaml` second, so existing projects are unaffected and `.skillshare/` wins when both exist. `init -p` without the flag still creates `.skillshare/`. To move an existing project, run `mv .skillshare skillshare` followed by `skillshare sync -p` to repair target symlinks, and update any `sources` paths in `config.yaml` that name `.skillshare/` explicitly. Refs: #256.
+
+### Bug Fixes
+
+- **`.skillignore` matches again when the file uses CRLF line endings** — rules were compiled with a trailing carriage return that could never equal a path segment, so a `.skillignore` saved on Windows silently ignored nothing while `status` still reported its patterns as loaded. Editing patterns was affected the same way: existing entries were not found, adding one duplicated it, and removing one failed. A regression since v0.17.4. Refs: #275.
+- **A directory symlink inside a skill no longer discards every file hash** — hashing stopped at the first entry that could not be read as a file and threw away the hashes computed so far, which left installed skills without the metadata used to detect local edits. Directory symlinks are skipped; file symlinks are still hashed, and real failures such as broken links still surface. Refs: #272.
+
+## [0.20.27] - 2026-09-02
+
+### New Features
+
+- **Agents can declare which targets they belong to** — a `targets` list in an agent's frontmatter now restricts that agent to the listed tools, the same way `metadata.targets` works for skills. Agent files are copied verbatim and Claude Code, OpenCode, Cursor and Copilot read different frontmatter fields, so this lets you keep a per-tool variant of the same agent side by side. Agents without the field still sync everywhere; target aliases such as `claude-code` match `claude`. Applies to `sync agents`, the dashboard, `doctor` and the target summary. Refs: #267.
+
+  ```yaml
+  # ~/.config/skillshare/agents/reviewer.md
+  ---
+  targets: [claude]
+  tools: Read, Write, Bash(git log)
+  ---
+
+  # ~/.config/skillshare/agents/reviewer-opencode.md
+  ---
+  targets: [opencode]
+  mode: subagent
+  permission: { read: allow, write: allow, bash: ask }
+  ---
+  ```
+
+### Bug Fixes
+
+- **`update --all` no longer deletes a skill when the audit blocks its update** — when several skills from one repository were updated together, the existing skill directory was removed before the new content was copied in, and an audit block then cleaned up the new content as well, leaving nothing on disk and a stale metadata entry that later updates could not find. Grouped updates now stage the new content in a temporary directory, run the audit there, and only swap it into place once the audit passes, matching what `update <name>` already did. If a skill was already lost this way, `skillshare update <name> --force` reinstalls it. Refs: #271.
+- **Batch updates and the web UI follow the branch a skill was installed from** — `update --all` cloned the remote default branch for skills installed with `-b <branch>`, so they were reported stale or downgraded, and `--prune` moved them to trash. The dashboard's check and update did the same, comparing against the remote HEAD instead of the installed branch. All of these now group by repository and branch and fetch from the installed branch. Refs: #268.
+- **Windows drive-letter paths install as local skills** — `skillshare install D:\skills\my-skill` failed with `unrecognized source format` because only paths starting with `/`, `~`, `./` or `../` were treated as local. Drive-letter paths (`D:older`, `C:/Users/...`) and backslash-relative paths (`.\skill`) are now recognised in the CLI and the dashboard install page. Refs: #269.
+- **Dashboard labels non-GitHub git sources as Remote** — skills installed from Gitea, GitLab, self-hosted or SSH sources showed a **Local** badge because only GitHub metadata types were recognised. Any non-local git source now shows **Remote**, matching `skillshare list`. Tracked repos and GitHub sources keep their existing badges. Refs: #270.
+
+## [0.20.26] - 2026-08-27
+
+### Bug Fixes
+
+- **`update --force` can override the security audit again** — when an update was blocked by an audit finding, the error told you to pass `--force`, but the flag never reached the audit gate. Update stages new content in a temporary directory and had to leave its internal overwrite flag off to keep the gate active, which discarded your `--force` along with it, so a flagged update could not be applied short of `--skip-audit` — which turns scanning off entirely. `--force` now reaches the gate on every update path: regular skills, tracked repos, agents, and the web UI's Force Retry button.
+
+  ```bash
+  skillshare update my-skill --force       # apply despite audit findings
+  skillshare update my-skill --skip-audit  # skip scanning entirely
+  ```
+
+  Audit *scan failures* stay fail-closed regardless of `--force`: accepting findings you have seen is not the same as proceeding when the scanner could not run.
+
+- **`install --json` no longer bypasses the security audit** — `--json` set the internal overwrite flag so installs could run non-interactively, and the audit gate read that same flag, so JSON-mode installs silently accepted content that would have been blocked interactively.
+- **Grouped batch updates are covered by the audit gate** — updating several skills from a single repository inherited the same overwrite flag and skipped the block threshold.
+- **Web UI: Force Retry only appears where it can help** — a failure such as `failed to remove existing skill: ... permission denied` offered a Force Retry button that retried with force and failed identically, with no hint of what would actually fix it. The button now shows for audit blocks and for pulls the server would retry with force, and is hidden elsewhere.
+- **Web UI: update errors no longer quote CLI flags** — messages ending in `Use --force to override or --skip-audit to bypass scanning` were rendered verbatim in the dashboard, where there is no command line to type them into.
+
+### Breaking Changes
+
+- **A `--force` at install time no longer exempts later updates from the audit gate** — `--force` is a per-command decision. A skill installed with `--force` is scanned again on its next `update`, and needs `--force` (or `--skip-audit`) again to apply findings at or above the block threshold.
+
+## [0.20.25] - 2026-08-10
+
+### Bug Fixes
+
+- **Batch updates no longer mark skills under target dot-directories as stale** — skills installed from subdirectories such as `.claude/skills/...` or `.codex/skills/...` were skipped by discovery during batch updates and reported as deleted upstream, which could incorrectly suggest `--prune`. Batch update now resolves the requested subdirectory directly before declaring it missing. Refs: #261.
+- **Explicit target dot-directory installs discover their requested content** — commands such as `skillshare install user/repo/.claude` no longer return zero results just because `.claude` is normally excluded from repository-wide discovery. Explicitly requested roots are scanned for both skills and agents, while repository-root scans continue to skip synced target copies.
+- **Project commands preserve existing projects when `config.yaml` is missing** — when `.skillshare/` already contains skills or agents but `.skillshare/config.yaml` has disappeared, project-mode commands now stop with recovery guidance instead of silently re-initializing an empty config, dropping target configuration, and leaving stale links. Fresh projects and shared repositories that intentionally gitignore `config.yaml` still initialize automatically.
+- **Windows can uninstall nested skills again** — uninstalling a skill stored under a folder no longer passes Windows backslashes into the trash-name validator and fails with `trash name must not contain backslash`. Nested skill names are normalized to slash-separated paths in global and project mode without weakening traversal checks. Refs: #264.
+
+## [0.20.24] - 2026-08-03
+
+### Bug Fixes
+
+- **Gemini CLI and Antigravity are separate targets again** — `gemini` had been folded into `antigravity` as an alias, but the two runtimes read different global skill directories, so one of them was always pointed at the wrong path. Antigravity now resolves to `~/.gemini/config/skills` (global) and `.agents/skills` (project); `gemini` is a target of its own resolving to `~/.gemini/skills` and `.gemini/skills`, with `~/.agents/skills` and `.agents/skills` still scanned as fallbacks. Aliases: `gemini-cli` for Gemini CLI, `antigravity-cli` for Antigravity. Refs: #255.
+
+  ```bash
+  skillshare target add gemini        # Gemini CLI
+  skillshare target add antigravity   # Antigravity
+  skillshare sync
+  ```
+
+  Antigravity's skill scanner also skips symlinked skill directories entirely — silently on macOS and Linux, and as `Incorrect function` on Windows. The troubleshooting docs now cover this along with its two workarounds: switch the target to `copy` mode, or point Antigravity at your skillshare source directory via its Skill Custom Paths setting.
+
+- **`doctor`'s symlink compatibility hint is deterministic** — the hint chose its example target by iterating a map, so the same config produced a different suggestion on each run, and it could name a target whose runtime handles symlinks fine — telling users to switch something that was not broken. The example is now drawn only from the targets known to skip symlinked skill directories, in a fixed order. The sync docs are also corrected: the hint is printed by `doctor`, not `sync`.
+
+### Breaking Changes
+
+- **`gemini` no longer resolves to the Antigravity target** — configs that used `gemini` (or `gemini-cli`) to reach Antigravity now sync to Gemini CLI's own directory instead. Use `antigravity` for Antigravity. Existing `antigravity` targets change global path from `~/.gemini/skills` to `~/.gemini/config/skills`; run `skillshare sync` after upgrading.
+
+## [0.20.23] - 2026-07-30
+
+### New Features
+
+- **`list --status` filters enabled or disabled entries outside the TUI** — the enabled/disabled filter previously existed only inside the list TUI (`s` key, `status:` search tag), so scripts had to know that `disabled` is omitted for enabled entries and filter the JSON themselves. `--status` combines with the pattern and `--type` using AND semantics, and works in project mode and for agents.
+
+  ```bash
+  skillshare list --status disabled
+  skillshare list --status enabled --json
+  ```
+
+  `--status all` is the default and produces output identical to omitting the flag. Refs: #244.
+
+### Bug Fixes
+
+- **Backups no longer copy your source, and old snapshots are pruned automatically** — pre-sync backups followed merge-mode skill symlinks and copied the resolved content, so every snapshot duplicated the source directory, including files kept out of Git but still present on disk such as model weights, `.venv`, and browser profiles. Retention only ran when `backup --cleanup` was invoked by hand, so nothing removed the accumulating snapshots; backup directories could reach hundreds of gigabytes until `sync` failed with `no space left on device`. Snapshots now capture only local target content, and the existing retention policy (10 snapshots, 30 days, 500 MB) runs after every automatic backup. Refs: #252.
+- **`backup --cleanup` keeps the newest snapshot when it exceeds the size cap** — a single snapshot larger than the 500 MB cap previously removed every backup including the most recent one, leaving no restore point at all.
+- **Backup previews and cleanup now agree** — `backup --cleanup --dry-run` no longer reports that it will delete an oversized newest snapshot when the actual cleanup keeps it. Retention also counts only snapshots that remain after cleanup, avoiding unnecessary deletion of older snapshots that still fit.
+- **Failed backups are discarded instead of appearing as restore points** — if a file cannot be copied, the partial snapshot is removed and cannot consume the newest retention slot. Automatic cleanup failures are now shown as warnings instead of being silently ignored.
+- **Targets holding only symlinks no longer produce empty snapshots** — an empty restore point consumed a retention slot and evicted older snapshots that did have content.
+- **`doctor` handles linked target directories correctly** — in project symlink mode the valid link `../.skillshare/skills` was reported as pointing to the wrong location, because relative links were resolved against the current working directory instead of the link's parent. Symlink-mode targets no longer report every source skill as a duplicate target-local copy, while copy-mode targets reached through a symlink still report real duplicate copies. Refs: #251.
+
+### Breaking Changes
+
+- **Backups capture local target content only** — merge-mode skill symlinks are skipped, so restoring a target recovers its local skills and then needs `skillshare sync` to recreate symlinks for synced skills. Copy-mode targets are unaffected because they hold real files. The documented backup location is also corrected to `~/.local/share/skillshare/backups/` (the XDG data directory), which had been listed under `~/.config` in some places.
+
+## [0.20.22] - 2026-07-21
+
+### New Features
+
+- **Grok CLI target** — added xAI's Grok CLI as a built-in target, syncing skills to `~/.grok/skills` (global) and `.grok/skills` (project), with legacy fallback to `~/.agents/skills`. Aliases: `xai`, `grok-cli`.
+
+  ```bash
+  skillshare target add grok
+  skillshare sync
+  ```
+
+### Bug Fixes
+
+- **`collect --json` no longer forces overwrites** — JSON mode previously implied `--force`, silently overwriting existing skills and agents in the source. It now still skips confirmation prompts but keeps the overwrite guard, so existing resources are preserved unless `--force` is passed.
+- **`uninstall --json` no longer bypasses the uncommitted-changes guard** — JSON mode previously implied `--force`, removing tracked skills that had uncommitted changes without warning. Dirty repositories now return a structured error unless `--force` is passed.
+- **Batch uninstall explains all-dirty failures** — uninstalling multiple tracked skills where every repository has uncommitted changes now reports why nothing was removed instead of failing without explanation.
+- **Editing a skill's source no longer rewrites the source directory's Git remote** — in the dashboard, changing a nested skill's source URL could overwrite the `origin` of the skills source directory itself when that directory is a Git repository (for example, backed by Git Sync). Source edits now only affect a tracked skill's own repository.
+- **Freshly installed skills show their correct source instead of "Local"** — after installing a skill from the dashboard, the resource now immediately shows its GitHub source and type, rather than appearing as a local skill with an empty source until the server was restarted.
+
+## [0.20.21] - 2026-06-29
+
+### Bug Fixes
+
+- **Copy-mode sync respects file ignore patterns** — `sync` in `copy` mode now skips configured `ignore:` artifacts, plus default `.DS_Store`, `.git/`, and `__pycache__/` files, across CLI sync, diff, and dashboard sync/diff paths. This prevents ignored cache and build artifacts from being copied into targets or changing copy-mode checksums.
+- **Global sync uses the default skills source when source is omitted** — global configs that only define targets now work with `skillshare sync --global`, using the default `~/.config/skillshare/skills` source instead of failing with `source path is empty`. Refs: #238.
+
 ## [0.20.20] - 2026-06-19
 
 ### Bug Fixes

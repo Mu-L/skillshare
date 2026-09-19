@@ -51,6 +51,7 @@ On a TTY, `skillshare list` launches an interactive terminal UI with:
 - **Keyboard navigation** — arrow keys to browse, `q` to quit
 - **Detail panel** — shows description, disk path, files, and synced targets for the selected skill
 - **Enable/disable toggle** — press `E` to toggle the selected skill's enabled/disabled state. Writes to `.skillignore` immediately without leaving the TUI. Disabled skills show a red **disabled** badge in the detail panel.
+- **Manual only toggle** — press `M` to toggle `disable-model-invocation` in the selected skill's `SKILL.md`. The skill stays installed and you can still invoke it by name, but the model stops loading it on its own; the detail panel shows a **manual only** badge. Unlike `E`, this edits the skill file itself: for a tracked or installed skill the TUI asks first, because `skillshare update` skips tracked repos with local changes and reinstalling a skill drops the edit. Pressing `M` again removes the line and restores the file exactly. Agents are not affected. The [dashboard](/docs/reference/commands/ui) shows the same **manual only** tag and has the switch in its skill editor.
 - **Content viewer** — press `Enter` to open a dual-pane viewer with a file tree on the left and Markdown-rendered content on the right. `j`/`k` browse files (auto-preview), `l`/`Enter` expand directories, `h` collapse. `Ctrl+d`/`u` scroll content half-page, `g`/`G` jump to top/bottom. Mouse wheel and click are also supported.
 
 Use `--no-tui` to skip the TUI and print plain text instead:
@@ -68,9 +69,16 @@ Filter skills without entering the TUI:
 skillshare list react                     # Filter by name/path/source
 skillshare list --type local              # Only local skills
 skillshare list --type github             # Only GitHub-sourced skills
+skillshare list --status disabled         # Only skills disabled via .skillignore
+skillshare list --status enabled --json   # Enabled skills, as JSON
 skillshare list react --sort newest       # Sort by install date
 skillshare list --json | jq '.[].name'   # JSON for scripting
 ```
+
+The default view (`--status all`) includes entries marked disabled. `--status`
+combines with the pattern and `--type` using AND semantics, works in project
+mode and for `list agents` / `list --all`, and seeds the TUI's `Status:` chip
+(you can still press `s` to cycle from there).
 
 :::tip AI Usage
 Use `--json` mode when inspecting skills programmatically:
@@ -223,6 +231,7 @@ Project list uses the same visual format as global list, with `(project)` label 
 | `--json, -j` | Output as JSON (useful for CI/scripts) |
 | `--no-tui` | Disable interactive TUI, use plain text output |
 | `--type, -t <type>` | Filter by type: `tracked`, `local`, `github` |
+| `--status <status>` | Filter by status: `all` (default), `enabled`, `disabled` |
 | `--sort, -s <order>` | Sort order: `name` (default), `newest`, `oldest` |
 | `--project, -p` | List project skills |
 | `--global, -g` | List global skills |

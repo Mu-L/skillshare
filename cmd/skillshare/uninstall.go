@@ -110,6 +110,19 @@ func topLevelDir(relPath string) string {
 	return parts[0]
 }
 
+// normalizeUninstallName converts OS-native separators to the slash-separated
+// logical names used by metadata and trash entries.
+func normalizeUninstallName(name string) string {
+	return normalizeUninstallNameForSeparator(name, os.PathSeparator)
+}
+
+func normalizeUninstallNameForSeparator(name string, separator uint8) string {
+	if separator == '/' {
+		return name
+	}
+	return strings.ReplaceAll(name, string(separator), "/")
+}
+
 // looksLikeShellGlob detects when positional args appear to be shell-expanded
 // file names rather than real skill names. Heuristic: ≥3 warnings, warnings ≥50%
 // of names, and ≥2 names contain a dot (file extension characteristic).
@@ -131,6 +144,7 @@ func looksLikeShellGlob(names []string, warnings []string) bool {
 // to "frontend/react/react-best-practices").
 func resolveUninstallTarget(skillName string, cfg *config.Config) (*uninstallTarget, error) {
 	skillName = strings.TrimRight(strings.TrimSpace(skillName), `/\`)
+	skillName = normalizeUninstallName(skillName)
 	if skillName == "" || skillName == "." {
 		return nil, fmt.Errorf("invalid skill name: %q", skillName)
 	}
@@ -197,6 +211,7 @@ func resolveUninstallByGlob(pattern string, cfg *config.Config) ([]*uninstallTar
 // Returns uninstallTargets for each skill found.
 func resolveGroupSkills(group, sourceDir string) ([]*uninstallTarget, error) {
 	group = strings.TrimRight(strings.TrimSpace(group), `/\`)
+	group = normalizeUninstallName(group)
 	if group == "" || group == "." {
 		return nil, fmt.Errorf("invalid group name: %q", group)
 	}
@@ -239,7 +254,7 @@ func resolveGroupSkills(group, sourceDir string) ([]*uninstallTarget, error) {
 			rel, relErr := filepath.Rel(resolvedSourceDir, path)
 			if relErr == nil && !strings.HasPrefix(rel, "..") {
 				targets = append(targets, &uninstallTarget{
-					name:          rel,
+					name:          normalizeUninstallName(rel),
 					path:          path,
 					isTrackedRepo: isRepo,
 				})
@@ -278,7 +293,7 @@ func resolveNestedSkillDir(sourceDir, name string) (string, error) {
 		}
 		if info.Name() == name || info.Name() == "_"+name {
 			if rel, relErr := filepath.Rel(walkRoot, path); relErr == nil && rel != "." {
-				matches = append(matches, rel)
+				matches = append(matches, normalizeUninstallName(rel))
 			}
 			return filepath.SkipDir
 		}
@@ -584,11 +599,6 @@ func cmdUninstall(args []string) error {
 		return parseErr
 	}
 
-	// --json implies --force (skip confirmation prompts)
-	if opts.jsonOutput {
-		opts.force = true
-	}
-
 	cfg, err := config.Load()
 	if err != nil {
 		if opts.jsonOutput {
@@ -599,6 +609,7 @@ func cmdUninstall(args []string) error {
 
 	// Agent-only uninstall: move .md + sidecar to agent trash, then return.
 	if kind == kindAgents {
+		opts.force = opts.force || opts.jsonOutput
 		agentsDir := cfg.EffectiveAgentsSource()
 		err := cmdUninstallAgents(agentsDir, opts, config.ConfigPath(), trash.AgentTrashDir(), start)
 		return err
@@ -841,11 +852,17 @@ func cmdUninstall(args []string) error {
 			// Repo is dirty
 			if !opts.force {
 				if single {
+					dirtyErr := fmt.Errorf("uncommitted changes detected, use --force to override")
+					if opts.jsonOutput {
+						return writeJSONError(dirtyErr)
+					}
 					ui.Error("Repository has uncommitted changes!")
 					ui.Info("Use --force to uninstall anyway, or commit/stash your changes first")
-					return fmt.Errorf("uncommitted changes detected, use --force to override")
+					return dirtyErr
 				}
-				ui.StepSkip(t.name, "uncommitted changes, use --force")
+				if !opts.jsonOutput {
+					ui.StepSkip(t.name, "uncommitted changes, use --force")
+				}
 				continue
 			}
 			if !opts.jsonOutput {
@@ -864,6 +881,9 @@ func cmdUninstall(args []string) error {
 
 		if len(targets) == 0 {
 			preflightErr := fmt.Errorf("no skills to uninstall after pre-flight checks")
+			if preflightSkipped > 0 {
+				preflightErr = fmt.Errorf("%d tracked repo%s skipped due to uncommitted changes; use --force to override", preflightSkipped, pluralS(preflightSkipped))
+			}
 			if opts.jsonOutput {
 				return writeJSONError(preflightErr)
 			}
@@ -893,7 +913,7 @@ func cmdUninstall(args []string) error {
 		return nil
 	}
 
-	if !opts.force {
+	if !opts.force && !opts.jsonOutput {
 		if single {
 			confirmed, err := confirmUninstall(targets[0])
 			if err != nil {
@@ -1178,7 +1198,7 @@ Options:
   --group, -G <name>  Remove all skills in a group (prefix match, repeatable)
   --force, -f         Skip confirmation and ignore uncommitted changes
   --dry-run, -n       Preview without making changes
-  --json              Output results as JSON (implies --force)
+  --json              Global mode: output JSON and skip confirmation
   --project, -p       Use project-level config in current directory
   --global, -g        Use global config (~/.config/skillshare)
   --help, -h          Show this help

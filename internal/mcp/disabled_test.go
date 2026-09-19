@@ -1,0 +1,190 @@
+package mcp
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// A project turns off a server that the Agent's global config defines by writing an
+// entry holding only the switch; the Agent merges it over the global one by field.
+func TestDisabledTurnsOffGlobalServerInProject(t *testing.T) {
+	s := testService(t)
+	s.ProjectRoot = filepath.Join(s.Home, "project")
+	source := "mcp:\n  servers:\n    docs:\n      disabled: true\n      piExtension: pi-mcp-adapter\n      targets: [opencode, kilocode, pi]\n"
+	if err := os.WriteFile(s.ConfigPath, []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := s.Preview()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.Apply(plan.Revision); err != nil {
+		t.Fatal(err)
+	}
+	for file, want := range map[string]string{
+		"opencode.json": `{"mcp":{"docs":{"enabled":false}}}`,
+		"kilo.jsonc":    `{"mcp":{"docs":{"enabled":false}}}`,
+		".pi/mcp.json":  `{"mcpServers":{"docs":{"disabled":true}}}`,
+	} {
+		data, err := os.ReadFile(filepath.Join(s.ProjectRoot, file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got, expected any
+		if json.Unmarshal(data, &got) != nil || json.Unmarshal([]byte(want), &expected) != nil {
+			t.Fatalf("%s: %s", file, data)
+		}
+		a, _ := json.Marshal(got)
+		b, _ := json.Marshal(expected)
+		if string(a) != string(b) {
+			t.Fatalf("%s: got %s want %s", file, a, b)
+		}
+	}
+	if plan, err = s.Preview(); err != nil || len(plan.Changes) != 3 || plan.Changes[0].Action != "unchanged" {
+		t.Fatalf("not idempotent: %+v %v", plan, err)
+	}
+	if err := os.WriteFile(s.ConfigPath, []byte("mcp:\n  servers: {}\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if plan, err = s.Preview(); err != nil || len(plan.Changes) != 3 || plan.Changes[0].Action != "remove" {
+		t.Fatalf("switch not removed with its source: %+v %v", plan, err)
+	}
+}
+
+func TestDisabledRejected(t *testing.T) {
+	for name, tc := range map[string]struct {
+		project bool
+		server  string
+		want    string
+	}{
+		"global mode":       {false, "disabled: true\n      targets: [opencode]", "project"},
+		"whole-entry agent": {true, "disabled: true\n      targets: [cursor]", "cursor"},
+		"codex":             {true, "disabled: true\n      targets: [codex]", "whole config"},
+		"pi extension":      {true, "disabled: true\n      piExtension: pi-mcp-extension\n      targets: [pi]", "pi-mcp-adapter"},
+		"with a command":    {true, "disabled: true\n      command: tool\n      targets: [opencode]", "leave out"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := testService(t)
+			if tc.project {
+				s.ProjectRoot = filepath.Join(s.Home, "project")
+			}
+			if err := os.WriteFile(s.ConfigPath, []byte("mcp:\n  servers:\n    docs:\n      "+tc.server+"\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := s.Preview(); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("want %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
+// The dashboard's preview must refuse what saving would refuse.
+func TestPreviewRefusesDisabledInGlobalMode(t *testing.T) {
+	s := testService(t)
+	got := s.RenderNative("docs", Server{Disabled: true, Targets: []string{"opencode"}})
+	if len(got) != 1 || got[0].Content != "" || !strings.Contains(got[0].Error, "project mode") {
+		t.Fatalf("preview %+v", got)
+	}
+}
+
+// Claude Code replaces a whole entry across scopes, so a lone switch in .mcp.json would
+// break the server. It keeps a per-project off list in ~/.claude.json instead, the one
+// /mcp edits. The global config may manage a server of the same name in that same file.
+func TestClaudeDisabledUsesProjectOffList(t *testing.T) {
+	global := testService(t)
+	plan, err := global.Preview()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = global.Apply(plan.Revision); err != nil {
+		t.Fatal(err)
+	}
+	s := *global
+	s.ProjectRoot = filepath.Join(s.Home, "project")
+	s.ConfigPath = filepath.Join(s.ProjectRoot, ".skillshare", "config.yaml")
+	if err := os.MkdirAll(filepath.Dir(s.ConfigPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(s.Home, ".claude.json")
+	var document map[string]any
+	data, _ := os.ReadFile(file)
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	document["projects"] = map[string]any{s.ProjectRoot: map[string]any{"disabledMcpServers": []string{"mine"}}}
+	data, _ = json.Marshal(document)
+	if err := os.WriteFile(file, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	offList := func() string {
+		t.Helper()
+		var got struct {
+			McpServers map[string]any
+			Projects   map[string]struct{ DisabledMcpServers []string }
+		}
+		data, _ := os.ReadFile(file)
+		if err := json.Unmarshal(data, &got); err != nil || got.McpServers["docs"] == nil {
+			t.Fatalf("user-scope docs lost: %s", data)
+		}
+		return strings.Join(got.Projects[s.ProjectRoot].DisabledMcpServers, ",")
+	}
+	sync := func(source, action string) {
+		t.Helper()
+		if err := os.WriteFile(s.ConfigPath, []byte(source), 0600); err != nil {
+			t.Fatal(err)
+		}
+		plan, err := s.Preview()
+		if err != nil || plan.Blocked || len(plan.Changes) != 1 || plan.Changes[0].Action != action || plan.Changes[0].Target != "claude" {
+			t.Fatalf("want %s: %+v %v", action, plan, err)
+		}
+		if _, err = s.Apply(plan.Revision); err != nil {
+			t.Fatal(err)
+		}
+	}
+	off := "mcp:\n  servers:\n    docs:\n      disabled: true\n      targets: [claude]\n"
+	sync(off, "add")
+	if got := offList(); got != "mine,docs" {
+		t.Fatalf("off list %q", got)
+	}
+	if _, err := os.Stat(filepath.Join(s.ProjectRoot, ".mcp.json")); !os.IsNotExist(err) {
+		t.Fatal("the switch belongs in ~/.claude.json, not .mcp.json")
+	}
+	sync(off, "unchanged")
+	sync("mcp:\n  servers: {}\n", "remove")
+	if got := offList(); got != "mine" {
+		t.Fatalf("off list after removal %q", got)
+	}
+	// A name the person turned off in /mcp is theirs: never claimed, never removed.
+	sync("mcp:\n  servers:\n    mine:\n      disabled: true\n      targets: [claude]\n", "unchanged")
+	if err := os.WriteFile(s.ConfigPath, []byte("mcp:\n  servers: {}\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if plan, err = s.Preview(); err != nil || len(plan.Changes) != 0 {
+		t.Fatalf("claimed the person's own switch: %+v %v", plan, err)
+	}
+	if got := s.RenderNative("docs", Server{Disabled: true, Targets: []string{"claude"}}); got[0].Error != "" || got[0].Path != file || !strings.Contains(got[0].Content, "disabledMcpServers") {
+		t.Fatalf("preview %+v", got)
+	}
+}
+
+// Claude Code lets a local-scope server win over .mcp.json and the user scope, whole.
+func TestClaudeLocalScopeShadowIsReported(t *testing.T) {
+	s := testService(t)
+	s.ProjectRoot = filepath.Join(s.Home, "project")
+	local, _ := json.Marshal(map[string]any{"projects": map[string]any{s.ProjectRoot: map[string]any{"mcpServers": map[string]any{"docs": map[string]any{"command": "other"}}}}})
+	if err := os.WriteFile(filepath.Join(s.Home, ".claude.json"), local, 0600); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := s.Preview()
+	if err != nil || plan.Blocked {
+		t.Fatalf("%+v %v", plan, err)
+	}
+	for _, c := range plan.Changes {
+		if shadowed := strings.Contains(c.Message, "local scope"); shadowed != (c.Target == "claude") {
+			t.Fatalf("%s: %q", c.Target, c.Message)
+		}
+	}
+}

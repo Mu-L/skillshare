@@ -5,6 +5,7 @@ package integration
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"skillshare/internal/install"
@@ -176,5 +177,36 @@ func TestInstallProject_AuditThresholdShortFlag_BlocksHighFinding(t *testing.T) 
 	projectSkillPath := filepath.Join(projectRoot, ".skillshare", "skills", "project-flag-high", "SKILL.md")
 	if sb.FileExists(projectSkillPath) {
 		t.Error("project install should be blocked when -T high is set")
+	}
+}
+
+// Regression for #280: config-driven `install -p` must not prune the skills:
+// entries it just installed from config.yaml. Uses a subdir source so the
+// skill is a plain copy (no .git) — the case the stale store cannot see.
+func TestInstallProject_FromConfig_KeepsConfigSkills(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+	projectRoot := sb.SetupProjectDir("claude")
+
+	repoPath := filepath.Join(sb.Root, "cfg-src")
+	os.MkdirAll(filepath.Join(repoPath, "skills", "cfg-skill"), 0755)
+	os.WriteFile(filepath.Join(repoPath, "skills", "cfg-skill", "SKILL.md"), []byte("---\nname: cfg-skill\n---\n# Cfg"), 0644)
+	initGitRepo(t, repoPath)
+
+	sb.WriteProjectConfig(projectRoot, `targets:
+  - claude
+skills:
+  - name: cfg-skill
+    source: file://`+repoPath+`//skills/cfg-skill
+`)
+
+	sb.RunCLIInDir(projectRoot, "install", "-p").AssertSuccess(t)
+
+	if !sb.FileExists(filepath.Join(projectRoot, ".skillshare", "skills", "cfg-skill", "SKILL.md")) {
+		t.Fatal("skill should be installed from config")
+	}
+	cfg := sb.ReadFile(filepath.Join(projectRoot, ".skillshare", "config.yaml"))
+	if !strings.Contains(cfg, "name: cfg-skill") {
+		t.Errorf("config.yaml lost the skills entry after install -p:\n%s", cfg)
 	}
 }
