@@ -47,6 +47,7 @@ NAME must be the name in the Agent's own global config.
 
 | Target | Supported | Written |
 |---|---|---|
+| `claude` | Yes | name added to this project's `disabledMcpServers` in `~/.claude.json` (per machine) |
 | `opencode`, `kilocode` | Yes | `{"enabled": false}` |
 | `pi` + `--pi-extension pi-mcp-adapter` | Yes | `{"disabled": true}` |
 | `pi` + `pi-mcp-extension`, all other targets | No | Error, nothing written |

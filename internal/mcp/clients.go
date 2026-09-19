@@ -78,11 +78,34 @@ func (s *Service) additionalClientPath(target string, format clientFormat) (stri
 			return "", fmt.Errorf("Claude Desktop MCP configuration is supported on macOS and Windows")
 		}
 	case "cline":
-		vscode, err := s.nativePath("vscode")
-		if err != nil {
-			return "", err
+		// Same order as Cline: CLINE_MCP_SETTINGS_PATH, CLINE_DATA_DIR, then CLINE_DIR or ~/.cline.
+		const file = "cline_mcp_settings.json"
+		for _, key := range []string{"cline-mcp", "cline-data", "cline"} {
+			if dir := s.ConfigDirs[key]; dir != "" && !filepath.IsAbs(dir) {
+				return "", fmt.Errorf("Cline config paths must be absolute")
+			}
 		}
-		return filepath.Join(filepath.Dir(vscode), "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"), nil
+		if path := s.ConfigDirs["cline-mcp"]; path != "" {
+			return path, nil
+		}
+		if dir := s.ConfigDirs["cline-data"]; dir != "" {
+			return filepath.Join(dir, "settings", file), nil
+		}
+		if dir := s.ConfigDirs["cline"]; dir != "" {
+			return filepath.Join(dir, "data", "settings", file), nil
+		}
+		data := filepath.Join(home, ".cline", "data")
+		// The extension moves its old VS Code storage to ~/.cline once and then stops reading
+		// it. Until that has happened, the old file is the one Cline reads.
+		if _, err := os.Lstat(data); err != nil {
+			if vscode, err := s.nativePath("vscode"); err == nil {
+				legacy := filepath.Join(filepath.Dir(vscode), "globalStorage", "saoudrizwan.claude-dev", "settings", file)
+				if _, err := os.Lstat(legacy); err == nil {
+					return legacy, nil
+				}
+			}
+		}
+		return filepath.Join(data, "settings", file), nil
 	case "pi":
 		if dir := s.ConfigDirs["pi"]; dir != "" {
 			if !filepath.IsAbs(dir) {

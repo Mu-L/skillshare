@@ -29,7 +29,7 @@ func (s *Service) Backups() ([]BackupInfo, error) {
 	}
 	for _, record := range records {
 		if record.Owner == owner {
-			result = append(result, BackupInfo{ID: record.ID, Target: record.Target, Path: record.Path})
+			result = append(result, BackupInfo{ID: record.ID, Target: shownTarget(record.Target), Path: record.Path})
 		}
 	}
 	return result, nil

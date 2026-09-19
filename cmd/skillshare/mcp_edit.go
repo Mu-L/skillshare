@@ -54,6 +54,10 @@ func patchMCPServer(server mcp.Server, o mcpOptions) mcp.Server {
 	if o.piExtension != "" {
 		server.PiExtension = o.piExtension
 	}
+	if o.url != "" || len(o.command) > 0 {
+		// A connection makes this a server of its own, no longer a switch for a global one.
+		server.Disabled = false
+	}
 	if o.url != "" {
 		server.Command = ""
 		server.Args = nil

@@ -41,15 +41,24 @@ export function groupByFile(changes: MCPChange[]) {
 }
 
 // ponytail: keyed on the backend Change.Message text; add a reason code to mcp.Change if these start drifting.
+const shadowMessage = 'a local scope server of the same name in ~/.claude.json overrides this one in this project; remove it with:';
+
+// Keyed by how the message starts: some end in a path or a command.
 const conflictKeys: Record<string, string> = {
+  [shadowMessage]: 'mcp.claudeLocalShadow',
   'managed by another Skillshare config': 'mcp.conflictOtherConfig',
   'Agent configuration changed; import it or explicitly replace this entry': 'mcp.conflictChanged',
   'existing entry is not managed; import it to explicitly adopt it': 'mcp.conflictUnmanaged',
   'entry changed after the backup; restore would overwrite newer changes': 'mcp.conflictAfterBackup',
 };
 
-export const describeMessage = (t: (key: string) => string, message = '') =>
-  conflictKeys[message] ? t(conflictKeys[message]) : message;
+export const describeMessage = (t: (key: string) => string, message = '') => {
+  const start = Object.keys(conflictKeys).find((k) => message.startsWith(k));
+  return start ? t(conflictKeys[start]) + message.slice(start.length) : message;
+};
+
+/** A synced Claude entry that a local-scope server of the same name hides in this project. */
+export const isShadowed = (change: MCPChange) => change.action !== 'conflict' && Boolean(change.message?.startsWith(shadowMessage));
 
 /** Conflicts the user can settle by importing the Agent entry or replacing it with the source. */
 export const isResolvable = (change: MCPChange) =>
@@ -57,7 +66,7 @@ export const isResolvable = (change: MCPChange) =>
 
 /** Display names for the MCP clients, as in their own docs. */
 export const targetLabel = (target: string) =>
-  ({ pi: 'Pi', claude: 'Claude', codex: 'Codex', cursor: 'Cursor', vscode: 'VS Code', opencode: 'OpenCode', kilocode: 'Kilo Code', grok: 'Grok', antigravity: 'Antigravity', amp: 'Amp', 'claude-desktop': 'Claude Desktop', cline: 'Cline (VS Code)', copilot: 'Copilot CLI', factory: 'Factory', gemini: 'Gemini CLI', goose: 'Goose', junie: 'Junie', kiro: 'Kiro', lmstudio: 'LM Studio', warp: 'Warp', windsurf: 'Windsurf' })[target] ?? target;
+  ({ pi: 'Pi', claude: 'Claude', codex: 'Codex', cursor: 'Cursor', vscode: 'VS Code', opencode: 'OpenCode', kilocode: 'Kilo Code', grok: 'Grok', antigravity: 'Antigravity', amp: 'Amp', 'claude-desktop': 'Claude Desktop', cline: 'Cline', copilot: 'Copilot CLI', factory: 'Factory', gemini: 'Gemini CLI', goose: 'Goose', junie: 'Junie', kiro: 'Kiro', lmstudio: 'LM Studio', warp: 'Warp', windsurf: 'Windsurf' })[target] ?? target;
 
 /** Splits a command line into words, honouring single and double quotes. */
 // ponytail: no backslash escapes; a word holding both quote kinds needs the YAML config.

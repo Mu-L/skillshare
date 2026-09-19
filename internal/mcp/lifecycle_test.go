@@ -247,6 +247,21 @@ func TestScopeIsolationAndForeignOwnership(t *testing.T) {
 	if err != nil || !p.Blocked {
 		t.Fatalf("foreign ownership bypassed: %v", err)
 	}
+	// A config that was moved or deleted can no longer release its entries, so an
+	// explicit resolution may take them over. Without one it is still a conflict.
+	if err := os.Remove(s.ConfigPath); err != nil {
+		t.Fatal(err)
+	}
+	if p, err = other.Preview(); err != nil || !p.Blocked {
+		t.Fatalf("orphaned ownership claimed without asking: %v", err)
+	}
+	var adopt []Resolution
+	for _, target := range []string{"claude", "codex", "cursor", "vscode"} {
+		adopt = append(adopt, Resolution{Target: target, Name: "docs", Action: "adopt"})
+	}
+	if p, err = other.PreviewMutation(Mutation{Resolutions: adopt}); err != nil || p.Blocked {
+		t.Fatalf("orphaned ownership cannot be resolved: %v", err)
+	}
 	other.ProjectRoot = filepath.Join(s.Home, "project")
 	if _, err := other.Apply(""); err != nil {
 		t.Fatal(err)

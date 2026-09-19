@@ -48,8 +48,8 @@ func (s *Service) PreviewRestore(id string) (*Plan, error) {
 	p := &Plan{SourcePath: source.Path, source: source, state: state, stateBytes: stateBytes, Changes: []Change{}}
 	f := &filePlan{path: backup.Path, target: backup.Target, before: before, exists: exists, mode: mode, section: sectionDigest(native), changes: backup.Before}
 	for _, name := range sortedKeys(backup.Before) {
-		key := ownershipKey(backup.Path, name)
-		change := Change{Target: backup.Target, Path: backup.Path, Name: name, Action: "restore"}
+		key := ownershipKey(backup.Target, backup.Path, name)
+		change := Change{Target: shownTarget(backup.Target), Path: backup.Path, Name: name, Action: "restore"}
 		owned, managed := state.Entries[key]
 		if !sameEntry(native.Entries[name], backup.After[name]) || managed && owned.Owner != backup.Owner {
 			change.Action, change.Message = "conflict", "entry changed after the backup; restore would overwrite newer changes"

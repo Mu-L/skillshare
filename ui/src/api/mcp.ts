@@ -15,8 +15,8 @@ export interface MCPServer {
   /** Project mode: the whole entry, turning off a server the Agent's global config defines. */
   disabled?: boolean;
 }
-/** Agents that merge a project entry over the global one by field, so a lone switch works. */
-export const mcpOffTargets: readonly string[] = ['opencode', 'kilocode', 'pi'];
+/** Agents with a per-project switch: a field merged over the global entry, or Claude Code's own off list. */
+export const mcpOffTargets: readonly string[] = ['claude', 'opencode', 'kilocode', 'pi'];
 export interface MCPMutation {
   name?: string;
   server?: MCPServer;

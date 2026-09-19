@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 
@@ -182,18 +183,43 @@ func (s *Service) ClientPaths() map[string]string {
 // ConfigDirsFromEnv reads the Agent directory overrides Agents themselves honor.
 func ConfigDirsFromEnv() map[string]string {
 	dirs := map[string]string{}
-	for key, env := range map[string]string{"pi": "PI_CODING_AGENT_DIR", "codex": "CODEX_HOME", "claude": "CLAUDE_CONFIG_DIR", "grok": "GROK_HOME", "copilot": "COPILOT_HOME", "xdg": "XDG_CONFIG_HOME", "appdata": "APPDATA"} {
-		if value := strings.TrimSpace(os.Getenv(env)); value != "" {
-			dirs[key] = value
+	for key, env := range map[string]string{"pi": "PI_CODING_AGENT_DIR", "codex": "CODEX_HOME", "claude": "CLAUDE_CONFIG_DIR", "grok": "GROK_HOME", "copilot": "COPILOT_HOME", "cline": "CLINE_DIR", "cline-data": "CLINE_DATA_DIR", "cline-mcp": "CLINE_MCP_SETTINGS_PATH", "xdg": "XDG_CONFIG_HOME", "appdata": "APPDATA"} {
+		value := strings.TrimSpace(os.Getenv(env))
+		// The XDG spec says a relative XDG_CONFIG_HOME is invalid and must be ignored.
+		if value == "" || (key == "xdg" || key == "appdata") && !filepath.IsAbs(value) {
+			continue
 		}
+		dirs[key] = value
 	}
 	return dirs
 }
 
+// homeFolders are the Agents whose MCP file is not directly inside their own folder.
+var homeFolders = map[string]string{"claude": ".claude", "junie": ".junie", "kiro": ".kiro", "cline": ".cline"}
+
 // DetectedClients lists Agents that look installed: their native MCP file
 // exists, or its own config directory does. A file placed directly in the home
-// or project root only counts when the file itself exists.
+// only counts when the file itself exists.
+//
+// A project's folders say nothing: .github, .vscode and .agents exist for unrelated
+// reasons, and Claude's file sits in the root with no folder at all. There, an Agent
+// counts when its project file exists or when it is installed for the user.
 func (s *Service) DetectedClients(paths map[string]string) []string {
+	if s.ProjectRoot != "" {
+		user := *s
+		user.ProjectRoot = ""
+		installed := user.DetectedClients(user.ClientPaths())
+		out := []string{}
+		for _, target := range Targets {
+			if paths[target] == "" {
+				continue
+			}
+			if _, err := os.Lstat(paths[target]); err == nil || slices.Contains(installed, target) {
+				out = append(out, target)
+			}
+		}
+		return out
+	}
 	home := s.Home
 	if home == "" {
 		home, _ = os.UserHomeDir()
@@ -208,8 +234,13 @@ func (s *Service) DetectedClients(paths map[string]string) []string {
 			out = append(out, target)
 			continue
 		}
+		// The MCP file's folder, or the Agent's own home folder when that file sits deeper
+		// or directly in the home. ~/.gemini is shared with Antigravity, so it proves nothing.
 		dir := filepath.Dir(path)
-		if dir == filepath.Clean(home) || (s.ProjectRoot != "" && dir == filepath.Clean(s.ProjectRoot)) {
+		if marker := homeFolders[target]; marker != "" {
+			dir = filepath.Join(home, marker)
+		}
+		if dir == filepath.Clean(home) || target == "gemini" {
 			continue
 		}
 		if info, err := os.Stat(dir); err == nil && info.IsDir() {

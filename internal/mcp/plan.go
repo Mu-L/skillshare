@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -54,7 +55,14 @@ type filePlan struct {
 	changes       map[string]map[string]any
 }
 
-func ownershipKey(path, name string) string { return digest([]byte(path + "\x00" + name)) }
+// ownershipKey is one entry in one file. Claude's off list shares ~/.claude.json with the
+// user-scope servers a global config may own under the same name, so it keys apart.
+func ownershipKey(target, path, name string) string {
+	if strings.HasPrefix(target, claudeOffPrefix) {
+		path = target + "\x00" + path
+	}
+	return digest([]byte(path + "\x00" + name))
+}
 
 func safeRead(path string) ([]byte, bool, os.FileMode, error) {
 	info, err := os.Lstat(path)
@@ -124,27 +132,21 @@ func (s *Service) render(source *Source) (map[string]map[string]map[string]any, 
 		if len(selected) == 0 {
 			return nil, nil, fmt.Errorf("MCP %s has no targets; select at least one Agent", name)
 		}
-		if server.Disabled && s.ProjectRoot == "" {
-			return nil, nil, fmt.Errorf("MCP %s: disabled only applies in project mode, where it turns off a server from the Agent's global config; here, unselect the Agent instead", name)
-		}
 		for _, target := range selected {
+			if err := s.checkScope(name, target, server); err != nil {
+				return nil, nil, err
+			}
 			if target == "pi" {
-				if s.ProjectRoot == "" && s.ConfigDirs["pi"] != "" && server.PiExtension == "pi-mcp-extension" {
-					return nil, nil, fmt.Errorf("pi-mcp-extension uses ~/.pi/agent/mcp.json and does not honor PI_CODING_AGENT_DIR; unset the override before syncing")
-				}
 				if piExtension != "" && piExtension != server.PiExtension {
 					return nil, nil, fmt.Errorf("Pi servers share one config file; select the same piExtension for every Pi server")
 				}
 				piExtension = server.PiExtension
 			}
-			if target == "grok" && (!grokServerName.MatchString(name) || strings.Contains(name, "__") || strings.HasSuffix(name, "_")) {
-				return nil, nil, fmt.Errorf("Grok MCP %s: use a name starting with a letter or underscore, containing only letters, digits, hyphens and single underscores, and not ending in underscore", name)
-			}
-			path, err := s.nativePath(target)
+			path, native, err := s.destination(target, server)
 			if err != nil {
 				return nil, nil, err
 			}
-			targets[path] = target
+			targets[path] = native
 			entry, err := Render(target, server)
 			if err != nil {
 				return nil, nil, fmt.Errorf("%s / %s: %w", target, name, err)
@@ -164,6 +166,83 @@ func (s *Service) render(source *Source) (map[string]map[string]map[string]any, 
 		}
 	}
 	return desired, targets, nil
+}
+
+// destination is the file one server lands in for one Agent, and the native target that
+// reads and edits it. They differ from nativePath only for a switch-only Claude entry:
+// Claude Code takes a whole entry from one scope, so a lone switch in .mcp.json would
+// replace the server. Its per-project off list in the global file does the job instead.
+func (s *Service) destination(target string, server Server) (string, string, error) {
+	if target == "claude" && server.Disabled && s.ProjectRoot != "" {
+		global := *s
+		global.ProjectRoot = ""
+		path, err := global.nativePath(target)
+		return path, claudeOffPrefix + s.ProjectRoot, err
+	}
+	path, err := s.nativePath(target)
+	return path, target, err
+}
+
+// claudeLocalServers names the servers of Claude Code's local scope for this project. They
+// live in the global file and win, whole, over .mcp.json and the user scope.
+func (s *Service) claudeLocalServers() map[string]any {
+	if s.ProjectRoot == "" {
+		return nil
+	}
+	global := *s
+	global.ProjectRoot = ""
+	path, err := global.nativePath("claude")
+	if err != nil {
+		return nil
+	}
+	data, _, _, err := safeRead(path)
+	if err != nil {
+		return nil
+	}
+	var document struct {
+		Projects map[string]struct {
+			McpServers map[string]any `json:"mcpServers"`
+		} `json:"projects"`
+	}
+	_ = json.Unmarshal(data, &document)
+	return document.Projects[s.ProjectRoot].McpServers
+}
+
+// From Claude Code's MCP docs. The withheld list is the names the docs give; they say "such as".
+var (
+	claudeReservedNames = []string{"workspace", "claude-in-chrome", "computer-use"}
+	claudeWithheldEnv   = []string{"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "AWS_BEARER_TOKEN_BEDROCK", "HTTPS_PROXY", "NPM_TOKEN"}
+)
+
+// checkScope refuses what Render cannot see: limits that depend on the mode, the
+// Agent's directory overrides or the server's name. The dashboard's preview runs it
+// too, so it never shows a config that saving would then refuse.
+func (s *Service) checkScope(name, target string, server Server) error {
+	switch {
+	case server.Disabled && s.ProjectRoot == "":
+		return fmt.Errorf("MCP %s: disabled only applies in project mode, where it turns off a server from the Agent's global config; here, unselect the Agent instead", name)
+	case target == "pi" && s.ProjectRoot == "" && s.ConfigDirs["pi"] != "" && server.PiExtension == "pi-mcp-extension":
+		return fmt.Errorf("pi-mcp-extension uses ~/.pi/agent/mcp.json and does not honor PI_CODING_AGENT_DIR; unset the override before syncing")
+	case target == "grok" && (!grokServerName.MatchString(name) || strings.Contains(name, "__") || strings.HasSuffix(name, "_")):
+		return fmt.Errorf("Grok MCP %s: use a name starting with a letter or underscore, containing only letters, digits, hyphens and single underscores, and not ending in underscore", name)
+	case target == "claude" && slices.Contains(claudeReservedNames, name):
+		return fmt.Errorf("Claude MCP %s: Claude Code reserves this name for a built-in server and skips the entry; choose another name", name)
+	case target == "claude" && server.URL != "":
+		// Claude Code reads its own and the cloud provider's credentials as empty in a remote
+		// server's url and headers, so the server would get "Bearer " and answer 401.
+		refs := []*Value{server.BearerToken}
+		for _, v := range server.Headers {
+			refs = append(refs, &v)
+		}
+		for _, v := range refs {
+			if v != nil && slices.Contains(claudeWithheldEnv, v.FromEnv) {
+				return fmt.Errorf("Claude MCP %s: Claude Code never sends %s to a remote server and reads it as empty; copy the value into a variable with a name of your own and reference that", name, v.FromEnv)
+			}
+		}
+	case target == "kilocode" && s.ProjectRoot != "" && server.usesEnv():
+		return fmt.Errorf("Kilo Code MCP %s: Kilo does not allow environment references in project config and ignores the whole file when it finds one; remove fromEnv here or define this server in global mode", name)
+	}
+	return nil
 }
 
 func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Plan, error) {
@@ -195,6 +274,7 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 		Resolutions []Resolution
 	}{source.Servers, source.Targets, resolutions})
 	revision := digest(source.configBytes) + digest(source.bytes) + digest(stateBytes) + digest(proposal)
+	local := s.claudeLocalServers()
 	for _, path := range sortedKeys(targets) {
 		target := targets[path]
 		data, exists, mode, err := safeRead(path)
@@ -217,19 +297,23 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 			}
 		}
 		for _, name := range sortedKeys(names) {
-			key := ownershipKey(path, name)
+			key := ownershipKey(target, path, name)
 			owned, managed := state.Entries[key]
 			current := native.Entries[name]
 			currentHash := entryHash(managedEntry(target, current))
 			want := desired[path][name]
 			wantHash := entryHash(managedEntry(target, want))
 			for _, resolution := range resolutions {
-				if resolution.Target != target || resolution.Name != name {
+				if resolution.Target != shownTarget(target) || resolution.Name != name {
 					continue
 				}
-				matched[target+"\x00"+name] = true
+				matched[resolution.Target+"\x00"+name] = true
 				if managed && owned.Owner != source.ConfigPath {
-					break
+					// An owner that still exists must release the entry itself. One that was
+					// moved or deleted never can, so an explicit resolution may take over.
+					if _, err := os.Lstat(owned.Owner); err == nil {
+						break
+					}
 				}
 				// adopt claims only an entry that already matches; anything else
 				// stays a conflict for an explicit replace.
@@ -240,10 +324,10 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 				managed = true
 				p.state.Entries[key] = owned
 			}
-			change := Change{Target: target, Path: path, Name: name}
+			change := Change{Target: shownTarget(target), Path: path, Name: name}
 			switch {
 			case managed && owned.Owner != source.ConfigPath:
-				change.Action, change.Message = "conflict", "managed by another Skillshare config"
+				change.Action, change.Message = "conflict", "managed by another Skillshare config: "+owned.Owner
 			case currentHash == wantHash && managed && want != nil && native.cramped(name):
 				// The content is right but it is all on one line. Sync owns this entry, so it
 				// writes it again, laid out; the person pressing Sync expects a file they can read.
@@ -280,6 +364,8 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 			}
 			if change.Action == "conflict" {
 				p.Blocked = true
+			} else if target == "claude" && want != nil && local[name] != nil {
+				change.Message = "a local scope server of the same name in ~/.claude.json overrides this one in this project; remove it with: claude mcp remove " + name + " -s local"
 			}
 			p.Changes = append(p.Changes, change)
 		}

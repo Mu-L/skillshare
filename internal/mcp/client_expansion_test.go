@@ -177,7 +177,7 @@ func TestExpandedClientPaths(t *testing.T) {
 	s.Platform = "darwin"
 	want := map[string]string{
 		"amp": ".config/amp/settings.json", "claude-desktop": "Library/Application Support/Claude/claude_desktop_config.json",
-		"cline":   "Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json",
+		"cline":   ".cline/data/settings/cline_mcp_settings.json",
 		"copilot": ".copilot/mcp-config.json", "factory": ".factory/mcp.json", "gemini": ".gemini/settings.json",
 		"goose": ".config/goose/config.yaml", "junie": ".junie/mcp/mcp.json", "kiro": ".kiro/settings/mcp.json",
 		"lmstudio": ".lmstudio/mcp.json", "warp": ".warp/.mcp.json", "windsurf": ".codeium/windsurf/mcp_config.json",
@@ -229,6 +229,41 @@ func TestGoosePreservesUnrelatedYAML(t *testing.T) {
 	for _, bad := range []string{"extensions: {}\nextensions: {}", "extensions: {}\n---\nother: true", "extensions: []"} {
 		if _, err := ParseNative("goose", []byte(bad)); err == nil {
 			t.Errorf("invalid YAML accepted: %s", bad)
+		}
+	}
+}
+
+// Cline's IDE extension, CLI and SDK share ~/.cline/data/settings. The extension migrates
+// its old VS Code storage there once and never reads it again, so the old file is only
+// right for an install that has not migrated yet.
+func TestClinePath(t *testing.T) {
+	s := testService(t)
+	s.Platform = "darwin"
+	shared := filepath.Join(s.Home, ".cline", "data", "settings", "cline_mcp_settings.json")
+	legacy := filepath.Join(s.Home, "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+	if err := os.MkdirAll(filepath.Dir(legacy), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(legacy, []byte("{}"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.nativePath("cline"); err != nil || got != legacy {
+		t.Fatalf("not migrated yet %q: %v", got, err)
+	}
+	if err := os.MkdirAll(filepath.Join(s.Home, ".cline", "data"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.nativePath("cline"); err != nil || got != shared {
+		t.Fatalf("migrated %q: %v", got, err)
+	}
+	for dirs, want := range map[*map[string]string]string{
+		{"cline": "/c"}:                                      "/c/data/settings/cline_mcp_settings.json",
+		{"cline": "/c", "cline-data": "/d"}:                  "/d/settings/cline_mcp_settings.json",
+		{"cline-data": "/d", "cline-mcp": "/x/servers.json"}: "/x/servers.json",
+	} {
+		s.ConfigDirs = *dirs
+		if got, err := s.nativePath("cline"); err != nil || got != filepath.FromSlash(want) {
+			t.Fatalf("override %v: %q %v", *dirs, got, err)
 		}
 	}
 }

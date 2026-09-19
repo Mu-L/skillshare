@@ -14,8 +14,11 @@ func renderDisabled(target string, s Server) (map[string]any, error) {
 		return map[string]any{"enabled": false}, nil
 	case target == "pi" && s.PiExtension == "pi-mcp-adapter":
 		return map[string]any{"disabled": true}, nil
+	case target == "claude":
+		// No entry to write: destination sends the name to Claude Code's per-project off list.
+		return map[string]any{}, nil
 	}
-	return nil, fmt.Errorf("%s cannot turn off a global server from a project file; disabled supports opencode, kilocode and pi with pi-mcp-adapter", target)
+	return nil, fmt.Errorf("%s cannot turn off a global server from a project file; disabled supports claude, opencode, kilocode and pi with pi-mcp-adapter", target)
 }
 
 // Render converts a portable definition to a native entry without reading env.
@@ -153,14 +156,19 @@ func (s *Service) RenderNative(name string, server Server) []Rendered {
 	out := make([]Rendered, 0, len(server.Targets))
 	for _, target := range server.Targets {
 		r := Rendered{Target: target}
-		r.Path, _ = s.nativePath(target)
-		entry, err := Render(target, server)
+		path, native, _ := s.destination(target, server)
+		r.Path = path
+		err := s.checkScope(name, target, server)
+		var entry map[string]any
+		if err == nil {
+			entry, err = Render(target, server)
+		}
 		var n *Native
 		if err == nil {
 			if target == "goose" {
 				entry["name"] = name
 			}
-			n, err = ParseNative(target, nil)
+			n, err = ParseNative(native, nil)
 		}
 		var data []byte
 		if err == nil {

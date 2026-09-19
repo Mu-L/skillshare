@@ -18,7 +18,7 @@ import { MCPConfigDialog } from '../components/mcp/MCPConfigView';
 import MCPRemoveDialog from '../components/mcp/MCPRemoveDialog';
 import MCPRestoreDialog from '../components/mcp/MCPRestoreDialog';
 import MCPServerDialog from '../components/mcp/MCPServerDialog';
-import { buildMatrix, countActions, describeMessage, isResolvable, targetLabel, type MCPChange } from '../components/mcp/mcpView';
+import { buildMatrix, countActions, describeMessage, isShadowed, isResolvable, targetLabel, type MCPChange } from '../components/mcp/mcpView';
 import { useT } from '../i18n';
 import { shortenHome } from '../lib/paths';
 import { queryKeys } from '../lib/queryKeys';
@@ -195,6 +195,12 @@ export default function MCPPage() {
             )}
           </RailSection>
         </>}>
+          {changes.filter(isShadowed).map((c) => (
+            <div key={`${c.target}:${c.name}`} className="ss-note warn">
+              <AlertCircle size={16} />
+              <span className="flex-1">{targetLabel(c.target)} · <span className="font-mono">{c.name}</span>: {describeMessage(t, c.message)}</span>
+            </div>
+          ))}
           {conflicts.length > 0 && (
             <div className="ss-note warn !items-center">
               <AlertCircle size={16} className="self-start mt-0.5" />

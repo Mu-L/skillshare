@@ -3,6 +3,7 @@ package mcp
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -105,6 +106,42 @@ func TestKiloCodePath(t *testing.T) {
 	}
 }
 
+// Kilo treats project config as untrusted: one {env:} reference makes it discard the whole
+// project file, so every server in it would vanish. The user's own config may use them.
+func TestKiloCodeProjectRefusesEnvReferences(t *testing.T) {
+	s := testService(t)
+	if err := os.WriteFile(s.ConfigPath, []byte("mcp:\n  targets: [kilocode]\n  servers:\n    docs:\n      url: https://example.com/mcp\n      bearerToken: {fromEnv: MCP_TOKEN}\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Preview(); err != nil {
+		t.Fatalf("global config may reference the environment: %v", err)
+	}
+	s.ProjectRoot = t.TempDir()
+	if _, err := s.Preview(); err == nil || !strings.Contains(err.Error(), "fromEnv") {
+		t.Fatalf("project config must refuse fromEnv: %v", err)
+	}
+}
+
+// Claude Code skips a server named after one of its built-ins, and reads its own credentials
+// as empty toward a remote server. Both fail silently in Claude, so they are refused here.
+func TestClaudeRefusesWhatItWouldIgnore(t *testing.T) {
+	s := testService(t)
+	for name, server := range map[string]Server{
+		"workspace": {Command: "tool"},
+		"docs":      {URL: "https://example.com/mcp", BearerToken: &Value{FromEnv: "ANTHROPIC_API_KEY"}},
+	} {
+		if err := s.checkScope(name, "claude", server); err == nil {
+			t.Errorf("%s accepted for claude", name)
+		}
+		if err := s.checkScope(name, "cursor", server); err != nil {
+			t.Errorf("%s refused for cursor: %v", name, err)
+		}
+	}
+	if err := s.checkScope("docs", "claude", Server{Command: "tool", Env: map[string]Value{"ANTHROPIC_API_KEY": {FromEnv: "ANTHROPIC_API_KEY"}}}); err != nil {
+		t.Errorf("a local server may receive the key: %v", err)
+	}
+}
+
 func TestImportDetectsPastedJSONFormat(t *testing.T) {
 	for _, content := range []string{
 		`{"mcpServers":{"docs":{"url":"https://example.com/mcp"}}}`,
@@ -132,6 +169,50 @@ func TestDetectedClients(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := strings.Join(s.DetectedClients(paths), ","); got != "codex,cursor" {
+		t.Fatalf("detected %q", got)
+	}
+}
+
+// An Agent that is installed but has never had an MCP server has no MCP folder yet, only
+// its own home folder. Antigravity lives inside ~/.gemini, so that folder alone does not
+// mean Gemini CLI is installed.
+func TestDetectedClientsByHomeFolder(t *testing.T) {
+	s := testService(t)
+	for _, dir := range []string{".claude", ".junie", ".kiro", ".cline", filepath.Join(".gemini", "config")} {
+		if err := os.MkdirAll(filepath.Join(s.Home, dir), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := strings.Join(s.DetectedClients(s.ClientPaths()), ","); got != "claude,antigravity,cline,junie,kiro" {
+		t.Fatalf("detected %q", got)
+	}
+	if err := os.WriteFile(filepath.Join(s.Home, ".gemini", "settings.json"), []byte("{}"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := s.DetectedClients(s.ClientPaths()); !slices.Contains(got, "gemini") {
+		t.Fatalf("gemini with its own settings file: %v", got)
+	}
+}
+
+// A project has .github, .vscode and .agents for reasons unrelated to MCP, and Claude's
+// project file sits in the root, so project folders say nothing about which Agents are
+// in use. The project file itself does, and so does the Agent being installed.
+func TestDetectedClientsInProject(t *testing.T) {
+	s := testService(t)
+	global := s.ClientPaths()
+	if err := os.MkdirAll(filepath.Dir(global["cursor"]), 0700); err != nil {
+		t.Fatal(err)
+	}
+	s.ProjectRoot = t.TempDir()
+	for _, dir := range []string{".github", ".vscode", ".agents"} {
+		if err := os.MkdirAll(filepath.Join(s.ProjectRoot, dir), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(s.ProjectRoot, ".mcp.json"), []byte("{}"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(s.DetectedClients(s.ClientPaths()), ","); got != "claude,cursor" {
 		t.Fatalf("detected %q", got)
 	}
 }

@@ -200,3 +200,18 @@ func (s Server) Validate(name string) error {
 	}
 	return nil
 }
+
+// usesEnv reports whether any value is read from the environment when the Agent starts.
+func (s Server) usesEnv() bool {
+	if s.BearerToken != nil && s.BearerToken.FromEnv != "" {
+		return true
+	}
+	for _, values := range []map[string]Value{s.Env, s.Headers} {
+		for _, v := range values {
+			if v.FromEnv != "" {
+				return true
+			}
+		}
+	}
+	return false
+}

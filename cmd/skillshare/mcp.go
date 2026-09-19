@@ -98,6 +98,9 @@ func cmdMCP(args []string) (resultErr error) {
 	if err != nil {
 		return err
 	}
+	if o.disabled && sub != "add" {
+		return fmt.Errorf("--disabled only applies to mcp add")
+	}
 	start := time.Now()
 	switch sub {
 	case "list":
@@ -143,7 +146,7 @@ func cmdSyncMCP(args []string) error {
 	if err != nil {
 		return err
 	}
-	if o.piExtension != "" || o.name != "" || o.url != "" || o.from != "" || o.file != "" || len(o.command) > 0 || len(o.targets) > 0 || o.replace || o.sync {
+	if o.piExtension != "" || o.name != "" || o.url != "" || o.from != "" || o.file != "" || len(o.command) > 0 || len(o.targets) > 0 || o.replace || o.sync || o.disabled {
 		return fmt.Errorf("sync mcp accepts only --dry-run, --json, --revision and scope flags")
 	}
 	if o.dryRun {
@@ -232,7 +235,7 @@ Options:
   --file <path>      Native configuration file to import
   --url <url>        Streamable HTTP endpoint
   --disabled        Project mode: turn off a server from the Agent's global config
-                    (add NAME --disabled --target opencode; opencode, kilocode, pi)
+                    (add NAME --disabled --target opencode; claude, opencode, kilocode, pi)
   --sync            Save and synchronize (non-interactive default: save only)
   --replace         Replace an existing source entry; on import, also rewrite
                     the imported client's entry when it differs

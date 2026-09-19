@@ -139,7 +139,7 @@ Names such as `company-docs` work across all supported clients.
 | Antigravity (AGY) | `~/.gemini/config/mcp_config.json` | `.agents/mcp_config.json` | `mcpServers` |
 | [Amp](https://ampcode.com/docs/customize/mcp) | `~/.config/amp/settings.json` | `.amp/settings.json` | `amp.mcpServers` (literal key) |
 | [Claude Desktop](https://modelcontextprotocol.io/docs/develop/connect-local-servers) | Claude application data directory, `claude_desktop_config.json` | Global only | `mcpServers` |
-| [Cline (VS Code)](https://github.com/cline/cline/tree/main/apps/vscode/src/services/mcp) | VS Code User directory, `globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` | Global only | `mcpServers` |
+| [Cline](https://github.com/cline/cline/tree/main/apps/vscode/src/services/mcp) | `~/.cline/data/settings/cline_mcp_settings.json` | Global only | `mcpServers` |
 | [Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers) | `~/.copilot/mcp-config.json` | `.github/mcp.json` | `mcpServers` |
 | [Factory Droid](https://docs.factory.ai/harness/mcp) | `~/.factory/mcp.json` | `.factory/mcp.json` | `mcpServers` |
 | [Gemini CLI](https://geminicli.com/docs/tools/mcp-server/) | `~/.gemini/settings.json` | `.gemini/settings.json` | `mcpServers` |
@@ -186,8 +186,31 @@ Additional client details:
   formatting. Aliases, merges, duplicate keys and multiple documents block edits.
   Built-in extensions and keychain `env_keys` cannot be imported as portable MCP
   connections.
-- Windsurf support is for the documented Cascade configuration. Warp project
-  connections still require approval inside Warp each session.
+- Claude Code skips a server named `workspace`, `claude-in-chrome` or `computer-use`,
+  which it reserves for built-in servers. It also never sends its own credentials to a
+  remote server: `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `AWS_BEARER_TOKEN_BEDROCK`,
+  `HTTPS_PROXY` and `NPM_TOKEN` read as empty in `url` and `headers`. Skillshare refuses
+  both for Claude. Copy the credential into a variable with a name of your own.
+- Claude Code also has a local scope: servers added with `claude mcp add` and no
+  `--scope`, stored per project in `~/.claude.json`. A local server wins, whole, over
+  one of the same name in `.mcp.json` or the user scope. In project mode Skillshare
+  reports such a server next to the entry it hides, without blocking the sync. Remove
+  it with `claude mcp remove NAME -s local` from the project folder.
+- Cline's VS Code extension, CLI and SDK share `~/.cline/data/settings/`. The
+  extension moves its older VS Code `globalStorage` file there once and then stops
+  reading it, so Skillshare writes to the old file only while `~/.cline/data` does
+  not exist yet. `CLINE_MCP_SETTINGS_PATH`, `CLINE_DATA_DIR` and `CLINE_DIR` are
+  respected, in that order.
+- Windsurf support is for the documented Cascade configuration. Windsurf's newer
+  Devin Local agent reads its own `~/.config/devin/mcp_config.json`, which Skillshare
+  does not manage. Warp project connections still require approval inside Warp
+  each session.
+- Amp runs a server from a project's `.amp/settings.json` only after
+  `amp mcp approve <name>`. Global servers need no approval.
+- Kiro expands `${VARIABLE}` only for names listed in its "Mcp Approved Env Vars"
+  setting, and accepts `http://` URLs for localhost only.
+- VS Code keeps a separate `mcp.json` for each non-default profile under
+  `User/profiles/`. Skillshare manages the default profile's file.
 
 Environment references are exported as `${VARIABLE}` for Amp, Copilot CLI,
 Factory, Gemini CLI and Kiro, and `${env:VARIABLE}` for Cline and Windsurf.
@@ -218,6 +241,11 @@ more than one exists, consolidate them before syncing. `KILO_CONFIG`,
 `KILO_CONFIG_DIR` and the `mcp_settings.json` of the older VS Code extension are
 not managed.
 
+Kilo Code treats project config as untrusted. It does not allow `{env:VARIABLE}`
+references there, and it ignores the whole project file when it finds one. In project
+mode Skillshare therefore refuses a Kilo Code server that uses `fromEnv` or
+`bearerToken`. Define that server in global mode, where references are allowed.
+
 OpenCode and Kilo Code use `local`/`remote` types and `{env:VARIABLE}` references; Grok uses
 `${VARIABLE}` references. Skillshare converts these automatically. Claude's
 `"type": "streamable-http"` imports as HTTP. Disabled connections block import.
@@ -233,7 +261,7 @@ VS Code Stable's default user file is:
 - Windows: `%APPDATA%/Code/User/mcp.json`
 
 Global Claude, Codex, Grok and Copilot paths respect `CLAUDE_CONFIG_DIR`, `CODEX_HOME`,
-`GROK_HOME` and `COPILOT_HOME`. Amp and Goose honor `XDG_CONFIG_HOME` on the
+`GROK_HOME` and `COPILOT_HOME`. `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR` are not managed. Amp and Goose honor `XDG_CONFIG_HOME` on the
 platforms using their `.config` paths.
 Project destinations are relative to the selected project root. Project trust,
 server approval and authentication remain the receiving Agent's responsibility.
@@ -245,10 +273,11 @@ defined in the global file therefore loads in every project. To stop it loading 
 one project, add an entry **with the same name the Agent's global file uses** and
 mark it `disabled`.
 
-This works with three clients only:
+This works with four clients only:
 
-| Client | Supported | What Skillshare writes to the project file |
+| Client | Supported | What Skillshare writes |
 |---|---|---|
+| Claude Code | Yes | `~/.claude.json`: the name, in this project's `disabledMcpServers` list |
 | OpenCode | Yes | `opencode.json`: `"NAME": {"enabled": false}` |
 | Kilo Code | Yes | `kilo.jsonc`: `"NAME": {"enabled": false}` |
 | Pi with `pi-mcp-adapter` | Yes | `.pi/mcp.json`: `"NAME": {"disabled": true}` |
@@ -276,6 +305,26 @@ mcp:
       disabled: true
       targets: [opencode, kilocode]
 ```
+
+### Claude Code
+
+Claude Code takes a whole server entry from one scope and never merges fields, so a
+switch in `.mcp.json` would replace the server instead of turning it off. It keeps
+its own per-project off list in `~/.claude.json`, the one the `/mcp` panel edits.
+Skillshare adds the name there, under this project's absolute path, and writes
+nothing to `.mcp.json`.
+
+```bash
+skillshare mcp add company-docs --disabled --target claude
+skillshare sync mcp
+```
+
+- The list lives on your machine, not in the repository. Each teammate runs
+  `skillshare sync mcp` once in their own checkout.
+- A name you turned off yourself in `/mcp` is never claimed or removed.
+- If you turn the server back on in `/mcp`, the next sync reports a conflict.
+  Remove the entry from `.skillshare/config.yaml`, or replace to turn it off again.
+- The list is keyed by the project's path, so moving the project needs a new sync.
 
 ### Pi
 

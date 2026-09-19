@@ -211,7 +211,7 @@ skillshare sync mcp
 In the dashboard, open it from the project folder with `skillshare ui`, choose
 **Add server**, and pick **Off in this project**.
 
-This works with OpenCode, Kilo Code, and Pi with `pi-mcp-adapter`. Other Agents
+This works with Claude Code, OpenCode, Kilo Code, and Pi with `pi-mcp-adapter`. Other Agents
 are refused. For Pi, add `--pi-extension pi-mcp-adapter`. The
 [command reference](../../reference/commands/mcp.md#turn-off-a-global-server-in-one-project)
 shows what is written for each Agent and why the others are not supported.

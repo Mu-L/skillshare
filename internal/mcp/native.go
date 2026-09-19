@@ -19,9 +19,26 @@ type Native struct {
 	Target  string
 	Entries map[string]map[string]any
 	data    []byte
+	off     []string // claude-off: the list in file order, for index-based removal
 	json    hujson.Value
 	yaml    yaml.Node
 }
+
+// claudeOffPrefix names the one destination that is not a map of servers: the list of
+// server names Claude Code keeps per project in ~/.claude.json, which /mcp edits. The
+// project root rides in the target so a backup can find the list again. Internal only:
+// validTarget rejects it, so no source can select it.
+const claudeOffPrefix = "claude-off:"
+
+// shownTarget is the Agent a plan reports for a native target.
+func shownTarget(target string) string {
+	if strings.HasPrefix(target, claudeOffPrefix) {
+		return "claude"
+	}
+	return target
+}
+
+func claudeProject(root string) string { return "/projects/" + pointerKey(root) }
 
 func isTOMLTarget(target string) bool { return target == "codex" || target == "grok" }
 
@@ -75,7 +92,8 @@ func uniqueJSON(v *hujson.Value) error {
 
 // ParseNative fails closed on malformed files and duplicate JSON properties.
 func ParseNative(target string, data []byte) (*Native, error) {
-	if !validTarget(target) {
+	root, offList := strings.CutPrefix(target, claudeOffPrefix)
+	if !validTarget(target) && !offList {
 		return nil, fmt.Errorf("unsupported MCP target")
 	}
 	n := &Native{Target: target, data: data, Entries: map[string]map[string]any{}}
@@ -117,6 +135,18 @@ func ParseNative(target string, data []byte) (*Native, error) {
 			return nil, fmt.Errorf("target configuration must be an object")
 		}
 	}
+	if offList {
+		projects, _ := document["projects"].(map[string]any)
+		project, _ := projects[root].(map[string]any)
+		list, _ := project["disabledMcpServers"].([]any)
+		for _, raw := range list {
+			if name, ok := raw.(string); ok {
+				n.off = append(n.off, name)
+				n.Entries[name] = map[string]any{}
+			}
+		}
+		return n, nil
+	}
 	if raw, ok := document[nativeKey(target)]; ok {
 		servers, ok := raw.(map[string]any)
 		if !ok {
@@ -149,6 +179,9 @@ func (n *Native) Edit(changes map[string]map[string]any) ([]byte, error) {
 		return n.editYAML(changes)
 	}
 	v := n.json.Clone()
+	if root, ok := strings.CutPrefix(n.Target, claudeOffPrefix); ok {
+		return n.editOffList(v, root, changes)
+	}
 	key := "/" + nativeKey(n.Target)
 	var patches []map[string]any
 	if v.Find(key) == nil {
@@ -190,11 +223,54 @@ func (n *Native) Edit(changes map[string]map[string]any) ([]byte, error) {
 	return out, nil
 }
 
+// editOffList adds and removes names in Claude Code's per-project off list. Everything
+// else in ~/.claude.json, Claude Code's own state, stays byte for byte.
+func (n *Native) editOffList(v hujson.Value, root string, changes map[string]map[string]any) ([]byte, error) {
+	var patches []map[string]any
+	list := claudeProject(root) + "/disabledMcpServers"
+	for _, step := range []struct {
+		path  string
+		value any
+	}{{"/projects", map[string]any{}}, {claudeProject(root), map[string]any{}}, {list, []any{}}} {
+		if v.Find(step.path) == nil {
+			patches = append(patches, map[string]any{"op": "add", "path": step.path, "value": step.value})
+		}
+	}
+	// Remove from the end so earlier indexes stay valid.
+	for i := len(n.off) - 1; i >= 0; i-- {
+		if entry, changed := changes[n.off[i]]; changed && entry == nil {
+			patches = append(patches, map[string]any{"op": "remove", "path": fmt.Sprintf("%s/%d", list, i)})
+		}
+	}
+	for _, name := range sortedKeys(changes) {
+		if _, exists := n.Entries[name]; changes[name] != nil && !exists {
+			patches = append(patches, map[string]any{"op": "add", "path": list + "/-", "value": name})
+		}
+	}
+	patch, err := json.Marshal(patches)
+	if err != nil {
+		return nil, err
+	}
+	if len(patches) > 0 {
+		if err := v.Patch(patch); err != nil {
+			return nil, fmt.Errorf("cannot safely edit Claude Code's project settings")
+		}
+	}
+	if len(bytes.TrimSpace(n.data)) <= 2 {
+		v.Format() // a new file, or the dashboard's preview: nobody's layout to keep
+	}
+	out := v.Pack()
+	if _, err := ParseNative(n.Target, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // cramped reports an entry that sits on one line: what Skillshare wrote before it laid
 // entries out, or a minifier's work. An entry someone formatted by hand has line breaks
 // and is left alone.
 func (n *Native) cramped(name string) bool {
-	if isTOMLTarget(n.Target) || n.Target == "goose" || n.json.Value == nil {
+	if isTOMLTarget(n.Target) || n.Target == "goose" || n.json.Value == nil || strings.HasPrefix(n.Target, claudeOffPrefix) {
 		return false
 	}
 	v := n.json.Find("/" + nativeKey(n.Target) + "/" + pointerKey(name))

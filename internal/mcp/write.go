@@ -165,7 +165,7 @@ func (s *Service) applyPlan(p *Plan) (*Result, error) {
 		id := fmt.Sprintf("%d-%s", time.Now().UnixNano(), backupSuffix(f.path))
 		backup := backupRecord{ID: id, Owner: p.source.ConfigPath, Target: f.target, Path: f.path, Before: map[string]map[string]any{}, After: f.changes, Ownership: map[string]ownership{}}
 		for name := range f.changes {
-			key := ownershipKey(f.path, name)
+			key := ownershipKey(f.target, f.path, name)
 			backup.Before[name] = native.Entries[name]
 			if owned, ok := state.Entries[key]; ok {
 				backup.Ownership[key] = owned

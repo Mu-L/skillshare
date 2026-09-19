@@ -209,14 +209,14 @@ func (s *Service) MutateBatch(mutations []Mutation, revision string, sync bool) 
 					return nil, fmt.Errorf("source saved; %w", err)
 				}
 				for _, r := range resolutions {
-					if r.Target != f.target || native.Entries[r.Name] == nil {
+					if r.Target != shownTarget(f.target) || native.Entries[r.Name] == nil {
 						continue
 					}
-					approved, ok := preview.state.Entries[ownershipKey(f.path, r.Name)]
+					approved, ok := preview.state.Entries[ownershipKey(f.target, f.path, r.Name)]
 					if !ok || approved.Owner != source.ConfigPath {
 						continue
 					}
-					state.Entries[ownershipKey(f.path, r.Name)] = ownership{Owner: source.ConfigPath, Target: f.target, Path: f.path, Name: r.Name, Hash: entryHash(managedEntry(f.target, native.Entries[r.Name]))}
+					state.Entries[ownershipKey(f.target, f.path, r.Name)] = ownership{Owner: source.ConfigPath, Target: f.target, Path: f.path, Name: r.Name, Hash: entryHash(managedEntry(f.target, native.Entries[r.Name]))}
 				}
 			}
 			if err := writeJSONFile(s.statePath(), state); err != nil {
