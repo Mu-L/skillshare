@@ -591,7 +591,10 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
       >
         {selectBox(s)}
         <span className="flex flex-col min-w-0 flex-1 gap-px">
-          <Link to={resourceHref(s)} className={`nm m truncate hover:underline ${s.disabled ? 'text-ink-3' : ''}`}>{s.name}</Link>
+          <span className="flex min-w-0 items-center gap-2">
+            <Link to={resourceHref(s)} className={`nm m truncate hover:underline ${s.disabled ? 'text-ink-3' : ''}`}>{s.name}</Link>
+            {s.manualOnly && <span className="ss-tag shrink-0" title={t('frontmatterEditor.field.disableModelInvocation.hint')}>manual only</span>}
+          </span>
           {sub && <span className="font-mono text-xs text-ink-3 truncate">{sub}</span>}
         </span>
         {group === 'none' && view === 'list' && <span className="w-[150px] font-mono text-xs text-ink-3 truncate">{sourceName(s)}</span>}
@@ -652,7 +655,10 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
         </div>
         <span className="ds text-[13px] text-ink-2">{group === 'source' ? parentPath(s, true) : parentPath(s) || sourceName(s)}</span>
         <div className="ft">
-          <TargetStack names={synced} max={3} />
+          <span className="flex items-center gap-2">
+            <TargetStack names={synced} max={3} />
+            {s.manualOnly && <span className="ss-tag shrink-0" title={t('frontmatterEditor.field.disableModelInvocation.hint')}>manual only</span>}
+          </span>
           {status$(tone, label)}
         </div>
       </div>

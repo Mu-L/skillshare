@@ -32,6 +32,14 @@ type skillItem struct {
 	Version     string   `json:"version,omitempty"`
 	Branch      string   `json:"branch,omitempty"`
 	Disabled    bool     `json:"disabled"`
+	// ManualOnly mirrors disable-model-invocation: installed and invocable by name, but the
+	// model does not load it on its own. The list TUI toggles it with M.
+	ManualOnly bool `json:"manualOnly,omitempty"`
+}
+
+// ponytail: one small read per skill on the list; carry it on DiscoveredSkill if lists get slow.
+func manualOnly(skillDir string) bool {
+	return strings.EqualFold(utils.ParseFrontmatterField(filepath.Join(skillDir, "SKILL.md"), "disable-model-invocation"), "true")
 }
 
 // enrichSkillBranch fills item.Branch from metadata, falling back to
@@ -73,6 +81,7 @@ func (s *Server) handleListSkills(w http.ResponseWriter, r *http.Request) {
 				IsInRepo:   d.IsInRepo,
 				Targets:    d.Targets,
 				Disabled:   d.Disabled,
+				ManualOnly: manualOnly(d.SourcePath),
 			}
 
 			if entry := s.skillsStore.GetByPath(d.RelPath); entry != nil {
@@ -185,6 +194,7 @@ func (s *Server) handleGetSkill(w http.ResponseWriter, r *http.Request) {
 				IsInRepo:   d.IsInRepo,
 				Targets:    d.Targets,
 				Disabled:   d.Disabled,
+				ManualOnly: manualOnly(d.SourcePath),
 			}
 
 			if entry := s.skillsStore.GetByPath(d.RelPath); entry != nil {

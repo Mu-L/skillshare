@@ -393,6 +393,9 @@ function MetaBox({ resource, frontmatter, body, fileCount, check, audit, auditPe
   const rows: [string, React.ReactNode][] = [];
   if (isAgent && str(frontmatter.model)) rows.push([t('resourceDetail.meta.model'), <span className="font-mono">{str(frontmatter.model)}</span>]);
   if (isAgent && str(frontmatter.tools)) rows.push([t('resourceDetail.meta.tools'), <span className="font-mono">{str(frontmatter.tools)}</span>]);
+  if (!isAgent && String(frontmatter['disable-model-invocation']).toLowerCase() === 'true') {
+    rows.push([t('frontmatterEditor.group.invocation'), <span className="ss-tag" title={t('frontmatterEditor.field.disableModelInvocation.hint')}>manual only</span>]);
+  }
   rows.push([
     t('resourceDetail.metadata.source'),
     remote ? (

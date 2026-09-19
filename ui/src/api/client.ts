@@ -775,6 +775,8 @@ export interface Skill {
   repoUrl?: string;
   version?: string;
   disabled?: boolean;
+  /** disable-model-invocation: invocable by name, never loaded by the model on its own. */
+  manualOnly?: boolean;
   branch?: string;
 }
 

@@ -55,6 +55,35 @@ func TestHandleListSkills_WithSkills(t *testing.T) {
 	}
 }
 
+func TestHandleListSkills_ManualOnly(t *testing.T) {
+	s, src := newTestServer(t)
+	addSkill(t, src, "auto")
+	addSkill(t, src, "manual")
+	md := "---\nname: manual\ndisable-model-invocation: true\n---\n# manual\n"
+	if err := os.WriteFile(filepath.Join(src, "manual", "SKILL.md"), []byte(md), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	s.handler.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/resources", nil))
+
+	var resp struct {
+		Resources []struct {
+			Name       string `json:"name"`
+			ManualOnly bool   `json:"manualOnly"`
+		} `json:"resources"`
+	}
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+	for _, r := range resp.Resources {
+		if r.ManualOnly != (r.Name == "manual") {
+			t.Errorf("%s: manualOnly = %v", r.Name, r.ManualOnly)
+		}
+	}
+	if len(resp.Resources) != 2 {
+		t.Fatalf("expected 2 resources, got %d", len(resp.Resources))
+	}
+}
+
 func TestHandleGetSkill_Found(t *testing.T) {
 	s, src := newTestServer(t)
 	addSkill(t, src, "my-skill")
