@@ -138,7 +138,7 @@ func giteaDownloadDirRecursive(client *http.Client, apiBase, owner, repo, path, 
 		if onProgress != nil {
 			onProgress(fmt.Sprintf("Downloading %s", item.Path))
 		}
-		return giteaDownloadFile(client, item.DownloadURL, target)
+		return giteaDownloadFile(client, apiBase, item.DownloadURL, target)
 	}
 
 	// Directory listing response: [{type, name, path, download_url, ...}]
@@ -166,7 +166,7 @@ func giteaDownloadDirRecursive(client *http.Client, apiBase, owner, repo, path, 
 				if onProgress != nil {
 					onProgress(fmt.Sprintf("Downloading %s", item.Path))
 				}
-				if err := giteaDownloadFile(client, item.DownloadURL, target); err != nil {
+				if err := giteaDownloadFile(client, apiBase, item.DownloadURL, target); err != nil {
 					return err
 				}
 			}
@@ -177,8 +177,13 @@ func giteaDownloadDirRecursive(client *http.Client, apiBase, owner, repo, path, 
 	return fmt.Errorf("unexpected Gitea contents payload for %q", path)
 }
 
-// giteaDownloadFile downloads a single file from a URL.
-func giteaDownloadFile(client *http.Client, fileURL, destPath string) error {
+// giteaDownloadFile downloads a single file from a URL the server named.
+// The request carries the token, so a URL on another origin is refused; the
+// caller then falls back to a git clone, which only talks to the source host.
+func giteaDownloadFile(client *http.Client, apiBase, fileURL, destPath string) error {
+	if !sameOrigin(apiBase, fileURL) {
+		return fmt.Errorf("download URL %q is not on the API host", fileURL)
+	}
 	req, err := giteaNewRequest(fileURL)
 	if err != nil {
 		return err
@@ -533,4 +538,12 @@ func escapeRepoPath(repo string) string {
 		parts[i] = url.PathEscape(parts[i])
 	}
 	return strings.Join(parts, "/")
+}
+
+// sameOrigin reports whether two URLs share a scheme and host.
+func sameOrigin(a, b string) bool {
+	ua, errA := url.Parse(a)
+	ub, errB := url.Parse(b)
+	return errA == nil && errB == nil && ua.Host != "" &&
+		ua.Scheme == ub.Scheme && strings.EqualFold(ua.Host, ub.Host)
 }
