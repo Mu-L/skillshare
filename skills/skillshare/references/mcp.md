@@ -14,7 +14,8 @@ skillshare mcp restore BACKUP_ID --dry-run --json     # Preview entry-level rest
 skillshare mcp restore BACKUP_ID --no-tui            # Apply restoration; source stays unchanged
 ```
 
-MCP supports 21 clients including Claude Code, Codex, Cursor, VS Code, OpenCode,
+MCP supports 21 clients including Claude Code, Codex (its `config.toml` is shared by the
+Codex CLI, IDE extension and ChatGPT desktop app), Cursor, VS Code, OpenCode,
 Kilo Code, Grok, Antigravity, Amp, Cline, Copilot CLI, Factory, Gemini CLI, Goose, Junie,
 Kiro, LM Studio, Warp, Windsurf, Claude Desktop and Pi (with a third-party MCP extension). Client scope and transport
 support vary; see the MCP command reference for native destinations and limits.
@@ -50,6 +51,7 @@ NAME must be the name in the Agent's own global config.
 | `claude` | Yes | name added to this project's `disabledMcpServers` in `~/.claude.json` (per machine) |
 | `opencode`, `kilocode` | Yes | `{"enabled": false}` |
 | `pi` + `--pi-extension pi-mcp-adapter` | Yes | `{"disabled": true}` |
+| `codex` | No | a lone `enabled = false` breaks Codex's whole config where the global server is missing |
 | `pi` + `pi-mcp-extension`, all other targets | No | Error, nothing written |
 
 ```bash

@@ -17,6 +17,12 @@ func renderDisabled(target string, s Server) (map[string]any, error) {
 	case target == "claude":
 		// No entry to write: destination sends the name to Claude Code's per-project off list.
 		return map[string]any{}, nil
+	case target == "codex":
+		// Codex merges the project file by field, so the switch works where the global config
+		// defines the server. Where it does not, the merged entry has no command or url and
+		// Codex fails its whole config load with "invalid transport". The project file is
+		// usually committed, so one person's switch would break Codex for a teammate.
+		return nil, fmt.Errorf("codex cannot turn off a global server from a project file: on a machine whose global config lacks the server, Codex stops loading its whole config; set enabled = false in ~/.codex/config.toml instead")
 	}
 	return nil, fmt.Errorf("%s cannot turn off a global server from a project file; disabled supports claude, opencode, kilocode and pi with pi-mcp-adapter", target)
 }

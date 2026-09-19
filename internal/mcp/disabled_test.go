@@ -62,6 +62,7 @@ func TestDisabledRejected(t *testing.T) {
 	}{
 		"global mode":       {false, "disabled: true\n      targets: [opencode]", "project"},
 		"whole-entry agent": {true, "disabled: true\n      targets: [cursor]", "cursor"},
+		"codex":             {true, "disabled: true\n      targets: [codex]", "whole config"},
 		"pi extension":      {true, "disabled: true\n      piExtension: pi-mcp-extension\n      targets: [pi]", "pi-mcp-adapter"},
 		"with a command":    {true, "disabled: true\n      command: tool\n      targets: [opencode]", "leave out"},
 	} {

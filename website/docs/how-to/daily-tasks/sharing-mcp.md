@@ -8,7 +8,8 @@ MCP lets an Agent use tools supplied by another program or service. Skillshare
 stores the connection settings once and writes each supported Agent's native
 configuration. It does not run a gateway or keep a background server alive.
 
-Supported MCP clients include Claude Code, Codex, Cursor, VS Code, OpenCode,
+Supported MCP clients include Claude Code, Codex (the CLI, the IDE extension and the
+ChatGPT desktop app share one config), Cursor, VS Code, OpenCode,
 Kilo Code, Grok CLI, Antigravity (AGY), Amp, Claude Desktop, Cline, Copilot CLI, Factory,
 Gemini CLI, Goose, Junie, Kiro, LM Studio, Warp and Windsurf. Pi works through a
 third-party MCP extension that you

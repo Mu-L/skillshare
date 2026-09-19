@@ -165,10 +165,22 @@ platform. Each server is one row; the count button on the right opens the full
 client list for that server. Global-only clients cannot be selected in project mode.
 The **Sync** box on the right lists the changes not yet written: ticking a client
 only edits the source, and the files are written after you confirm on the Sync page.
-Below it, **Agents** lists the clients whose config file was detected.
+Below it, **Agents** lists the clients detected on this machine. A client counts as
+detected when its MCP file exists, or when the folder that client keeps its settings in
+exists, so a fresh install with no MCP file yet still appears. In project mode a client
+is listed when the project has its MCP file or the client is detected globally.
 
 Additional client details:
 
+- The `codex` destination is one `config.toml` that the Codex CLI, the Codex IDE
+  extension and the ChatGPT desktop app share, so a server synced to `codex` appears in
+  all three. The ChatGPT desktop app lists them under **Settings → MCP servers**.
+  Codex reads `.codex/config.toml` only in a project it trusts; in an untrusted
+  project the synced servers do not load, without an error. `cwd`,
+  `http_headers_helper`, tool lists and approval modes, timeouts and the `oauth` table
+  have no portable form: import leaves them out with a warning and sync keeps them in
+  the existing entry. MCP servers that a Codex plugin bundles are configured under
+  `plugins.<plugin>.mcp_servers` and are not managed here.
 - Claude Desktop file sync supports **stdio only**, on macOS and Windows.
   Its directory is `~/Library/Application Support/Claude` on macOS and
   `%APPDATA%/Claude` on Windows. Configure remote connectors in the application.
@@ -282,12 +294,21 @@ This works with four clients only:
 | Kilo Code | Yes | `kilo.jsonc`: `"NAME": {"enabled": false}` |
 | Pi with `pi-mcp-adapter` | Yes | `.pi/mcp.json`: `"NAME": {"disabled": true}` |
 | Pi with `pi-mcp-extension` | No | It has no disable field |
+| Codex | No | See below |
 | Every other client | No | Selecting one is an error; nothing is written |
 
 Only the switch is written. The Agent keeps the command or URL from its global
 entry. The other clients are refused because they replace the whole global entry
 with the project one, or have no project file, so a lone switch would break the
 server instead of turning it off.
+
+Codex is refused for a different reason. It does merge `.codex/config.toml` over the
+global file field by field, so `enabled = false` alone would work on a machine whose
+global config defines the server. On a machine where it does not, the merged entry has
+no `command` or `url`, and Codex then fails to load its whole configuration with
+`invalid transport`. `.codex/config.toml` is usually committed, so one teammate's switch
+could stop Codex from starting for another. Turn the server off per machine instead,
+with `enabled = false` in `~/.codex/config.toml`.
 
 ### OpenCode and Kilo Code
 
@@ -387,7 +408,10 @@ In the dashboard, this is the **Off in this project** choice beside `stdio` and
   did not manage it before, such as after moving a project, it stays unmanaged:
   removing the server leaves it in place until you import it. A different
   unmanaged entry requires import or an explicit per-entry replacement; another
-  Skillshare configuration's ownership cannot be overridden.
+  Skillshare configuration's ownership cannot be overridden while that
+  configuration file still exists. If it was moved or deleted it can never release
+  the entry, so an explicit import or replacement takes it over. The conflict names
+  the owning file.
 - The dashboard's MCP settings work only when the browser opens the dashboard by
   `localhost` or an IP address. Through a domain name, including a reverse
   proxy, MCP requests return 403, because DNS rebinding attacks always use a
