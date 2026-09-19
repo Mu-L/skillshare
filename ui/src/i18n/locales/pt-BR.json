@@ -719,6 +719,7 @@
   "update.missingRepos.rehydrateSuccess": "{count} repositório(s) rastreado(s) reidratado(s)",
   "update.missingRepos.rehydratePartial": "Falha ao reidratar {count} repositório(s)",
   "updateDialog.copyCommand": "Copiar comando",
+  "updateDialog.needsSudo": "A atualização precisa da sua senha. Execute sudo skillshare upgrade em um terminal.",
   "updateDialog.newVersion": "Nova versão disponível",
   "updateDialog.restartDev": "Reinicialização em modo DEV simulada.",
   "updateDialog.restartManual": "Atualizado. Reinicie com skillshare ui start se esta página não reconectar.",

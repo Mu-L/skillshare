@@ -123,3 +123,18 @@ func TestHandleUpgradeReturnsRunnerError(t *testing.T) {
 		t.Fatalf("response should include error: %s", rec.Body.String())
 	}
 }
+
+func TestHandleUpgradeNeedsSudoIsCoded(t *testing.T) {
+	old := runUIUpgrade
+	runUIUpgrade = func() (uiUpgradeResult, error) {
+		return uiUpgradeResult{Output: "run in a terminal: sudo skillshare upgrade"}, errors.New("exit status 1")
+	}
+	defer func() { runUIUpgrade = old }()
+
+	rec := httptest.NewRecorder()
+	(&Server{}).handleUpgrade(rec, httptest.NewRequest(http.MethodPost, "/api/upgrade", nil))
+
+	if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), `"upgrade.needs_sudo"`) {
+		t.Errorf("got %d %s, want 403 with upgrade.needs_sudo", rec.Code, rec.Body.String())
+	}
+}

@@ -340,7 +340,9 @@ func doSkillDownload(skillshareSkillDir, sourceDir, fromVersion string) error {
 }
 
 func downloadAndReplace(url, destPath string) error {
-	resp, err := http.Get(url)
+	// Bounds the whole download; the release archive is ~10MB.
+	client := &http.Client{Timeout: 5 * time.Minute}
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}

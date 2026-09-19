@@ -719,6 +719,7 @@
   "update.missingRepos.rehydrateSuccess": "{count} مخزن ردیابی‌شده مجدداً کلون شد",
   "update.missingRepos.rehydratePartial": "کلون مجدد {count} مخزن ناموفق بود",
   "updateDialog.copyCommand": "کپی دستور",
+  "updateDialog.needsSudo": "به‌روزرسانی به گذرواژهٔ شما نیاز دارد. در ترمینال sudo skillshare upgrade را اجرا کنید.",
   "updateDialog.newVersion": "نسخه جدید موجود است",
   "updateDialog.restartDev": "راه‌اندازی مجدد در حالت DEV شبیه‌سازی شد.",
   "updateDialog.restartManual": "به‌روزرسانی شد. اگر این صفحه دوباره وصل نشد، با skillshare ui start دوباره راه‌اندازی کنید.",

@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	versionpkg "skillshare/internal/version"
+
 	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 )
@@ -32,6 +34,9 @@ func reexecWithSudo(execPath string) error {
 	if !stdinIsTTY() {
 		// sudo prompts on /dev/tty, not stdin: without -n a dashboard-spawned
 		// upgrade waits for a password nobody can see until it times out.
+		if exec.Command(sudoPath, "-n", "true").Run() != nil {
+			return fmt.Errorf("a password is needed to write to %s; run in a terminal: %s", filepath.Dir(execPath), versionpkg.SudoUpgradeHint)
+		}
 		args = append(args, "-n")
 	}
 	args = append(args, execPath)

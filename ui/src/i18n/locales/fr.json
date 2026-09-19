@@ -719,6 +719,7 @@
   "update.missingRepos.rehydrateSuccess": "{count} dépôt(s) suivi(s) réhydraté(s)",
   "update.missingRepos.rehydratePartial": "Échec de la réhydratation de {count} dépôt(s)",
   "updateDialog.copyCommand": "Copier la commande",
+  "updateDialog.needsSudo": "La mise à jour nécessite votre mot de passe. Exécutez sudo skillshare upgrade dans un terminal.",
   "updateDialog.newVersion": "Nouvelle version disponible",
   "updateDialog.restartDev": "Redémarrage simulé en mode DEV.",
   "updateDialog.restartManual": "Mise à jour effectuée. Redémarrez avec skillshare ui start si cette page ne se reconnecte pas.",

@@ -36,6 +36,11 @@ func (s *Server) handleUpgrade(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := runUIUpgrade()
 	if err != nil {
+		if strings.Contains(result.Output, versioncheck.SudoUpgradeHint) {
+			writeCodedError(w, http.StatusForbidden, "upgrade.needs_sudo",
+				"a password is needed to replace the binary; run in a terminal: "+versioncheck.SudoUpgradeHint, nil)
+			return
+		}
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

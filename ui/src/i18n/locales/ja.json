@@ -719,6 +719,7 @@
   "update.missingRepos.rehydrateSuccess": "{count} 件の tracked リポジトリを rehydrate しました",
   "update.missingRepos.rehydratePartial": "{count} 件のリポジトリの rehydrate に失敗しました",
   "updateDialog.copyCommand": "コマンドをコピー",
+  "updateDialog.needsSudo": "更新にはパスワードが必要です。ターミナルで sudo skillshare upgrade を実行してください。",
   "updateDialog.newVersion": "新しいバージョンが利用可能です",
   "updateDialog.restartDev": "DEV モードの再起動をシミュレートしました。",
   "updateDialog.restartManual": "更新しました。このページが再接続しない場合は、skillshare ui start で再起動してください。",

@@ -124,3 +124,25 @@ func TestReexecWithSudo_NonInteractiveWithoutTTY(t *testing.T) {
 		t.Errorf("args = %v, want sudo -n so a missing TTY fails fast", gotArgs)
 	}
 }
+
+func TestReexecWithSudo_PasswordNeededWithoutTTY(t *testing.T) {
+	orig := execFunc
+	execFunc = func(string, []string, []string) error {
+		t.Error("must not exec sudo when it would need a password")
+		return nil
+	}
+	defer func() { execFunc = orig }()
+
+	origTTY := stdinIsTTY
+	stdinIsTTY = func() bool { return false }
+	defer func() { stdinIsTTY = origTTY }()
+
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "sudo"), []byte("#!/bin/sh\nexit 1\n"), 0755)
+	t.Setenv("PATH", dir)
+
+	err := reexecWithSudo("/usr/local/bin/skillshare")
+	if err == nil || !strings.Contains(err.Error(), "sudo skillshare upgrade") {
+		t.Errorf("err = %v, want the terminal command hint", err)
+	}
+}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, Copy, Check, CircleArrowUp } from 'lucide-react';
 import { queryKeys, staleTimes } from '../lib/queryKeys';
-import { api } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { VersionCheck } from '../api/client';
 import DialogShell from './DialogShell';
 import Button from './Button';
@@ -99,7 +99,7 @@ export default function UpdateDialog() {
       await api.restartApp({ clearCache: true });
       void waitForRestartThenReload();
     } catch (err) {
-      setStatus((err as Error).message);
+      setStatus(err instanceof ApiError && err.code === 'upgrade.needs_sudo' ? t('updateDialog.needsSudo') : (err as Error).message);
       setUpdating(false);
     }
   };

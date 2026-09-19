@@ -725,6 +725,7 @@
   "syncResult.skipped": "{count} skipped",
   "syncResult.updated": "{count} updated",
   "updateDialog.copyCommand": "Copy command",
+  "updateDialog.needsSudo": "Updating needs your password. Run sudo skillshare upgrade in a terminal.",
   "updateDialog.newVersion": "New version available",
   "updateDialog.restartDev": "DEV mode restart simulated.",
   "updateDialog.restartManual": "Updated. Restart with skillshare ui start if this page does not reconnect.",

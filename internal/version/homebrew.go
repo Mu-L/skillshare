@@ -67,3 +67,7 @@ func FetchBrewLatestVersion() (string, error) {
 
 	return info.Formulae[0].Versions.Stable, nil
 }
+
+// SudoUpgradeHint is the command shown when an upgrade needs a password but
+// has no terminal to ask on. The dashboard matches on it to explain the failure.
+const SudoUpgradeHint = "sudo skillshare upgrade"
