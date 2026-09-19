@@ -22,6 +22,8 @@ export interface ContextMenuSubItem {
 export interface ContextMenuItem {
   key: string;
   label: string;
+  /** What picking this does, shown under the label. */
+  description?: string;
   icon?: React.ReactNode;
   /** Direct action — mutually exclusive with `items` */
   onSelect?: () => void;
@@ -128,13 +130,18 @@ export function SkillContextMenu({
             ) : (
               <button
                 type="button"
-                className={item.danger ? 'dng' : ''}
+                className={`${item.danger ? 'dng' : ''} ${item.description ? '!h-auto max-w-[340px] py-1.5' : ''}`}
                 role="menuitem"
                 onMouseDown={(e) => { e.preventDefault(); item.onSelect?.(); onClose(); }}
                 onMouseEnter={() => setExpandedKey(null)}
               >
                 {item.icon && <span className="w-4 shrink-0 flex items-center justify-center">{item.icon}</span>}
-                {item.label}
+                {item.description ? (
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-mono">{item.label}</span>
+                    <span className="text-xs font-normal leading-snug text-ink-3">{item.description}</span>
+                  </span>
+                ) : item.label}
               </button>
             )}
           </Fragment>
