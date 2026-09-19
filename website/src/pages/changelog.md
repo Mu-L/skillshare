@@ -9,6 +9,53 @@ All notable changes to skillshare are documented here. For the full commit histo
 
 ---
 
+## [0.21.1] - 2026-09-20
+
+### New Features
+
+#### MCP connections
+
+- **Turn off a global MCP server in one project** — a server in an Agent's global config loads in every project. In project mode, add an entry with the same name and mark it `disabled` to stop it loading in that project only. The Agent keeps the command or URL from its global entry.
+
+  ```bash
+  cd my-project
+  skillshare mcp add company-docs --disabled --target claude --target opencode
+  skillshare sync mcp
+  ```
+
+  ```yaml
+  # .skillshare/config.yaml
+  mcp:
+    servers:
+      company-docs:
+        disabled: true
+        targets: [claude, opencode]
+  ```
+
+  Works with Claude Code, OpenCode, Kilo Code, and Pi with `pi-mcp-adapter`. OpenCode, Kilo Code and Pi get a lone switch in their project file. Claude Code takes a whole entry from one scope, so Skillshare adds the name to that project's off list in `~/.claude.json`, the one the `/mcp` panel edits; a name you turned off yourself is never claimed or removed. Other clients are refused, because a lone switch would replace the server instead of turning it off. In the dashboard, open it from the project folder, choose **Add server** and pick **Off in this project**. Refs: #286.
+- **Kilo Code is an MCP client** — `kilocode` joins the supported clients, in global and project scope. It uses OpenCode's format; Skillshare writes to whichever `kilo.jsonc` or `kilo.json` already exists and creates `kilo.jsonc` when there is none. Kilo ignores a project config that holds an environment reference, so `fromEnv` and `bearerToken` are refused for Kilo in project mode before anything is written. Refs: #287.
+- **Claude Code local scope servers are reported** — a server added with `claude mcp add` and no `--scope` wins, whole, over one of the same name in `.mcp.json` or the user scope. In project mode the plan and the dashboard now point out such a server next to the entry it hides, with the command that removes it. The sync is not blocked.
+- **Limits of each client are caught before the write** — Claude Code skips the reserved names `workspace`, `claude-in-chrome` and `computer-use`, and reads its own credentials such as `ANTHROPIC_API_KEY` as empty in a remote server's `url` and `headers`; both are now refused for Claude with a message that says what to do. The dashboard's config preview refuses the same things saving would.
+
+#### Dashboard
+
+- **Manual only skills are visible** — a skill with `disable-model-invocation: true` carries a **manual only** tag in the skills list, on its tile and on its detail page, matching the badge the list TUI shows after `M`. Refs: #283.
+- **Add field explains each frontmatter field** — the skill editor's **Add field** menu shows what each field does under its name, instead of bare keys such as `context` and `shell`.
+- **Agent icons in the MCP import picker** — the Agent dropdown in **Import from a target** shows each Agent's logo. Factory, LM Studio, Kilo Code and Claude Desktop now have their own icons.
+
+### Bug Fixes
+
+- **The MCP page detects Agents that have no MCP file yet** — detection looked only for the MCP file, so a fresh Claude Code install showed as not detected. An Agent's own settings folder now counts. In project mode the page listed every Agent as detected; it now lists those with a project MCP file or a global install.
+- **Cline's MCP settings are found again** — Cline moved its settings to `~/.cline/data/settings/`, shared by the VS Code extension, the CLI and the SDK. Skillshare now writes there and honors `CLINE_MCP_SETTINGS_PATH`, `CLINE_DATA_DIR` and `CLINE_DIR`. The old VS Code extension path is still used while it is the only one that exists.
+- **An MCP entry owned by a deleted config can be taken over** — an entry managed by a Skillshare config that was later moved or deleted stayed blocked forever as "managed by another Skillshare config". An explicit import or replace now takes it over, and the conflict names the owning file.
+- **`--disabled` is refused where it does nothing** — only `mcp add` uses the flag, but the other `mcp` commands and `sync mcp` accepted it and ignored it.
+- **A relative `XDG_CONFIG_HOME` is ignored for MCP paths** — as the XDG specification requires, instead of producing a path relative to the current directory.
+- **Skill detail and new skill pages** — the file viewer no longer leaves a gap above it when it sticks while scrolling, and the info column beside a long `SKILL.md` stays in view.
+
+### Breaking Changes
+
+- **The `kilocode` skills target moved to `.kilo/skills`** — from `.kilocode/skills`, in both global and project scope, because that is the only location Kilo Code's documentation lists now. Run `skillshare sync` once to write skills to the new location.
+
 ## [0.21.0] - 2026-09-19
 
 ### New Features
