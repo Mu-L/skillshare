@@ -157,20 +157,24 @@ func installAgentFromDiscoveryInternal(discovery *DiscoveryResult, agent AgentIn
 	return result, nil
 }
 
-func installImpl(source *Source, destPath string, opts InstallOptions) (*InstallResult, error) {
-	// Derive SourceDir from destPath if not set by caller.
-	// destPath = sourceDir[/into]/skillName, so strip Into + skillName.
-	if opts.SourceDir == "" {
-		dir := filepath.Dir(destPath)
-		if opts.Into != "" {
-			// Strip the --into prefix from the parent
-			dir = filepath.Dir(dir)
-			for i := strings.Count(opts.Into, "/"); i > 0; i-- {
-				dir = filepath.Dir(dir)
-			}
-		}
-		opts.SourceDir = dir
+// skillsRootFor returns opts.SourceDir, or derives it when the caller left it
+// empty: destPath = sourceDir[/into]/skillName, so strip Into + skillName.
+func skillsRootFor(destPath string, opts InstallOptions) string {
+	if opts.SourceDir != "" {
+		return opts.SourceDir
 	}
+	dir := filepath.Dir(destPath)
+	if opts.Into != "" {
+		dir = filepath.Dir(dir)
+		for i := strings.Count(opts.Into, "/"); i > 0; i-- {
+			dir = filepath.Dir(dir)
+		}
+	}
+	return dir
+}
+
+func installImpl(source *Source, destPath string, opts InstallOptions) (*InstallResult, error) {
+	opts.SourceDir = skillsRootFor(destPath, opts)
 
 	result := &InstallResult{
 		SkillName: source.Name,
@@ -328,6 +332,9 @@ func discoveredSkillSourceParts(discovery *DiscoveryResult, skill SkillInfo) (st
 }
 
 func installFromDiscoveryInternal(discovery *DiscoveryResult, skill SkillInfo, destPath string, opts InstallOptions, writeMeta bool) (*InstallResult, error) {
+	// Same derivation as Install: without it the metadata of an --into install
+	// lands in the group folder and the skill never reaches the config.
+	opts.SourceDir = skillsRootFor(destPath, opts)
 	fullSource, fullSubdir := discoveredSkillSourceParts(discovery, skill)
 
 	result := &InstallResult{

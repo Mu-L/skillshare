@@ -104,6 +104,9 @@ func InstallFromConfig(ctx InstallContext, opts InstallOptions) (ConfigInstallRe
 	}
 
 	sourcePath := ctx.SourcePath()
+	// A grouped entry installs to sourcePath/<group>/<name> without opts.Into, so
+	// the skills root cannot be derived from the destination path.
+	opts.SourceDir = sourcePath
 
 	parseOpts := ParseOptions{
 		GitLabHosts: ctx.GitLabHosts(),
