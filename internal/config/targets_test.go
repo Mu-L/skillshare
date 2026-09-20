@@ -243,6 +243,37 @@ func TestRuntimeScanPaths_Deduplicates(t *testing.T) {
 	}
 }
 
+// Codex documents ~/.agents/skills as its user-level skills path; ~/.codex/skills
+// is still read but deprecated. Writing to both would show every skill twice.
+func TestDefaultTargets_CodexSharesUniversalPath(t *testing.T) {
+	targets := DefaultTargets()
+	if got, want := targets["codex"].Path, targets["universal"].Path; got != want {
+		t.Errorf("codex default global path = %q, want universal's %q", got, want)
+	}
+}
+
+func TestAlsoScans_CodexKeepsDeprecatedPath(t *testing.T) {
+	if got := alsoScansSpec(t, "codex").Global; !slices.Contains(got, "~/.codex/skills") {
+		t.Errorf("codex also_scans.global = %v, missing the deprecated ~/.codex/skills", got)
+	}
+}
+
+func TestDetectDir_Codex(t *testing.T) {
+	// codex's skills path belongs to universal, so only its install dir
+	// identifies the tool.
+	if got, want := DetectDir("codex"), normalizeTargetPath("~/.codex"); got != want {
+		t.Errorf("DetectDir(codex) = %q, want %q", got, want)
+	}
+}
+
+func TestMatchesTargetName_CodexMatchesUniversal(t *testing.T) {
+	// A skill with frontmatter `targets: [codex]` must still sync for users who
+	// only have the universal target — both resolve to the same directory.
+	if !MatchesTargetName("codex", "universal") {
+		t.Error("MatchesTargetName(codex, universal) = false, want true")
+	}
+}
+
 func TestProjectTargetDotDirs_IncludesAlsoScans(t *testing.T) {
 	dirs := ProjectTargetDotDirs()
 

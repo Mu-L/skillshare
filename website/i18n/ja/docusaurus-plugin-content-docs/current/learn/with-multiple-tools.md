@@ -35,9 +35,11 @@ skillshare target list
 ```
   claude       ~/.claude/skills (merge)
   cursor       ~/.cursor/skills (merge)
-  codex        ~/.codex/skills (merge)
   opencode     ~/.config/opencode/skills (merge)
+  universal    ~/.agents/skills (merge)
 ```
+
+Codex には専用の行はありません。Codex は共有の `~/.agents/skills` ディレクトリを読み込むため、`universal` Target がそれをカバーします。
 
 ## ステップ 3: Skill をインストールする
 

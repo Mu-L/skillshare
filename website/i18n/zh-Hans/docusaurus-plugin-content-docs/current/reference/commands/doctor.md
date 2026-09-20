@@ -102,9 +102,9 @@ Doctor 会在两类重复 skill 风险到达运行时选择器之前将其标记
 解决方法：禁用其中一个重叠的 target，或用 `skillshare target <name> --path <dir>` 设置一个独立的路径。
 
 **`cross_target_discovery`** —— 当某个已启用 target 的运行时文档说明它也会扫描
-另一个已启用 target 写入的目录时触发。例如，Codex Desktop 除了读取 `~/.codex/skills` 之外
-还会读取 `~/.agents/skills`，因此同时启用 `codex` 和 `universal` 会导致 Codex 看到
-universal 的内容。
+另一个已启用 target 写入的目录时触发。例如，沿用旧设置的配置仍让 `codex` 指向旧版的
+`~/.codex/skills`，而 `universal` 写入 `~/.agents/skills` —— Codex 同样会读取这个目录。
+两者都启用时，Codex 除了自己的内容之外还会看到 universal 的内容。
 
 ```text
 ! codex will see content from: universal

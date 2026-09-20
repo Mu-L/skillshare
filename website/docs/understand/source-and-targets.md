@@ -209,7 +209,7 @@ Targets are AI CLI skill directories that skillshare syncs to.
 **Common targets:**
 - `~/.claude/skills/` — Claude Code
 - `~/.cursor/skills/` — Cursor
-- `~/.codex/skills/` — OpenAI Codex CLI
+- `~/.agents/skills/` — OpenAI Codex CLI (the shared `universal` directory)
 - `~/.gemini/config/skills/` — Antigravity
 - `~/.gemini/skills/` — Gemini CLI
 - And [64+ more](/docs/reference/targets/supported-targets)

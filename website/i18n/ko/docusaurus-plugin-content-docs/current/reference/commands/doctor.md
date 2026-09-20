@@ -100,7 +100,7 @@ Doctor는 런타임 피커에 도달하기 전에 두 가지 종류의 중복 sk
 
 해결 방법: 중복된 target 중 하나를 비활성화하거나, `skillshare target <name> --path <dir>`로 별도의 경로를 설정하십시오.
 
-**`cross_target_discovery`** — 활성화된 target의 런타임이 다른 활성화된 target이 쓰는 디렉터리도 스캔하도록 문서화되어 있을 때 발생합니다. 예를 들어 Codex Desktop은 `~/.codex/skills` 외에 `~/.agents/skills`도 읽으므로, `codex`와 `universal`을 함께 활성화하면 Codex가 universal의 콘텐츠를 보게 됩니다.
+**`cross_target_discovery`** — 활성화된 target의 런타임이 다른 활성화된 target이 쓰는 디렉터리도 스캔하도록 문서화되어 있을 때 발생합니다. 예를 들어 이전 설정이 남아 있어 `codex`가 여전히 legacy 경로인 `~/.codex/skills`를 가리키는 반면, `universal`은 `~/.agents/skills`에 쓰고 Codex는 이 경로도 읽습니다. 둘 다 활성화하면 Codex가 자신의 콘텐츠에 더해 universal의 콘텐츠까지 보게 됩니다.
 
 ```text
 ! codex will see content from: universal

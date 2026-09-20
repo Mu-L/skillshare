@@ -34,9 +34,11 @@ skillshare target list
 ```
   claude       ~/.claude/skills (merge)
   cursor       ~/.cursor/skills (merge)
-  codex        ~/.codex/skills (merge)
   opencode     ~/.config/opencode/skills (merge)
+  universal    ~/.agents/skills (merge)
 ```
+
+Codex는 별도의 행이 없습니다. Codex는 공유 디렉터리인 `~/.agents/skills`를 읽으므로 `universal` Target이 이를 담당합니다.
 
 ## 3단계: Skill 설치
 

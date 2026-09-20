@@ -19,6 +19,20 @@ func TestDetectPathOverlap_CrossRuntimeDiscovery(t *testing.T) {
 	}
 }
 
+func TestDetectPathOverlap_CodexSharesUniversalPath(t *testing.T) {
+	// Default codex path is universal's ~/.agents/skills — a shared-primary overlap.
+	involved := DetectPathOverlap(map[string]TargetConfig{
+		"codex":     {Skills: &ResourceTargetConfig{Path: "~/.agents/skills"}},
+		"universal": {Skills: &ResourceTargetConfig{Path: "~/.agents/skills"}},
+	}, false)
+
+	for _, want := range []string{"codex", "universal"} {
+		if !slices.Contains(involved, want) {
+			t.Errorf("DetectPathOverlap = %v, missing %s", involved, want)
+		}
+	}
+}
+
 func TestDetectPathOverlap_IgnoresScannerOwnPath(t *testing.T) {
 	// claude's runtime scans its own ~/.claude/skills; that is not an overlap
 	// with the unrelated target writing elsewhere.

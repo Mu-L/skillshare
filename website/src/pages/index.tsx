@@ -71,7 +71,7 @@ type Tool = {
 const TOOLS: Tool[] = [
   {id: 'claude', name: 'Claude Code', path: '~/.claude/skills', local: 3, left: 110, top: 60, rotate: -1.5, string: 'M584 200 Q384 177 185 74', defaultOn: true},
   {id: 'cursor', name: 'Cursor', path: '~/.cursor/skills', local: 1, left: 390, top: 30, rotate: 1, string: 'M584 200 Q524 162 465 44', defaultOn: true},
-  {id: 'codex', name: 'Codex', path: '~/.codex/skills', local: 2, left: 760, top: 30, rotate: -0.8, string: 'M584 200 Q710 162 835 44', defaultOn: true},
+  {id: 'codex', name: 'Codex', path: '~/.agents/skills', local: 2, left: 760, top: 30, rotate: -0.8, string: 'M584 200 Q710 162 835 44', defaultOn: true},
   {id: 'gemini', name: 'Gemini CLI', path: '~/.gemini/skills', local: 0, left: 1010, top: 80, rotate: 1.6, string: 'M584 200 Q834 187 1085 94', defaultOn: true},
   {id: 'opencode', name: 'OpenCode', path: '~/.config/opencode/skills', local: 0, left: 90, top: 430, rotate: 1.2, string: 'M584 456 Q374 490 165 444', defaultOn: true},
   {id: 'copilot', name: 'GitHub Copilot', path: '~/.copilot/skills', local: 0, left: 380, top: 530, rotate: -1, string: 'M584 456 Q520 540 455 544', defaultOn: false},

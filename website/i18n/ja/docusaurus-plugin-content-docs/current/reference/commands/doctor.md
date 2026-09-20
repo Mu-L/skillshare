@@ -100,7 +100,7 @@ Doctor は、ランタイムのピッカーに到達する前に、Skill 重複�
 
 解決方法: 重複している Target のいずれかを無効化するか、`skillshare target <name> --path <dir>` で別のパスを設定してください。
 
-**`cross_target_discovery`** — ある有効な Target のランタイムが、別の有効な Target が書き込むディレクトリもスキャンすると文書化されている場合に発生します。例えば、Codex Desktop は `~/.codex/skills` に加えて `~/.agents/skills` も読み込むため、`codex` と `universal` の両方を有効にすると、Codex が universal のコンテンツを見てしまいます。
+**`cross_target_discovery`** — ある有効な Target のランタイムが、別の有効な Target が書き込むディレクトリもスキャンすると文書化されている場合に発生します。例えば、以前のセットアップから残った設定では `codex` がレガシーな `~/.codex/skills` を指したままになっている一方、`universal` は `~/.agents/skills` に書き込みます — このディレクトリは Codex も読み込みます。両方を有効にすると、Codex は自身のコンテンツに加えて universal のコンテンツも見ることになります。
 
 ```text
 ! codex will see content from: universal

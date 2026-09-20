@@ -100,7 +100,7 @@ Doctor 會在兩類重複 skill 風險到達 runtime picker 之前先標示出�
 
 解決方式：停用其中一個重疊的 target，或使用 `skillshare target <name> --path <dir>` 設定不同的路徑。
 
-**`cross_target_discovery`**——當某個已啟用 target 的 runtime 文件說明它也會掃描另一個已啟用 target 寫入的目錄時觸發。例如，Codex Desktop 除了讀取 `~/.codex/skills` 外，也會讀取 `~/.agents/skills`，所以同時啟用 `codex` 與 `universal` 會導致 Codex 看到 universal 的內容。
+**`cross_target_discovery`**——當某個已啟用 target 的 runtime 文件說明它也會掃描另一個已啟用 target 寫入的目錄時觸發。例如，從舊設定沿用下來的 config 仍將 `codex` 指向舊的 `~/.codex/skills`，而 `universal` 則寫入 `~/.agents/skills`——這個目錄 Codex 同樣會讀取。兩者都啟用時，Codex 就會在自己的內容之外，額外看到 universal 的內容。
 
 ```text
 ! codex will see content from: universal

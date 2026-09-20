@@ -100,7 +100,7 @@ Doctor flags two classes of duplicate-skill risk before they reach the runtime p
 
 Resolution: disable one of the overlapping targets, or set a distinct path with `skillshare target <name> --path <dir>`.
 
-**`cross_target_discovery`** — fires when an enabled target's runtime is documented to also scan a directory another enabled target writes to. For example, Codex Desktop reads `~/.agents/skills` in addition to `~/.codex/skills`, so enabling both `codex` and `universal` causes Codex to see universal's content.
+**`cross_target_discovery`** — fires when an enabled target's runtime is documented to also scan a directory another enabled target writes to. For example, a config left over from an older setup still points `codex` at the legacy `~/.codex/skills`, while `universal` writes to `~/.agents/skills` — which Codex also reads. Enabling both makes Codex see universal's content on top of its own.
 
 ```text
 ! codex will see content from: universal

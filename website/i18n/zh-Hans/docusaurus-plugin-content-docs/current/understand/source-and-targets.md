@@ -209,7 +209,7 @@ Target 是 skillshare 同步到的 AI CLI skill 目录。
 **常见 target：**
 - `~/.claude/skills/` — Claude Code
 - `~/.cursor/skills/` — Cursor
-- `~/.codex/skills/` — OpenAI Codex CLI
+- `~/.agents/skills/` — OpenAI Codex CLI（共享的 `universal` 目录）
 - `~/.gemini/config/skills/` — Antigravity
 - `~/.gemini/skills/` — Gemini CLI
 - 还有 [64+ 更多](/docs/reference/targets/supported-targets)

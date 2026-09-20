@@ -210,7 +210,7 @@ Target とは、skillshare が同期する先の AI CLI の Skill ディレク�
 **よく使われる target:**
 - `~/.claude/skills/` — Claude Code
 - `~/.cursor/skills/` — Cursor
-- `~/.codex/skills/` — OpenAI Codex CLI
+- `~/.agents/skills/` — OpenAI Codex CLI（共有の `universal` ディレクトリ）
 - `~/.gemini/config/skills/` — Antigravity
 - `~/.gemini/skills/` — Gemini CLI
 - その他 [64 以上](/docs/reference/targets/supported-targets)

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -46,6 +48,46 @@ func TestHandleAvailableTargets(t *testing.T) {
 	json.Unmarshal(rr.Body.Bytes(), &resp)
 	if len(resp.Targets) == 0 {
 		t.Error("expected at least 1 available target")
+	}
+}
+
+func TestHandleAvailableTargets_CodexDetectedViaInstallDir(t *testing.T) {
+	// codex writes to universal's ~/.agents/skills, so only ~/.codex tells the
+	// dashboard whether Codex is installed.
+	home := t.TempDir()
+	t.Setenv("HOME", home) // newTestServer only sets HOME when it is unset
+	os.MkdirAll(filepath.Join(home, ".agents"), 0755)
+
+	codexDetected := func() bool {
+		t.Helper()
+		s, _ := newTestServer(t)
+		req := httptest.NewRequest(http.MethodGet, "/api/config/available-targets", nil)
+		rr := httptest.NewRecorder()
+		s.handler.ServeHTTP(rr, req)
+
+		var resp struct {
+			Targets []struct {
+				Name     string `json:"name"`
+				Detected bool   `json:"detected"`
+			} `json:"targets"`
+		}
+		json.Unmarshal(rr.Body.Bytes(), &resp)
+		for _, tgt := range resp.Targets {
+			if tgt.Name == "codex" {
+				return tgt.Detected
+			}
+		}
+		t.Fatal("codex missing from available targets")
+		return false
+	}
+
+	if codexDetected() {
+		t.Error("codex detected = true with only ~/.agents present, want false")
+	}
+
+	os.MkdirAll(filepath.Join(home, ".codex"), 0755)
+	if !codexDetected() {
+		t.Error("codex detected = false with ~/.codex present, want true")
 	}
 }
 

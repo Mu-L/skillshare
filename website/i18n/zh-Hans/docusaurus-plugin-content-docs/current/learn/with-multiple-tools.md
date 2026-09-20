@@ -34,9 +34,11 @@ skillshare target list
 ```
   claude       ~/.claude/skills (merge)
   cursor       ~/.cursor/skills (merge)
-  codex        ~/.codex/skills (merge)
   opencode     ~/.config/opencode/skills (merge)
+  universal    ~/.agents/skills (merge)
 ```
+
+Codex 没有属于自己的一行：它读取共享的 `~/.agents/skills` 目录，因此由 `universal` Target 涵盖。
 
 ## 步骤 3：安装 Skill
 

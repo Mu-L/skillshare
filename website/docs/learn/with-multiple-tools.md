@@ -34,9 +34,11 @@ Example output:
 ```
   claude       ~/.claude/skills (merge)
   cursor       ~/.cursor/skills (merge)
-  codex        ~/.codex/skills (merge)
   opencode     ~/.config/opencode/skills (merge)
+  universal    ~/.agents/skills (merge)
 ```
+
+Codex has no row of its own: it reads the shared `~/.agents/skills` directory, so the `universal` target covers it.
 
 ## Step 3: Install Skills
 

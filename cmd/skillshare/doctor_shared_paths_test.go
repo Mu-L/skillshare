@@ -215,6 +215,30 @@ func TestCheckCrossTargetDiscovery_IgnoresScannerOwnPath(t *testing.T) {
 	}
 }
 
+func TestCheckCodexOnUniversalPath_ReportedOnceAsSharedPath(t *testing.T) {
+	// A fresh init points codex at universal's ~/.agents/skills. That is a
+	// shared-primary collision, so shared_target_paths owns the warning and
+	// cross_target_discovery must not repeat it.
+	cfg := &config.Config{
+		Targets: map[string]config.TargetConfig{
+			"codex":     {Skills: &config.ResourceTargetConfig{Path: "~/.agents/skills"}},
+			"universal": {Skills: &config.ResourceTargetConfig{Path: "~/.agents/skills"}},
+		},
+	}
+
+	shared := &doctorResult{}
+	checkSharedTargetPaths(cfg, shared, false)
+	if shared.warnings != 1 {
+		t.Fatalf("expected 1 shared_target_paths warning, got %d (checks=%+v)", shared.warnings, shared.checks)
+	}
+
+	cross := &doctorResult{}
+	checkCrossTargetDiscovery(cfg, cross, false)
+	if cross.warnings != 0 {
+		t.Errorf("expected 0 cross_target_discovery warnings, got %d (checks=%+v)", cross.warnings, cross.checks)
+	}
+}
+
 func TestCheckSharedTargetPaths_EmptyPathSkipped(t *testing.T) {
 	cfg := &config.Config{
 		Targets: map[string]config.TargetConfig{

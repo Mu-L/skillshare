@@ -768,6 +768,9 @@ func TestInit_Discover_DoesNotExpandSharedDirectoryTargets(t *testing.T) {
 	os.MkdirAll(codexSkillsPath, 0755)
 	os.MkdirAll(cursorSkillsPath, 0755)
 	os.MkdirAll(copilotSkillsPath, 0755)
+	// gemini has a path of its own, so discover has at least one genuinely new
+	// agent to offer — codex resolves to the already-configured universal target.
+	os.MkdirAll(filepath.Join(sb.Home, ".gemini", "skills"), 0755)
 
 	sb.WriteConfig(`source: ` + sb.SourcePath + `
 targets:
@@ -1193,4 +1196,90 @@ func TestInit_MutualExclusion_SkillFlags(t *testing.T) {
 
 	result.AssertFailure(t)
 	result.AssertAnyOutputContains(t, "mutually exclusive")
+}
+
+// ============================================
+// Codex shares the universal ~/.agents/skills path
+// ============================================
+
+func TestInit_CodexOnly_AddsUniversalInsteadOfCodex(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	os.Remove(sb.ConfigPath)
+
+	// Only ~/.codex exists (created by the sandbox); Codex reads ~/.agents/skills,
+	// so it must be credited to the universal target, not a codex target.
+	os.RemoveAll(filepath.Join(sb.Home, ".claude"))
+	os.RemoveAll(filepath.Join(sb.Home, ".cursor"))
+
+	result := sb.RunCLI("init", "--no-copy", "--all-targets", "--no-git", "--no-skill")
+
+	result.AssertSuccess(t)
+
+	configContent := sb.ReadFile(sb.ConfigPath)
+	if !strings.Contains(configContent, "universal:") {
+		t.Errorf("config should contain universal target, got:\n%s", configContent)
+	}
+	if strings.Contains(configContent, "codex:") {
+		t.Errorf("config should not contain a separate codex target, got:\n%s", configContent)
+	}
+}
+
+func TestInit_CodexAndClaude_AddsClaudeAndUniversal(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	os.Remove(sb.ConfigPath)
+	os.RemoveAll(filepath.Join(sb.Home, ".cursor"))
+	os.MkdirAll(filepath.Join(sb.Home, ".claude", "skills"), 0755)
+
+	result := sb.RunCLI("init", "--no-copy", "--all-targets", "--no-git", "--no-skill")
+
+	result.AssertSuccess(t)
+
+	configContent := sb.ReadFile(sb.ConfigPath)
+	for _, want := range []string{"claude:", "universal:"} {
+		if !strings.Contains(configContent, want) {
+			t.Errorf("config should contain %s, got:\n%s", want, configContent)
+		}
+	}
+	if strings.Contains(configContent, "codex:") {
+		t.Errorf("config should not contain a separate codex target, got:\n%s", configContent)
+	}
+}
+
+func TestInit_TargetsCodex_UsesAgentsPath(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	os.Remove(sb.ConfigPath)
+
+	result := sb.RunCLI("init", "--no-copy", "--targets", "codex", "--no-git", "--no-skill")
+
+	result.AssertSuccess(t)
+
+	configContent := sb.ReadFile(sb.ConfigPath)
+	agentsPath := filepath.Join(sb.Home, ".agents", "skills")
+	if !strings.Contains(configContent, agentsPath) {
+		t.Errorf("codex target should point to %s, got:\n%s", agentsPath, configContent)
+	}
+}
+
+func TestSync_CodexTarget_WritesToAgentsPath(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	os.Remove(sb.ConfigPath)
+	sb.RunCLI("init", "--no-copy", "--targets", "codex", "--no-git", "--no-skill").AssertSuccess(t)
+	sb.CreateSkill("codex-skill", map[string]string{"SKILL.md": "# Codex Skill"})
+
+	sb.RunCLI("sync").AssertSuccess(t)
+
+	if !sb.IsSymlink(filepath.Join(sb.Home, ".agents", "skills", "codex-skill")) {
+		t.Error("skill should be linked into ~/.agents/skills")
+	}
+	if sb.FileExists(filepath.Join(sb.Home, ".codex", "skills", "codex-skill")) {
+		t.Error("skill should not be written to the deprecated ~/.codex/skills")
+	}
 }

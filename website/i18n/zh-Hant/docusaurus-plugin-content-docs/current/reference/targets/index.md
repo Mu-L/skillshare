@@ -13,7 +13,7 @@ flowchart LR
     SRC["Source"]
     TGT_CLAUDE["claude &nbsp; ~/.claude/skills"]
     TGT_CURSOR["cursor &nbsp; ~/.cursor/skills"]
-    TGT_CODEX["codex &nbsp; ~/.codex/skills"]
+    TGT_CODEX["codex &nbsp; ~/.agents/skills"]
     TGT_GEMINI["gemini &nbsp; ~/.gemini/skills"]
     TGT_MORE["... &nbsp; 支援 64+ 個"]
 
