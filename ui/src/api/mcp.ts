@@ -2,6 +2,11 @@ import { apiFetch } from './client';
 
 export const mcpTargets = ['claude', 'codex', 'cursor', 'vscode', 'opencode', 'kilocode', 'grok', 'antigravity', 'amp', 'claude-desktop', 'cline', 'copilot', 'factory', 'gemini', 'goose', 'junie', 'kiro', 'lmstudio', 'warp', 'windsurf', 'pi'] as const;
 export type MCPValue = string | { fromEnv: string };
+export type MCPDirectTools = boolean | 'search' | string[];
+/** A scope's defaults. A save replaces both, so a value left out is cleared. */
+export interface MCPSettings { targets?: string[]; directTools?: MCPDirectTools }
+/** One root under the global config's mcp.projects. */
+export interface MCPProject extends MCPSettings { servers?: Record<string, MCPServer> }
 export interface MCPServer {
   piExtension?: string;
   command?: string;
@@ -12,12 +17,17 @@ export interface MCPServer {
   env?: Record<string, MCPValue>;
   headers?: Record<string, MCPValue>;
   bearerToken?: { fromEnv: string };
+  /** pi-mcp-adapter only. Left out, Skillshare does not touch the value in Pi's file. */
+  directTools?: MCPDirectTools;
   /** Project mode: the whole entry, turning off a server the Agent's global config defines. */
   disabled?: boolean;
 }
 /** Agents with a per-project switch: a field merged over the global entry, or Claude Code's own off list. */
 export const mcpOffTargets: readonly string[] = ['claude', 'opencode', 'kilocode', 'pi'];
 export interface MCPMutation {
+  /** A root under mcp.projects; with `remove` and no `name`, the project itself. */
+  project?: string;
+  settings?: MCPSettings;
   name?: string;
   server?: MCPServer;
   remove?: boolean;
@@ -35,7 +45,9 @@ export interface MCPCandidate { name: string; server: MCPServer; problems: strin
 const post = <T,>(path: string, body: unknown) => apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body) });
 export const mcpApi = {
   list: () => apiFetch<{
-    source: { path: string; configPath: string; targets: string[] | null; servers: Record<string, MCPServer> };
+    source: { path: string; configPath: string; targets: string[] | null; servers: Record<string, MCPServer>; directTools?: MCPDirectTools; projects?: Record<string, MCPProject> };
+    /** Project roots that also have their own .skillshare/config.yaml. */
+    projectConfigs: string[];
     paths: Record<string, string>; detected: string[]; plan: MCPPlan | null; previewError: string;
     backups: { id: string; target: string; path: string }[];
   }>('/mcp'),

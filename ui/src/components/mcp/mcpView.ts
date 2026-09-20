@@ -24,6 +24,10 @@ export function buildMatrix(servers: Record<string, MCPServer>, plan: MCPPlan | 
   return [...rows.values()];
 }
 
+/** The mcp.projects root a change's file sits in, if any. */
+// ponytail: matched on the path; add a root to mcp.Change if a project file ever lives outside its folder.
+export const projectOf = (roots: string[], path: string) => roots.find((root) => path.startsWith(root + '/') || path.startsWith(root + '\\'));
+
 export function countActions(changes: MCPChange[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const change of changes) counts[change.action] = (counts[change.action] ?? 0) + 1;

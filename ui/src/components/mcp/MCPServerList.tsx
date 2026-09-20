@@ -1,11 +1,9 @@
 import { Fragment, useState } from 'react';
-import { Check, ChevronDown, Ellipsis, Plug } from 'lucide-react';
-import AgentIcon from '../AgentIcon';
+import { Ellipsis, Plug } from 'lucide-react';
 import { useT } from '../../i18n';
 import { mcpOffTargets } from '../../api/mcp';
-import { describeEndpoint, targetLabel, type MatrixRow } from './mcpView';
-
-const STACK = 6;
+import { describeEndpoint, type MatrixRow } from './mcpView';
+import { TargetPill, TargetToggles } from './TargetPicker';
 
 interface Props {
   rows: MatrixRow[];
@@ -13,13 +11,15 @@ interface Props {
   targetsOf: (name: string) => string[];
   onToggle: (name: string, target: string, on: boolean) => void;
   onMenu: (e: React.MouseEvent<HTMLButtonElement>, name: string) => void;
+  /** Agents a switch-only entry can go to. mcp.projects cannot reach Claude's off list. */
+  offTargets?: readonly string[];
 }
 
 /**
  * One row per server. The agents it writes to are chips inside the row, not columns:
  * the list grows downwards as more CLIs gain MCP support, so it never scrolls sideways.
  */
-export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMenu }: Props) {
+export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMenu, offTargets = mcpOffTargets }: Props) {
   const t = useT();
   const [open, setOpen] = useState<string[]>([]);
 
@@ -27,7 +27,7 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
     <div className="ss-list">
       {rows.map((row) => {
         // A switch-only entry works in a few Agents, so it offers and counts only those.
-        const offered = row.server?.disabled ? targets.filter((x) => mcpOffTargets.includes(x)) : targets;
+        const offered = row.server?.disabled ? targets.filter((x) => offTargets.includes(x)) : targets;
         const selected = row.server ? targetsOf(row.name).filter((x) => offered.includes(x)) : [];
         const expanded = open.includes(row.name);
         const http = Boolean(row.server?.url);
@@ -46,23 +46,7 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
               </span>
               {row.server && (
                 <>
-                  <button
-                    type="button"
-                    className={`ss-btn ${selected.length > 0 ? '!pl-1.5' : ''}`}
-                    aria-expanded={expanded}
-                    aria-label={t('mcp.chooseAgents', { name: row.name })}
-                    onClick={() => setOpen((prev) => (expanded ? prev.filter((x) => x !== row.name) : [...prev, row.name]))}
-                  >
-                    {selected.length > 0 && (
-                      <span className="ss-stack" aria-hidden="true">
-                        {selected.slice(0, STACK).map((target) => (
-                          <span key={target} className="ss-at"><AgentIcon target={target} size={13} /></span>
-                        ))}
-                      </span>
-                    )}
-                    {selected.length}/{offered.length}
-                    <ChevronDown size={14} className={expanded ? 'rotate-180' : ''} />
-                  </button>
+                  <TargetPill selected={selected} text={`${selected.length}/${offered.length}`} expanded={expanded} label={t('mcp.chooseAgents', { name: row.name })} onClick={() => setOpen((prev) => (expanded ? prev.filter((x) => x !== row.name) : [...prev, row.name]))} />
                   <button type="button" className="ss-ib" aria-label={t('mcp.moreActions', { name: row.name })} onClick={(e) => onMenu(e, row.name)}>
                     <Ellipsis size={16} />
                   </button>
@@ -71,23 +55,7 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
             </div>
             {expanded && row.server && (
               <div className="ss-r fold !min-h-0 flex-wrap gap-x-6 gap-y-3.5 !py-3.5">
-                {offered.map((target) => {
-                  const on = selected.includes(target);
-                  return (
-                    <button
-                      key={target}
-                      type="button"
-                      role="checkbox"
-                      aria-checked={on}
-                      className={`ss-tgl ${on ? 'on' : ''}`}
-                      onClick={() => onToggle(row.name, target, !on)}
-                      disabled={target === 'claude-desktop' && http && !on}
-                    >
-                      <span className="ic"><AgentIcon target={target} size={20} /><i><Check size={9} strokeWidth={3.5} /></i></span>
-                      {targetLabel(target)}{target === 'claude-desktop' && <span className="ss-tag">stdio</span>}
-                    </button>
-                  );
-                })}
+                <TargetToggles offered={offered} selected={selected} http={http} onToggle={(target, on) => onToggle(row.name, target, on)} />
               </div>
             )}
           </Fragment>

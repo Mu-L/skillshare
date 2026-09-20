@@ -1,24 +1,31 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, Archive, ChevronDown, ChevronRight, Copy, Download, Eye, Pencil, Plug, Plus, Trash2, X } from 'lucide-react';
-import { mcpApi, mcpTargets, type MCPMutation, type MCPPlan } from '../api/mcp';
+import { AlertCircle, Archive, ChevronDown, Copy, Download, Eye, FolderOpen, Info, Pencil, Plug, Plus, Trash2, X } from 'lucide-react';
+import { mcpApi, mcpTargets, type MCPMutation, type MCPPlan, type MCPSettings } from '../api/mcp';
 import Button from '../components/Button';
+import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
 import { PageSkeleton } from '../components/Skeleton';
-import { RailGroup, RailLayout, RailLine, RailRow, RailSection, SyncBox } from '../components/StatusRail';
+import { RailGroup, RailLayout, RailRow, RailSection } from '../components/StatusRail';
 import { SkillContextMenu, type ContextMenuItem } from '../components/TargetMenu';
 import { useToast } from '../components/Toast';
+import MCPDefaults from '../components/mcp/MCPDefaults';
 import MCPImportDialog from '../components/mcp/MCPImportDialog';
+import MCPProjectDialog from '../components/mcp/MCPProjectDialog';
+import MCPProjectList from '../components/mcp/MCPProjectList';
+import MCPProjectView from '../components/mcp/MCPProjectView';
+import MCPSyncBox from '../components/mcp/MCPSyncBox';
 import MCPServerList from '../components/mcp/MCPServerList';
 import MCPPreview, { type MCPResolve } from '../components/mcp/MCPPreview';
 import { MCPConfigDialog } from '../components/mcp/MCPConfigView';
 import MCPRemoveDialog from '../components/mcp/MCPRemoveDialog';
 import MCPRestoreDialog from '../components/mcp/MCPRestoreDialog';
 import MCPServerDialog from '../components/mcp/MCPServerDialog';
-import { buildMatrix, countActions, describeMessage, isShadowed, isResolvable, targetLabel, type MCPChange } from '../components/mcp/mcpView';
+import { buildMatrix, describeMessage, isShadowed, isResolvable, targetLabel, type MCPChange } from '../components/mcp/mcpView';
+import { useAppContext } from '../context/AppContext';
 import { useT } from '../i18n';
 import { shortenHome } from '../lib/paths';
 import { queryKeys } from '../lib/queryKeys';
@@ -30,8 +37,12 @@ const copy = (text: string) => void navigator.clipboard?.writeText(text);
 export default function MCPPage() {
   const t = useT();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const cache = useQueryClient();
+  const { isProjectMode } = useAppContext();
+  // The tab and the open project live in the URL, so Back and a reload keep them.
+  const [params, setParams] = useSearchParams();
+  const [addingProject, setAddingProject] = useState(false);
+  const [droppingProject, setDroppingProject] = useState('');
   const { data, error, isPending } = useQuery({ queryKey: queryKeys.mcp, queryFn: mcpApi.list });
   const [piSetupName, setPiSetupName] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null); // '' adds a new server
@@ -51,7 +62,7 @@ export default function MCPPage() {
     void cache.invalidateQueries({ queryKey: queryKeys.config });
   };
   const done = (message: string) => {
-    setPiSetupName(null); setEditing(null); setAddMode('form'); setImporting(null); setRemoving(''); setBackupsOpen(false); setReplace(null);
+    setPiSetupName(null); setEditing(null); setAddMode('form'); setImporting(null); setRemoving(''); setBackupsOpen(false); setReplace(null); setDroppingProject('');
     refresh();
     toast(message, 'success');
   };
@@ -61,10 +72,14 @@ export default function MCPPage() {
   const servers = data?.source.servers ?? {};
   const defaults = data?.source.targets ?? [];
   const targetsOf = (name: string) => servers[name]?.targets ?? defaults;
-  const rows = data ? buildMatrix(servers, data.plan) : [];
   const changes = data?.plan?.changes ?? [];
-  const counts = countActions(changes);
-  const pending = (counts.add ?? 0) + (counts.update ?? 0) + (counts.remove ?? 0);
+  // mcp.projects puts a server of the same name into other folders; this list is the global files only.
+  const globalPaths = Object.values(data?.paths ?? {});
+  const rows = data ? buildMatrix(servers, data.plan && { ...data.plan, changes: changes.filter((c) => globalPaths.includes(c.path)) }) : [];
+  const projects = data?.source.projects ?? {};
+  const roots = Object.keys(projects);
+  // A project config syncs only itself, so it has no projects to show.
+  const tab = !isProjectMode && params.get('tab') === 'projects' ? 'projects' : 'servers';
   const conflicts = changes.filter((c) => c.action === 'conflict');
   const detected = new Set(data?.detected);
   const files = mcpTargets.filter((x) => data?.paths[x]);
@@ -90,6 +105,32 @@ export default function MCPPage() {
       toast((e as Error).message, 'error');
     }
     refresh();
+  };
+
+  const saveSettings = async (settings: MCPSettings, project?: string) => {
+    try {
+      await mcpApi.save({ project, settings, replace: true });
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+    refresh();
+  };
+
+  const openProjectMenu = (e: React.MouseEvent<HTMLButtonElement>, root: string) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setMenu({ x: r.left, y: r.bottom + 4, items: [{ key: 'open', label: t('mcp.projects.open'), icon: <FolderOpen size={14} />, onSelect: () => setParams({ project: root }) }, { key: 'remove', label: t('mcp.projects.remove'), icon: <Trash2 size={14} />, danger: true, onSelect: () => setDroppingProject(root) }] });
+  };
+
+  const dropProject = async () => {
+    setBusy(true);
+    try {
+      await mcpApi.save({ project: droppingProject, remove: true });
+      done(t('mcp.toast.projectRemoved'));
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const resolve: MCPResolve = async (target, name, action) => {
@@ -141,6 +182,11 @@ export default function MCPPage() {
     return `${params.target} · ${c.name}: ${describeMessage(t, c.message)}`;
   };
 
+  const opened = params.get('project');
+  if (data && opened && projects[opened]) {
+    return <MCPProjectView data={data} root={opened} offered={files} onBack={() => setParams({ tab: 'projects' })} onChanged={refresh} onRemoved={() => { setParams({ tab: 'projects' }); done(t('mcp.toast.projectRemoved')); }} />;
+  }
+
   return (
     <div className="animate-fade-in">
       <PageHeader
@@ -149,32 +195,25 @@ export default function MCPPage() {
         actions={<span className="flex items-center gap-2.5" data-tour="mcp-actions">
           {data?.backups.length ? <Button variant="ghost" onClick={() => setBackupsOpen(true)}><Archive size={15} />{t('mcp.backupsButton')}</Button> : null}
           <Button variant="secondary" onClick={() => setImporting({})}><Download size={15} />{t('mcp.importFromTarget')}</Button>
-          <Button variant="primary" onClick={() => { setAddMode('form'); setEditing(''); }}><Plus size={15} />{t('mcp.addServer')}</Button>
+          {tab === 'projects'
+            ? <Button variant="primary" onClick={() => setAddingProject(true)}><Plus size={15} />{t('mcp.projects.add')}</Button>
+            : <Button variant="primary" onClick={() => { setAddMode('form'); setEditing(''); }}><Plus size={15} />{t('mcp.addServer')}</Button>}
         </span>}
       />
+
+      {!isProjectMode && (
+        <nav className="ss-tabs mb-6" aria-label="MCP">
+          <button type="button" className={tab === 'servers' ? 'on' : ''} aria-current={tab === 'servers'} onClick={() => setParams({})}>{t('mcp.tab.servers')}<span className="ss-cnt">{Object.keys(servers).length}</span></button>
+          <button type="button" className={tab === 'projects' ? 'on' : ''} aria-current={tab === 'projects'} onClick={() => setParams({ tab: 'projects' })}>{t('mcp.tab.projects')}<span className="ss-cnt">{roots.length}</span></button>
+        </nav>
+      )}
 
       {error && <div className="ss-note bad mb-4"><span className="flex-1">{error.message}</span></div>}
       {data?.previewError && <div className="ss-note bad mb-4"><AlertCircle size={16} /><span className="flex-1">{data.previewError}</span></div>}
 
       {data && (
         <RailLayout rail={<>
-          {data.plan && rows.length > 0 && (pending > 0 || conflicts.length === 0) && (
-            <SyncBox tone={pending > 0 ? 'warn' : 'ok'} state={pending > 0 ? t(pending === 1 ? 'mcp.pending.one' : 'mcp.pending.other', { count: pending }) : t('targets.state.synced')}>
-              {pending > 0 && (
-                <>
-                  <div className="flex flex-col gap-1.5">
-                    {changes.filter((c) => c.action === 'add' || c.action === 'update' || c.action === 'remove').map((c) => (
-                      <RailLine key={`${c.target}:${c.name}`} name={c.name} agent={targetLabel(c.target)} word={c.action} />
-                    ))}
-                  </div>
-                  <Button className="w-full justify-center" onClick={() => navigate('/sync')}>{t('mcp.reviewInSync')}<ChevronRight size={15} /></Button>
-                </>
-              )}
-              {/* Ticks only change the source; MCP files are written from the Sync page, so say so where the state is. */}
-              <p className={pending > 0 ? 'text-xs leading-normal text-ink-2' : 'text-[13px] leading-normal text-ink-2'}>{t('mcp.syncHint')}</p>
-              {pending === 0 && <button type="button" className="ss-more self-start" onClick={() => navigate('/sync')}>{t('mcp.reviewInSync')}</button>}
-            </SyncBox>
-          )}
+          {data.plan && (rows.length > 0 || roots.length > 0) && (changes.some((c) => ['add', 'update', 'remove'].includes(c.action)) || conflicts.length === 0) && <MCPSyncBox changes={changes} roots={roots} />}
 
           <RailSection title={t('layout.nav.agents')} count={files.length}>
             {/* The file name is enough to recognise; the full path is one hover or one copy away. */}
@@ -220,7 +259,12 @@ export default function MCPPage() {
               </div>
             </div>
           )}
-          {rows.length > 0 ? (
+          {tab === 'projects' ? <>
+            <div className="ss-note inf"><Info size={16} /><span className="flex-1">{t('mcp.projects.note')}</span></div>
+            {roots.length > 0
+              ? <MCPProjectList projects={projects} defaults={defaults} globalNames={Object.keys(servers)} offered={files} changes={changes} onOpen={(root) => setParams({ project: root })} onSettings={(root, settings) => void saveSettings(settings, root)} onMenu={openProjectMenu} />
+              : <EmptyState icon={FolderOpen} title={t('mcp.projects.empty')} description={t('mcp.projects.emptyHint')} action={<Button variant="primary" onClick={() => setAddingProject(true)}><Plus size={15} />{t('mcp.projects.add')}</Button>} />}
+          </> : rows.length > 0 ? (
             <MCPServerList rows={rows} targets={mcpTargets.filter((x) => matrixTargets.has(x))} targetsOf={targetsOf} onToggle={(n, x, on) => void toggle(n, x, on)} onMenu={openMenu} />
           ) : (
             <EmptyState
@@ -233,6 +277,7 @@ export default function MCPPage() {
               </div>}
             />
           )}
+          {tab === 'servers' && <MCPDefaults targets={defaults} directTools={data.source.directTools} offered={files} onSave={(settings) => void saveSettings(settings)} />}
           <div className="flex items-center gap-1 px-1 text-xs text-ink-3">
             <span className="min-w-0 truncate">{t('mcp.source')}: <span className="font-mono" title={data.source.path}>{shortenHome(data.source.path)}</span></span>
             <button type="button" className="ss-ib" aria-label={t('mcp.copySource')} onClick={() => { copy(data.source.path); toast(t('mcp.copied'), 'success'); }}><Copy size={14} /></button>
@@ -276,7 +321,9 @@ export default function MCPPage() {
         />
       )}
       {viewing && servers[viewing] && <MCPConfigDialog mutation={{ name: viewing, server: { ...servers[viewing], targets: mcpTargets.filter((x) => targetsOf(viewing).includes(x)) } }} onClose={() => setViewing('')} />}
-      {removing && <MCPRemoveDialog name={removing} onClose={() => setRemoving('')} onSaved={() => done(t('mcp.toast.removed', { name: removing }))} />}
+      {addingProject && data && <MCPProjectDialog existing={roots} defaults={defaults} defaultDirectTools={data.source.directTools} offered={files} configPath={data.source.configPath} onClose={() => setAddingProject(false)} onSaved={() => { setAddingProject(false); done(t('mcp.toast.projectAdded')); }} />}
+      <ConfirmDialog open={Boolean(droppingProject)} variant="danger" loading={busy} title={t('mcp.projects.removeTitle', { name: shortenHome(droppingProject) })} message={t('mcp.projects.removeDesc')} confirmText={t('mcp.projects.remove')} onCancel={() => setDroppingProject('')} onConfirm={() => void dropProject()} />
+      {removing && <MCPRemoveDialog name={removing} inScope={(path) => globalPaths.includes(path)} onClose={() => setRemoving('')} onSaved={() => done(t('mcp.toast.removed', { name: removing }))} />}
       {backupsOpen && data && <MCPRestoreDialog backups={data.backups} onClose={() => setBackupsOpen(false)} onRestored={() => done(t('mcp.toast.restored'))} />}
       <DialogShell open={Boolean(replace)} onClose={() => setReplace(null)} padding="none" preventClose={busy} ariaLabel={t('mcp.replace')} className="!max-w-[640px]">
         {replace && <>

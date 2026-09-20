@@ -12,16 +12,20 @@ import { describeMessage } from './mcpView';
 
 interface Props {
   name: string;
+  /** A root under mcp.projects, when the server is one of that project's. */
+  project?: string;
+  /** Files of this scope. One name can be in the global source and in projects, and only one of them goes. */
+  inScope?: (path: string) => boolean;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function MCPRemoveDialog({ name, onClose, onSaved }: Props) {
+export default function MCPRemoveDialog({ name, project, inScope = () => true, onClose, onSaved }: Props) {
   const t = useT();
-  const { data: plan, error, isPending } = useQuery({ queryKey: ['mcp-remove-preview', name], queryFn: () => mcpApi.preview({ name, remove: true }), gcTime: 0 });
+  const { data: plan, error, isPending } = useQuery({ queryKey: ['mcp-remove-preview', project, name], queryFn: () => mcpApi.preview({ project, name, remove: true }), gcTime: 0 });
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const changes = plan?.changes.filter((c) => c.name === name) ?? [];
+  const changes = plan?.changes.filter((c) => c.name === name && inScope(c.path)) ?? [];
   const title = t('mcp.removeTitle', { name });
 
   const save = async (sync: boolean) => {
@@ -29,7 +33,7 @@ export default function MCPRemoveDialog({ name, onClose, onSaved }: Props) {
     setBusy(true);
     setSaveError('');
     try {
-      await mcpApi.configure({ name, remove: true }, plan.revision, sync);
+      await mcpApi.configure({ project, name, remove: true }, plan.revision, sync);
       onSaved();
     } catch (e) {
       setSaveError((e as Error).message);

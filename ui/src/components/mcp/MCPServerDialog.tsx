@@ -9,6 +9,7 @@ import SegmentedControl from '../SegmentedControl';
 import { Select } from '../Input';
 import { useT } from '../../i18n';
 import PiExtensionField from './PiExtensionField';
+import DirectToolsField, { directToolsComplete, directToolsDraft, directToolsValue } from './DirectToolsField';
 import MCPConfigView from './MCPConfigView';
 import { joinCommand, splitCommand, targetLabel } from './mcpView';
 
@@ -69,6 +70,8 @@ interface Props {
   defaultPiExtension?: string;
   existingNames: string[];
   availableTargets?: readonly string[];
+  /** A root under mcp.projects: the server is saved there instead of in mcp.servers. */
+  project?: string;
   /** Present when adding, so the user can swap to pasting a snippet instead of filling the fields. */
   onMode?: (mode: 'form' | 'paste') => void;
   onClose: () => void;
@@ -76,7 +79,7 @@ interface Props {
 }
 
 /** Add or edit one source server. Saving only changes the source; Sync writes the config files. */
-export default function MCPServerDialog({ initial, defaultTargets, defaultPiExtension = '', existingNames, availableTargets = mcpTargets, onMode, onClose, onSaved }: Props) {
+export default function MCPServerDialog({ initial, defaultTargets, defaultPiExtension = '', existingNames, availableTargets = mcpTargets, project, onMode, onClose, onSaved }: Props) {
   const t = useT();
   const server = initial?.server;
   const [piExtension, setPiExtension] = useState(server?.piExtension ?? defaultPiExtension);
@@ -84,6 +87,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
   const { isProjectMode } = useAppContext();
   const [http, setHttp] = useState(Boolean(server?.url));
   const [off, setOff] = useState(Boolean(server?.disabled));
+  const [directTools, setDirectTools] = useState(() => directToolsDraft(server?.directTools));
   const [command, setCommand] = useState(server?.command ? joinCommand([server.command, ...(server.args ?? [])]) : '');
   const [env, setEnv] = useState(() => envRows(server?.env));
   const [headers, setHeaders] = useState(() => envRows(server?.headers));
@@ -98,9 +102,11 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
   const taken = !initial && existingNames.includes(trimmed);
   const nameError = trimmed && !NAME.test(trimmed) ? t('mcp.nameHint') : taken ? t('mcp.nameTaken') : '';
   const words = splitCommand(command);
-  const canSave = Boolean(trimmed) && !nameError && targets.length > 0 && (off || (http ? url.trim() !== '' : words.length > 0)) && (!targets.includes('pi') || off || Boolean(piExtension)) && !saving;
+  const canSave = Boolean(trimmed) && !nameError && targets.length > 0 && (off || (http ? url.trim() !== '' : words.length > 0)) && (!targets.includes('pi') || off || Boolean(piExtension)) && (piExtension !== 'pi-mcp-adapter' || directToolsComplete(directTools)) && !saving;
   const title = t(initial ? 'mcp.editServer' : 'mcp.addServer');
-  const visibleTargets = new Set([...availableTargets, ...targets].filter((x) => !off || mcpOffTargets.includes(x)));
+  // mcp.projects cannot reach Claude's off list, which lives in the file the global servers use.
+  const offTargets = mcpOffTargets.filter((x) => !project || x !== 'claude');
+  const visibleTargets = new Set([...availableTargets, ...targets].filter((x) => !off || offTargets.includes(x)));
 
   /** The server as the fields describe it right now. */
   const build = (): MCPServer => {
@@ -120,6 +126,8 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
     const transport = http ? 'streamable-http' : 'stdio';
     if (server?.transport === transport) next.transport = transport;
     if (piExtension) next.piExtension = piExtension;
+    const direct = directToolsValue(directTools);
+    if (direct !== undefined && piExtension === 'pi-mcp-adapter' && targets.includes('pi')) next.directTools = direct;
     return next;
   };
   const ordered = mcpTargets.filter((x) => targets.includes(x));
@@ -135,7 +143,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
     setSaving(true);
     setError('');
     try {
-      await mcpApi.save({ name: trimmed, server: next, replace: Boolean(initial) });
+      await mcpApi.save({ project, name: trimmed, server: next, replace: Boolean(initial) });
       onSaved();
     } catch (e) {
       setError((e as Error).message);
@@ -174,10 +182,10 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
               value={off ? 'off' : http ? 'streamable-http' : 'stdio'}
               onChange={(v) => {
                 setOff(v === 'off');
-                if (v === 'off') setTargets(targets.filter((x) => mcpOffTargets.includes(x)));
+                if (v === 'off') setTargets(targets.filter((x) => offTargets.includes(x)));
                 else setHttp(v === 'streamable-http');
               }}
-              options={[{ value: 'stdio', label: 'stdio' }, { value: 'streamable-http', label: 'streamable-http' }, ...(isProjectMode || off ? [{ value: 'off', label: t('mcp.offHere') }] : [])]}
+              options={[{ value: 'stdio', label: 'stdio' }, { value: 'streamable-http', label: 'streamable-http' }, ...(isProjectMode || project || off ? [{ value: 'off', label: t('mcp.offHere') }] : [])]}
             />
           </div>
         </div>
@@ -238,13 +246,14 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
           </div>
         </div>
         {targets.includes('pi') && !off && <PiExtensionField value={piExtension} onChange={setPiExtension} disabled={saving} />}
+        {targets.includes('pi') && !off && piExtension === 'pi-mcp-adapter' && <DirectToolsField value={directTools} onChange={setDirectTools} disabled={saving} />}
         {error && <div className="ss-note bad"><span className="flex-1">{error}</span></div>}
       </form>}
       {viewing ? <div className="df"><Button variant="secondary" onClick={() => setViewing(false)}>{t('common.back')}</Button></div> : <div className="df">
         <span className="flex-1 text-[13px]">
           {targets.length === 0
             ? <span className="ss-st warn">{t('mcp.pickTarget')}</span>
-            : <span className="text-ink-2">{t(targets.length === 1 ? 'mcp.writes.one' : 'mcp.writes.other', { count: targets.length })}{complete && <button type="button" className="ss-more ml-1.5" onClick={() => setViewing(true)}>{t('mcp.viewConfigShort')}</button>}</span>}
+            : <span className="text-ink-2">{t(targets.length === 1 ? 'mcp.writes.one' : 'mcp.writes.other', { count: targets.length })}{/* ponytail: the preview renders global paths only; give /api/mcp/render a project to show it here too. */}{complete && !project && <button type="button" className="ss-more ml-1.5" onClick={() => setViewing(true)}>{t('mcp.viewConfigShort')}</button>}</span>}
         </span>
         <Button variant="ghost" onClick={onClose} disabled={saving}>{t('common.cancel')}</Button>
         <Button type="submit" form="mcp-server" variant="primary" loading={saving} disabled={!canSave}>{t('common.save')}</Button>

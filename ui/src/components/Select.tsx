@@ -11,6 +11,8 @@ export interface SelectOption {
 
 interface SelectProps {
   label?: string;
+  /** Names the control when it has no visible label. */
+  ariaLabel?: string;
   value: string;
   onChange: (value: string) => void;
   options: SelectOption[];
@@ -34,7 +36,7 @@ interface DropdownPos {
   bottom?: number;
 }
 
-export function Select({ label, value, onChange, options, className = '', size = 'md', disabled = false, prefix }: SelectProps) {
+export function Select({ label, ariaLabel, value, onChange, options, className = '', size = 'md', disabled = false, prefix }: SelectProps) {
   const labelId = useId();
   const [open, setOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(-1);
@@ -182,6 +184,7 @@ export function Select({ label, value, onChange, options, className = '', size =
         className={`ss-inp w-full justify-between text-left outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${selectTriggerSizes[size]} ${open ? 'border-accent' : ''}`}
         role="combobox"
         aria-labelledby={label ? labelId : undefined}
+        aria-label={label ? undefined : ariaLabel}
         aria-expanded={open}
         aria-haspopup="listbox"
       >
