@@ -18,3 +18,4 @@ sidebar_position: 1
 | [Cross-Machine Sync](cross-machine-sync-recipe) | 跨机器 Push/Pull Skill |
 | [Team Onboarding](team-onboarding-recipe) | 新员工 Skill 环境搭建 |
 | [Centralized Skills Repo](centralized-skills-repo) | 一个仓库存放 Skill，Targets 由每位开发者各自配置 |
+| [Many Projects, One Config](many-projects-one-config) | 通过 global 配置将 Skill 和 MCP server 发送到多个项目文件夹 |

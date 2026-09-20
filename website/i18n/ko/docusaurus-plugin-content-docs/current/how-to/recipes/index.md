@@ -19,3 +19,4 @@ sidebar_position: 1
 | [Cross-Machine Sync](cross-machine-sync-recipe) | 여러 기기 간 Skill push/pull |
 | [Team Onboarding](team-onboarding-recipe) | 신규 입사자 Skill 환경 설정 |
 | [Centralized Skills Repo](centralized-skills-repo) | Skill은 하나의 저장소에, Target은 각 개발자의 설정에 |
+| [Many Projects, One Config](many-projects-one-config) | global 설정에서 여러 프로젝트 폴더로 Skill과 MCP 서버 보내기 |

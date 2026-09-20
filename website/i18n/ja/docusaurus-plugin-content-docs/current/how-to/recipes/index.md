@@ -19,3 +19,4 @@ sidebar_position: 1
 | [クロスマシン Sync](cross-machine-sync-recipe) | マシン間で Skill を push/pull する |
 | [チームオンボーディング](team-onboarding-recipe) | 新入社員の Skill 環境セットアップ |
 | [集中管理された Skill リポジトリ](centralized-skills-repo) | Skill は1つのリポジトリ、Target は各開発者の config で |
+| [多数の Project を 1 つの Config で](many-projects-one-config) | global config から複数の project フォルダーに Skill と MCP サーバーを配布する |

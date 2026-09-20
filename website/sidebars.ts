@@ -80,6 +80,7 @@ const sidebars: SidebarsConfig = {
             'how-to/recipes/cross-machine-sync-recipe',
             'how-to/recipes/team-onboarding-recipe',
             'how-to/recipes/centralized-skills-repo',
+            'how-to/recipes/many-projects-one-config',
           ],
         },
       ],

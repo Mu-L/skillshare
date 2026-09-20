@@ -18,3 +18,4 @@ sidebar_position: 1
 | [跨機器同步](cross-machine-sync-recipe) | 跨機器 push/pull Skills |
 | [團隊導入](team-onboarding-recipe) | 新進人員的 Skill 環境設定 |
 | [集中式 Skills Repo](centralized-skills-repo) | 一個 repo 存放 Skills，Targets 存在每位開發者的 config 中 |
+| [多個 Projects，一份 Config](many-projects-one-config) | 從 global config 把 Skills 與 MCP servers 送進多個 project 資料夾 |
