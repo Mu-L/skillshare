@@ -205,7 +205,7 @@ export function Select({ label, ariaLabel, value = '', onChange, values, onChang
           {prefix && <span className="text-ink-3 shrink-0">{prefix}</span>}
           {chosen.some((o) => o.icon) && (
             <span className={values ? 'ss-stack shrink-0' : 'flex shrink-0 items-center'}>
-              {chosen.slice(0, 6).map((o) => (values ? <span key={o.value} className="ss-at">{o.icon}</span> : o.icon))}
+              {chosen.slice(0, 6).map((o) => <span key={o.value} className={values ? 'ss-at' : 'flex items-center'}>{o.icon}</span>)}
             </span>
           )}
           <span className={`truncate ${chosen.length === 0 && placeholder ? 'text-ink-3' : ''}`}>{chosen.length === 0 && placeholder ? placeholder : selectedLabel}</span>

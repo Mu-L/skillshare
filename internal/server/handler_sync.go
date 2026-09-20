@@ -332,8 +332,6 @@ func (s *Server) backupBeforeSync(skills, agents bool) []string {
 }
 
 func (s *Server) computeContextCost(skills []ssync.DiscoveredSkill) map[string]any {
-	const charsPerToken = 4
-
 	type tokenPair struct{ always, onDemand int }
 	groupMap := make(map[tokenPair][]string)
 
@@ -352,37 +350,22 @@ func (s *Server) computeContextCost(skills []ssync.DiscoveredSkill) map[string]a
 	}
 
 	for name, target := range s.cfg.Targets {
-		sc := target.SkillsConfig()
-		mode := sc.Mode
-		if mode == "" {
-			mode = cfgMode
-		}
-
-		var filtered []ssync.DiscoveredSkill
-		if mode == "symlink" {
+		filtered, fErr := ssync.TargetSkills(name, target, cfgMode, s.cfg.EffectiveSkillsSource(), skills)
+		if fErr != nil {
 			filtered = skills
-		} else {
-			var fErr error
-			filtered, fErr = ssync.FilterSkills(skills, sc.Include, sc.Exclude)
-			if fErr != nil {
-				filtered = skills
-			}
-			filtered = ssync.FilterSkillsByTarget(filtered, name)
 		}
 
-		var alwaysChars, onDemandChars int
+		var at, ot int
 		var perSkill []skillToken
 		for _, sk := range filtered {
-			alwaysChars += sk.DescChars
-			onDemandChars += sk.BodyChars
+			at += sk.DescTokens
+			ot += sk.BodyTokens
 			perSkill = append(perSkill, skillToken{
 				name:       sk.FlatName,
-				descTokens: sk.DescChars / charsPerToken,
-				bodyTokens: sk.BodyChars / charsPerToken,
+				descTokens: sk.DescTokens,
+				bodyTokens: sk.BodyTokens,
 			})
 		}
-		at := alwaysChars / charsPerToken
-		ot := onDemandChars / charsPerToken
 
 		groupMap[tokenPair{at, ot}] = append(groupMap[tokenPair{at, ot}], name)
 

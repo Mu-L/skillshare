@@ -243,57 +243,30 @@ func discoverSourceSkillsInternal(sourcePath string, opts discoverOptions) ([]Di
 
 			relPath = strings.ReplaceAll(relPath, "\\", "/")
 
-			// Root-level .skillignore fallback (for files in non-skipped dirs)
-			if rootMatcher.Match(relPath, false) {
-				if opts.collectIgnored {
-					stats.IgnoredSkills = append(stats.IgnoredSkills, relPath)
-				}
-				if opts.includeIgnored {
-					inRepo := false
-					igParts := strings.Split(relPath, "/")
-					if len(igParts) > 0 && utils.IsTrackedRepoDir(igParts[0]) {
-						inRepo = true
-					}
-					skills = append(skills, DiscoveredSkill{
-						SourcePath: filepath.Join(sourcePath, relPath),
-						RelPath:    relPath,
-						FlatName:   utils.PathToFlatName(relPath),
-						IsInRepo:   inRepo,
-						Targets:    inferSkillTargetsFromRelPath(relPath),
-						Disabled:   true,
-					})
-				}
-				return nil
-			}
-
 			isInRepo := false
 			parts := strings.Split(relPath, "/")
 			if len(parts) > 0 && utils.IsTrackedRepoDir(parts[0]) {
 				isInRepo = true
 			}
 
-			if isInRepo && isSkillIgnored(parts, walkRoot, ignoreMatchers) {
+			// Root-level .skillignore fallback (for files in non-skipped dirs),
+			// then the repo-level .skillignore inside tracked repos. With
+			// includeIgnored the skill is kept, flagged Disabled, and measured
+			// like any other so analyze can price it for symlink-mode targets.
+			disabled := rootMatcher.Match(relPath, false) || (isInRepo && isSkillIgnored(parts, walkRoot, ignoreMatchers))
+			if disabled {
 				if opts.collectIgnored {
 					stats.IgnoredSkills = append(stats.IgnoredSkills, relPath)
 				}
-				if opts.includeIgnored {
-					skills = append(skills, DiscoveredSkill{
-						SourcePath: filepath.Join(sourcePath, relPath),
-						RelPath:    relPath,
-						FlatName:   utils.PathToFlatName(relPath),
-						IsInRepo:   true,
-						Targets:    inferSkillTargetsFromRelPath(relPath),
-						Disabled:   true,
-					})
+				if !opts.includeIgnored {
+					return nil
 				}
-				return nil
 			}
 
 			skillFile := filepath.Join(skillDir, "SKILL.md")
 
 			var targets []string
-			var descChars, bodyChars int
-			var description string
+			var ctx skillContext
 			var lintIssues []LintIssue
 
 			if opts.collectContext {
@@ -301,9 +274,8 @@ func discoverSourceSkillsInternal(sourcePath string, opts discoverOptions) ([]Di
 				content, readErr := os.ReadFile(skillFile)
 				if readErr == nil {
 					targets = utils.ParseFrontmatterListFromBytes(content, "targets")
-					var fmName string
 					var yamlErr error
-					fmName, descChars, bodyChars, description, yamlErr = calcContextFromContent(content)
+					ctx, yamlErr = calcContextFromContent(content)
 					if yamlErr != nil {
 						lintIssues = append(lintIssues, LintIssue{
 							Rule:     "malformed-frontmatter",
@@ -312,7 +284,7 @@ func discoverSourceSkillsInternal(sourcePath string, opts discoverOptions) ([]Di
 							Message:  fmt.Sprintf("frontmatter YAML is malformed: %v", yamlErr),
 						})
 					}
-					lintResults, err := LintSkill(fmName, description, bodyChars)
+					lintResults, err := LintSkill(ctx.Name, ctx.Description, ctx.BodyChars)
 					if err != nil {
 						return fmt.Errorf("lint skill %s: %w", relPath, err)
 					}
@@ -334,10 +306,13 @@ func discoverSourceSkillsInternal(sourcePath string, opts discoverOptions) ([]Di
 				FlatName:    utils.PathToFlatName(relPath),
 				IsInRepo:    isInRepo,
 				Targets:     targets,
-				DescChars:   descChars,
-				BodyChars:   bodyChars,
-				Description: description,
+				DescChars:   ctx.DescChars,
+				BodyChars:   ctx.BodyChars,
+				DescTokens:  ctx.DescTokens,
+				BodyTokens:  ctx.BodyTokens,
+				Description: ctx.Description,
 				LintIssues:  lintIssues,
+				Disabled:    disabled,
 			})
 		}
 

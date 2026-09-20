@@ -143,6 +143,9 @@ function ProjectEditor({ project, tools, mcp }: { project: ProjectRow; tools: Pr
         subtitle={<span className="font-mono">{shortenHome(project.path)}</span>}
         actions={
           <>
+            {tab === 'skills' && previewTool && (
+              <Link to={`/skills?tab=analyze&target=${encodeURIComponent(`${project.name}@${previewTool}`)}`} className="ss-btn ghost">{t('analyze.open')}</Link>
+            )}
             <Button variant="ghost" onClick={() => setRemoving(true)}>{t('projects.remove')}</Button>
             {tab !== 'mcp' && <Button variant="primary" onClick={save} loading={saving} disabled={!canSave}>{t('common.save')}</Button>}
           </>

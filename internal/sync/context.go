@@ -9,6 +9,34 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// EstimateTokens approximates how many tokens s costs. ASCII text runs about
+// four characters per token; anything wider (CJK, emoji, accented letters)
+// is counted as one token per rune, which is what tokenizers charge for it.
+// ponytail: two-bucket heuristic. Swap in a real tokenizer if a model's count
+// ever needs to be exact rather than comparable.
+func EstimateTokens(s string) int {
+	var ascii, wide int
+	for _, r := range s {
+		if r < utf8.RuneSelf {
+			ascii++
+		} else {
+			wide++
+		}
+	}
+	return ascii/4 + wide
+}
+
+// skillContext is the context cost of one SKILL.md: the always-loaded layer
+// (name + description) and the on-demand layer (body after the frontmatter).
+type skillContext struct {
+	Name        string
+	Description string
+	DescChars   int // rune count of name + description
+	BodyChars   int // rune count of body after frontmatter
+	DescTokens  int
+	BodyTokens  int
+}
+
 // CalcSkillContext reads a skill's SKILL.md once and returns rune counts for:
 //   - descChars: name + description (always loaded into context for skill matching)
 //   - bodyChars: everything after the frontmatter closing --- (loaded on demand)
@@ -20,25 +48,28 @@ func CalcSkillContext(skillPath string) (descChars, bodyChars int, description s
 	if err != nil {
 		return 0, 0, "", nil
 	}
-	_, d, b, desc, _ := calcContextFromContent(content)
-	return d, b, desc, nil
+	sc, _ := calcContextFromContent(content)
+	return sc.DescChars, sc.BodyChars, sc.Description, nil
 }
 
 // calcContextFromContent parses frontmatter name+description and body from
-// pre-read SKILL.md content, returning rune counts for each layer.
+// pre-read SKILL.md content, returning rune and token counts for each layer.
 // yamlErr is non-nil when the frontmatter YAML between --- delimiters cannot
 // be parsed; body metrics are still valid in that case.
-func calcContextFromContent(content []byte) (name string, descChars, bodyChars int, description string, yamlErr error) {
+func calcContextFromContent(content []byte) (sc skillContext, yamlErr error) {
 	s := string(content)
 	if len(s) == 0 {
-		return "", 0, 0, "", nil
+		return sc, nil
 	}
 
 	// Find frontmatter boundaries (between --- delimiters)
 	trimmed := strings.TrimSpace(s)
 	if !strings.HasPrefix(trimmed, "---") {
 		// No frontmatter — entire content is body
-		return "", 0, utf8.RuneCountInString(strings.TrimSpace(s)), "", nil
+		body := strings.TrimSpace(s)
+		sc.BodyChars = utf8.RuneCountInString(body)
+		sc.BodyTokens = EstimateTokens(body)
+		return sc, nil
 	}
 
 	// Find closing ---
@@ -53,7 +84,7 @@ func calcContextFromContent(content []byte) (name string, descChars, bodyChars i
 	closingIdx := strings.Index(rest, "\n---")
 	if closingIdx < 0 {
 		// Malformed frontmatter — no closing ---
-		return "", 0, 0, "", nil
+		return sc, nil
 	}
 
 	fmRaw := rest[:closingIdx]
@@ -67,15 +98,16 @@ func calcContextFromContent(content []byte) (name string, descChars, bodyChars i
 	yamlErr = yaml.Unmarshal([]byte(fmRaw), &fm)
 
 	// Build always-loaded string
-	var alwaysLoaded string
+	alwaysLoaded := fm.Name
 	if fm.Description != "" {
 		alwaysLoaded = fm.Name + " " + fm.Description
-	} else {
-		alwaysLoaded = fm.Name
 	}
 
-	descChars = utf8.RuneCountInString(alwaysLoaded)
-	bodyChars = utf8.RuneCountInString(body)
-
-	return fm.Name, descChars, bodyChars, fm.Description, yamlErr
+	sc.Name = fm.Name
+	sc.Description = fm.Description
+	sc.DescChars = utf8.RuneCountInString(alwaysLoaded)
+	sc.BodyChars = utf8.RuneCountInString(body)
+	sc.DescTokens = EstimateTokens(alwaysLoaded)
+	sc.BodyTokens = EstimateTokens(body)
+	return sc, yamlErr
 }

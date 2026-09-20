@@ -27,6 +27,8 @@ type analyzeSkillEntry struct {
 	BodyChars         int               `json:"body_chars"`
 	BodyTokens        int               `json:"body_tokens"`
 	LintIssues        []ssync.LintIssue `json:"lint_issues,omitempty"`
+	Local             bool              `json:"local,omitempty"`    // lives in the target folder, not the source
+	Disabled          bool              `json:"disabled,omitempty"` // .skillignore'd but still exposed by a symlink-mode target
 
 	// TUI-only fields (unexported, excluded from JSON)
 	relPath     string
@@ -90,13 +92,13 @@ func filterAnalyzeSkills(skills []analyzeSkillEntry, filter string) (matched []a
 		if skillMatchesFilter(s, lower) {
 			matched = append(matched, s)
 			summary.AlwaysLoaded.Chars += s.DescriptionChars
+			summary.AlwaysLoaded.Tokens += s.DescriptionTokens
 			summary.OnDemand.Chars += s.BodyChars
+			summary.OnDemand.Tokens += s.BodyTokens
 		}
 	}
-	summary.AlwaysLoaded.Tokens = estimateTokens(summary.AlwaysLoaded.Chars)
-	summary.OnDemand.Tokens = estimateTokens(summary.OnDemand.Chars)
 	summary.Total.Chars = summary.AlwaysLoaded.Chars + summary.OnDemand.Chars
-	summary.Total.Tokens = estimateTokens(summary.Total.Chars)
+	summary.Total.Tokens = summary.AlwaysLoaded.Tokens + summary.OnDemand.Tokens
 	return
 }
 
@@ -212,7 +214,7 @@ func runAnalyze(opts *analyzeOptions) error {
 			if err != nil {
 				return analyzeLoadResult{err: err}
 			}
-			entries, err := buildAnalyzeEntries(discovered, cfg.Targets, cfg.Mode, "")
+			entries, err := buildAnalyzeEntries(discovered, cfg.Targets, cfg.Mode, cfg.EffectiveSkillsSource(), "")
 			if err != nil {
 				return analyzeLoadResult{err: err}
 			}
@@ -222,10 +224,6 @@ func runAnalyze(opts *analyzeOptions) error {
 	}
 	return runAnalyzeCore(cfg.EffectiveSkillsSource(), cfg.Targets, cfg.Mode, cfg.ContextBudget, opts)
 }
-
-const charsPerToken = 4
-
-func estimateTokens(chars int) int { return chars / charsPerToken }
 
 func runAnalyzeCore(sourcePath string, targets map[string]config.TargetConfig, defaultMode string, budget config.ContextBudgetConfig, opts *analyzeOptions) error {
 	var sp *ui.Spinner
@@ -258,7 +256,7 @@ func runAnalyzeCore(sourcePath string, targets map[string]config.TargetConfig, d
 		sp.Success(fmt.Sprintf("Analyzed %d skill(s)", len(discovered)))
 	}
 
-	entries, err := buildAnalyzeEntries(discovered, targets, defaultMode, opts.targetName)
+	entries, err := buildAnalyzeEntries(discovered, targets, defaultMode, sourcePath, opts.targetName)
 	if err != nil {
 		if opts.json {
 			return writeJSONError(err)
@@ -311,6 +309,7 @@ func buildAnalyzeEntries(
 	discovered []ssync.DiscoveredSkill,
 	targets map[string]config.TargetConfig,
 	defaultMode string,
+	sourcePath string,
 	filterTarget string,
 ) ([]analyzeTargetEntry, error) {
 	var entries []analyzeTargetEntry
@@ -320,19 +319,9 @@ func buildAnalyzeEntries(
 			continue
 		}
 
-		sc := target.SkillsConfig()
-		tMode := getTargetMode(sc.Mode, defaultMode)
-
-		var filtered []ssync.DiscoveredSkill
-		if tMode == "symlink" {
-			filtered = discovered
-		} else {
-			var err error
-			filtered, err = ssync.FilterSkills(discovered, sc.Include, sc.Exclude)
-			if err != nil {
-				return nil, fmt.Errorf("target %s: %w", name, err)
-			}
-			filtered = ssync.FilterSkillsByTarget(filtered, name)
+		filtered, err := ssync.TargetSkills(name, target, getTargetMode("", defaultMode), sourcePath, discovered)
+		if err != nil {
+			return nil, fmt.Errorf("target %s: %w", name, err)
 		}
 
 		if len(filtered) == 0 {
@@ -340,17 +329,21 @@ func buildAnalyzeEntries(
 		}
 
 		skills := make([]analyzeSkillEntry, 0, len(filtered))
-		var totalDescChars, totalBodyChars int
+		var totalDescChars, totalBodyChars, totalDescTokens, totalBodyTokens int
 		for _, s := range filtered {
 			totalDescChars += s.DescChars
 			totalBodyChars += s.BodyChars
+			totalDescTokens += s.DescTokens
+			totalBodyTokens += s.BodyTokens
 			skills = append(skills, analyzeSkillEntry{
 				Name:              s.FlatName,
 				DescriptionChars:  s.DescChars,
-				DescriptionTokens: estimateTokens(s.DescChars),
+				DescriptionTokens: s.DescTokens,
 				BodyChars:         s.BodyChars,
-				BodyTokens:        estimateTokens(s.BodyChars),
+				BodyTokens:        s.BodyTokens,
 				LintIssues:        s.LintIssues,
+				Local:             s.Local,
+				Disabled:          s.Disabled,
 				relPath:           s.RelPath,
 				isTracked:         s.IsInRepo,
 				targetNames:       s.Targets,
@@ -367,11 +360,11 @@ func buildAnalyzeEntries(
 			SkillCount: len(skills),
 			AlwaysLoaded: analyzeCharTokens{
 				Chars:           totalDescChars,
-				EstimatedTokens: estimateTokens(totalDescChars),
+				EstimatedTokens: totalDescTokens,
 			},
 			OnDemandMax: analyzeCharTokens{
 				Chars:           totalBodyChars,
-				EstimatedTokens: estimateTokens(totalBodyChars),
+				EstimatedTokens: totalBodyTokens,
 			},
 			Skills: skills,
 		})
@@ -388,22 +381,7 @@ func buildAnalyzeEntries(
 	return entries, nil
 }
 
-func formatTokensStr(chars int) string {
-	tokens := estimateTokens(chars)
-	if tokens < 1000 {
-		return fmt.Sprintf("~%d", tokens)
-	}
-	s := fmt.Sprintf("%d", tokens)
-	var b strings.Builder
-	b.WriteByte('~')
-	for i := 0; i < len(s); i++ {
-		if i > 0 && (len(s)-i)%3 == 0 {
-			b.WriteByte(',')
-		}
-		b.WriteByte(s[i])
-	}
-	return b.String()
-}
+func formatTokensStr(tokens int) string { return "~" + formatTokenComma(tokens) }
 
 const analyzeTopN = 10
 const analyzeNameMaxLen = 30
@@ -447,8 +425,8 @@ func printAnalyzeHeader(entries []analyzeTargetEntry) {
 }
 
 func printAnalyzeEntry(e analyzeTargetEntry, showTopN bool) {
-	fmt.Printf("  Always loaded:  %s tokens\n", formatTokensStr(e.AlwaysLoaded.Chars))
-	fmt.Printf("  On-demand max:  %s tokens\n", formatTokensStr(e.OnDemandMax.Chars))
+	fmt.Printf("  Always loaded:  %s tokens\n", formatTokensStr(e.AlwaysLoaded.EstimatedTokens))
+	fmt.Printf("  On-demand max:  %s tokens\n", formatTokensStr(e.OnDemandMax.EstimatedTokens))
 	if !showTopN {
 		fmt.Println()
 		return
@@ -459,7 +437,7 @@ func printAnalyzeEntry(e analyzeTargetEntry, showTopN bool) {
 	for _, s := range e.Skills[:limit] {
 		fmt.Printf("  %-32s %s tokens\n",
 			truncateName(s.Name, analyzeNameMaxLen),
-			formatTokensStr(s.DescriptionChars),
+			formatTokensStr(s.DescriptionTokens),
 		)
 	}
 	if remaining := len(e.Skills) - limit; remaining > 0 {

@@ -26,7 +26,7 @@ func cmdAnalyzeProject(root string, opts *analyzeOptions) error {
 			if err != nil {
 				return analyzeLoadResult{err: err}
 			}
-			entries, err := buildAnalyzeEntries(discovered, runtime.targets, "", "")
+			entries, err := buildAnalyzeEntries(discovered, runtime.targets, "", runtime.sourcePath, "")
 			if err != nil {
 				return analyzeLoadResult{err: err}
 			}

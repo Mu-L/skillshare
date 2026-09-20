@@ -20,6 +20,8 @@ type analyzeSkillResponse struct {
 	BodyChars         int               `json:"body_chars"`
 	BodyTokens        int               `json:"body_tokens"`
 	LintIssues        []ssync.LintIssue `json:"lint_issues,omitempty"`
+	Local             bool              `json:"local,omitempty"`
+	Disabled          bool              `json:"disabled,omitempty"`
 	Path              string            `json:"path"`
 	IsTracked         bool              `json:"is_tracked"`
 	Targets           []string          `json:"targets,omitempty"`
@@ -33,8 +35,6 @@ type analyzeTargetResponse struct {
 	OnDemandMax  analyzeCharTokensResponse `json:"on_demand_max"`
 	Skills       []analyzeSkillResponse    `json:"skills"`
 }
-
-const analyzeCharsPerToken = 4
 
 func (s *Server) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
@@ -51,40 +51,27 @@ func (s *Server) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 
 	entries := make([]analyzeTargetResponse, 0)
 	for name, target := range targets {
-		sc := target.SkillsConfig()
-		tMode := sc.Mode
-		if tMode == "" {
-			tMode = defaultMode
-		}
-
-		var filtered []ssync.DiscoveredSkill
-		if tMode == "symlink" {
-			filtered = discovered
-		} else {
-			var ferr error
-			filtered, ferr = ssync.FilterSkills(discovered, sc.Include, sc.Exclude)
-			if ferr != nil {
-				continue
-			}
-			filtered = ssync.FilterSkillsByTarget(filtered, name)
-		}
-
-		if len(filtered) == 0 {
+		filtered, ferr := ssync.TargetSkills(name, target, defaultMode, source, discovered)
+		if ferr != nil || len(filtered) == 0 {
 			continue
 		}
 
 		skills := make([]analyzeSkillResponse, 0, len(filtered))
-		var totalDescChars, totalBodyChars int
+		var totalDescChars, totalBodyChars, totalDescTokens, totalBodyTokens int
 		for _, sk := range filtered {
 			totalDescChars += sk.DescChars
 			totalBodyChars += sk.BodyChars
+			totalDescTokens += sk.DescTokens
+			totalBodyTokens += sk.BodyTokens
 			skills = append(skills, analyzeSkillResponse{
 				Name:              sk.FlatName,
 				DescriptionChars:  sk.DescChars,
-				DescriptionTokens: sk.DescChars / analyzeCharsPerToken,
+				DescriptionTokens: sk.DescTokens,
 				BodyChars:         sk.BodyChars,
-				BodyTokens:        sk.BodyChars / analyzeCharsPerToken,
+				BodyTokens:        sk.BodyTokens,
 				LintIssues:        sk.LintIssues,
+				Local:             sk.Local,
+				Disabled:          sk.Disabled,
 				Path:              sk.RelPath,
 				IsTracked:         sk.IsInRepo,
 				Targets:           sk.Targets,
@@ -101,11 +88,11 @@ func (s *Server) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 			SkillCount: len(skills),
 			AlwaysLoaded: analyzeCharTokensResponse{
 				Chars:           totalDescChars,
-				EstimatedTokens: totalDescChars / analyzeCharsPerToken,
+				EstimatedTokens: totalDescTokens,
 			},
 			OnDemandMax: analyzeCharTokensResponse{
 				Chars:           totalBodyChars,
-				EstimatedTokens: totalBodyChars / analyzeCharsPerToken,
+				EstimatedTokens: totalBodyTokens,
 			},
 			Skills: skills,
 		})

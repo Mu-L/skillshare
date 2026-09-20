@@ -1410,6 +1410,10 @@ export interface AnalyzeSkill {
   body_chars: number;
   body_tokens: number;
   lint_issues?: AnalyzeLintIssue[];
+  /** Lives in the target folder itself, not in the skillshare source. */
+  local?: boolean;
+  /** Disabled in .skillignore but still exposed by a symlink-mode target. */
+  disabled?: boolean;
   path: string;
   is_tracked: boolean;
   targets?: string[];

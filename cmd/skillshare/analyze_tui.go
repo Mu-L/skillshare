@@ -23,14 +23,14 @@ type analyzeTargetGroup struct {
 }
 
 type analyzeTUIModel struct {
-	list              list.Model
-	allItems          []analyzeSkillItem
-	filterText        string
-	filterInput       textinput.Model
-	filtering         bool
-	matchCount        int
-	filteredDescChars int
-	filteredBodyChars int
+	list               list.Model
+	allItems           []analyzeSkillItem
+	filterText         string
+	filterInput        textinput.Model
+	filtering          bool
+	matchCount         int
+	filteredDescTokens int
+	filteredBodyTokens int
 
 	groups   []analyzeTargetGroup
 	groupIdx int
@@ -177,13 +177,13 @@ func (m *analyzeTUIModel) applyFilter() {
 
 	// Cache filtered sums for renderStatsLine (avoids per-render iteration
 	// and ensures correctness across paginated views).
-	var descChars, bodyChars int
+	var descTokens, bodyTokens int
 	for _, item := range items {
-		descChars += item.entry.DescriptionChars
-		bodyChars += item.entry.BodyChars
+		descTokens += item.entry.DescriptionTokens
+		bodyTokens += item.entry.BodyTokens
 	}
-	m.filteredDescChars = descChars
-	m.filteredBodyChars = bodyChars
+	m.filteredDescTokens = descTokens
+	m.filteredBodyTokens = bodyTokens
 
 	listItems := make([]list.Item, len(items))
 	for i, item := range items {
@@ -539,7 +539,7 @@ func (m analyzeTUIModel) renderStatsLine() string {
 		return ""
 	}
 	g := m.groups[m.groupIdx]
-	totalChars := m.filteredDescChars + m.filteredBodyChars
+	totalTokens := m.filteredDescTokens + m.filteredBodyTokens
 
 	var countStr string
 	if m.filterText != "" {
@@ -550,10 +550,10 @@ func (m analyzeTUIModel) renderStatsLine() string {
 
 	return theme.Dim().MarginLeft(2).Render(fmt.Sprintf("%s  Always: %s tokens  On-demand: %s tokens  Total: %s tokens  %s",
 		countStr,
-		formatTokensStr(m.filteredDescChars),
-		formatTokensStr(m.filteredBodyChars),
-		formatTokensStr(totalChars),
-		theme.Dim().Render("(1 token ≈ 4 chars)"),
+		formatTokensStr(m.filteredDescTokens),
+		formatTokensStr(m.filteredBodyTokens),
+		formatTokensStr(totalTokens),
+		theme.Dim().Render("(1 token ≈ 4 ASCII chars or 1 CJK char)"),
 	)) + "\n"
 }
 
@@ -568,13 +568,13 @@ func (m analyzeTUIModel) renderDetailBody(e analyzeSkillEntry, width int) string
 	// Token breakdown
 	g := m.groups[m.groupIdx]
 	pct := 0.0
-	if g.entry.AlwaysLoaded.Chars > 0 {
-		pct = float64(e.DescriptionChars) / float64(g.entry.AlwaysLoaded.Chars) * 100
+	if g.entry.AlwaysLoaded.EstimatedTokens > 0 {
+		pct = float64(e.DescriptionTokens) / float64(g.entry.AlwaysLoaded.EstimatedTokens) * 100
 	}
 	tokenRows := []string{
-		renderFactRow("Desc tokens", fmt.Sprintf("%s  (%.0f%%)", formatTokensStr(e.DescriptionChars), pct)),
-		renderFactRow("Body tokens", formatTokensStr(e.BodyChars)),
-		renderFactRow("Total", formatTokensStr(e.DescriptionChars+e.BodyChars)),
+		renderFactRow("Desc tokens", fmt.Sprintf("%s  (%.0f%%)", formatTokensStr(e.DescriptionTokens), pct)),
+		renderFactRow("Body tokens", formatTokensStr(e.BodyTokens)),
+		renderFactRow("Total", formatTokensStr(e.DescriptionTokens+e.BodyTokens)),
 	}
 	b.WriteString(renderDetailSection("Tokens", strings.Join(tokenRows, "\n"), width))
 	b.WriteString("\n\n")

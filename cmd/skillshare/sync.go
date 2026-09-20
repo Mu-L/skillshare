@@ -368,7 +368,7 @@ func cmdSync(args []string) error {
 	// for installed skills whose files may be missing from disk.
 
 	// Compute token cost once — used by both text summary and JSON output
-	analyzeEntries, analyzeErr := buildAnalyzeEntries(discoveredSkills, cfg.Targets, cfg.Mode, "")
+	analyzeEntries, analyzeErr := buildAnalyzeEntries(discoveredSkills, cfg.Targets, cfg.Mode, cfg.EffectiveSkillsSource(), "")
 
 	if !jsonOutput && !quiet && analyzeErr == nil && len(analyzeEntries) > 0 {
 		printTokenSummary(analyzeEntries)

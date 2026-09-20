@@ -56,7 +56,12 @@ skillshare analyze --json | jq '.targets[].skills[] | select(.lint_issues | leng
 1. **Always loaded** — `name + description` from SKILL.md frontmatter (loaded into context on every request for skill matching)
 2. **On-demand** — Skill body after frontmatter (loaded only when the skill is triggered)
 
-Token estimates use `chars / 4` as an approximation.
+Token estimates count about 4 characters per token for ASCII text and 1 token per character for CJK and other wide scripts.
+
+Each target is measured as the tool sees it:
+
+- **merge / copy mode** — source skills that pass the target's include/exclude and `targets:` filters, minus anything disabled in `.skillignore`, plus skills that already live in the target folder without coming from the source (flagged `local` in JSON).
+- **symlink mode** — the whole source folder, including `.skillignore`'d skills (flagged `disabled` in JSON), because the symlink exposes them anyway.
 
 ### Skill Quality Lint
 

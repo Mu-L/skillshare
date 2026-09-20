@@ -112,6 +112,7 @@ function TargetEditor({ target }: { target: Target }) {
         subtitle={<span className="font-mono">{shortenHome(agent ? target.agentPath ?? '' : target.path)}</span>}
         actions={
           <>
+            {kind === 'skill' && <Link to={`/skills?tab=analyze&target=${encodeURIComponent(target.name)}`} className="ss-btn ghost">{t('analyze.open')}</Link>}
             <Button variant="ghost" onClick={() => setRemoving(true)}>{t('targetDetail.remove')}</Button>
             <Button variant="primary" onClick={save} loading={saving} disabled={!dirty}>{t('common.save')}</Button>
           </>

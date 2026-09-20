@@ -109,7 +109,7 @@ func (d analyzeSkillDelegate) Render(w io.Writer, m list.Model, index int, listI
 	}
 
 	isSelected := index == m.Index()
-	tokenStr := formatTokensStr(item.entry.DescriptionChars)
+	tokenStr := formatTokensStr(item.entry.DescriptionTokens)
 	colorCode := tokenColorCode(item.entry.DescriptionTokens, d.thresholdLow, d.thresholdHigh)
 	dot := analyzeDots[colorCode]
 

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, AlertTriangle, ArrowDown, Puzzle, Search, X } from 'lucide-react';
-import { api, type AnalyzeSkill } from '../../api/client';
+import { api, type AnalyzeSkill, type AnalyzeTarget } from '../../api/client';
 import AgentIcon from '../AgentIcon';
 import Button from '../Button';
 import DialogShell from '../DialogShell';
@@ -18,13 +18,23 @@ const STEP = 100;
 const kTokens = (n: number) => (n < 1000 ? n.toLocaleString() : n >= 10000 ? `${Math.round(n / 1000)}k` : `${(n / 1000).toFixed(1)}k`);
 /** "description-length" reads as "description length" — the full sentence waits in the dialog. */
 const ruleLabel = (rule: string) => rule.replace(/-/g, ' ');
+/** Project targets are named `project@tool`; own targets have no `@`. */
+const projectOf = (name: string) => (name.includes('@') ? name.slice(0, name.lastIndexOf('@')) : '');
+/** Exact name first. A project link may name a tool that shares its folder with another, so any target of that project will do. */
+function pickTarget(targets: AnalyzeTarget[], want: string) {
+  const project = projectOf(want);
+  return targets.find((x) => x.name === want) ?? (project ? targets.find((x) => projectOf(x.name) === project) : undefined) ?? targets[0];
+}
 
 /** Context cost of the skills a target loads: descriptions always, bodies on demand. */
 export default function AnalyzePanel() {
   const t = useT();
   const { data, isPending, error } = useQuery({ queryKey: queryKeys.analyze, queryFn: () => api.analyze(), staleTime: staleTimes.analyze });
 
-  const [target, setTarget] = useState('');
+  // The target lives in the URL so target and project pages can deep-link here.
+  const [params, setParams] = useSearchParams();
+  const target = params.get('target') ?? '';
+  const setTarget = (v: string) => setParams((p) => { p.set('target', v); return p; }, { replace: true });
   const [search, setSearch] = useState('');
   const [onlyIssues, setOnlyIssues] = useState(false);
   const [limit, setLimit] = useState(STEP);
@@ -36,7 +46,11 @@ export default function AnalyzePanel() {
   const targets = data?.targets ?? [];
   if (targets.length === 0) return <EmptyState icon={Puzzle} title={t('analyze.empty.title')} description={t('analyze.empty.description')} />;
 
-  const current = targets.find((x) => x.name === target) ?? targets[0];
+  const current = pickTarget(targets, target);
+  // Own targets first, project targets (`project@tool`) after, each keeping the API's heaviest-first order.
+  const options = [...targets]
+    .sort((a, b) => Number(Boolean(projectOf(a.name))) - Number(Boolean(projectOf(b.name))))
+    .map((x) => ({ value: x.name, label: x.name, icon: <AgentIcon target={x.name} size={15} /> }));
   const skills = [...current.skills].sort((a, b) => b.body_tokens - a.body_tokens);
   const issueCount = skills.filter((s) => s.lint_issues?.length).length;
   const heaviest = skills[0]?.body_tokens ?? 0;
@@ -51,8 +65,8 @@ export default function AnalyzePanel() {
           value={current.name}
           onChange={(v) => { setTarget(v); setLimit(STEP); }}
           prefix={t('analyze.target')}
-          className="w-[230px] shrink-0"
-          options={targets.map((x) => ({ value: x.name, label: x.name }))}
+          className="w-[260px] shrink-0"
+          options={options}
         />
       </div>
 
@@ -110,6 +124,8 @@ export default function AnalyzePanel() {
               {s.lint_issues?.length ? (
                 <span className="ss-tag warn shrink-0" title={s.lint_issues.map((i) => i.message).join(' · ')}>{ruleLabel(s.lint_issues[0].rule)}</span>
               ) : null}
+              {s.local && <span className="ss-tag shrink-0">{t('analyze.tag.local')}</span>}
+              {s.disabled && <span className="ss-tag warn shrink-0">{t('analyze.tag.disabled')}</span>}
               <span className="flex-1" />
               <span className="w-[110px] font-mono text-[13px]">{s.description_tokens.toLocaleString()}</span>
               <span className="flex w-[240px] items-center gap-2.5">
@@ -161,6 +177,9 @@ function SkillDialog({ skill, onClose }: { skill: AnalyzeSkill; onClose: () => v
           ) : null}
         </dl>
 
+        {skill.local && <div className="ss-note inf"><span className="flex-1">{t('analyze.detail.local')}</span></div>}
+        {skill.disabled && <div className="ss-note warn"><AlertTriangle size={16} /><span className="flex-1">{t('analyze.detail.disabled')}</span></div>}
+
         {skill.description && (
           <div className="ss-fld">
             <label>{t('analyze.detail.descriptionPreview')}</label>
@@ -185,7 +204,7 @@ function SkillDialog({ skill, onClose }: { skill: AnalyzeSkill; onClose: () => v
       <div className="df">
         <span className="flex-1" />
         <Button variant="ghost" onClick={onClose}>{t('common.close')}</Button>
-        <Link to={`/skills/${encodeURIComponent(skill.name)}`} className="ss-btn pri">{t('analyze.detail.viewSkill')}</Link>
+        {!skill.local && <Link to={`/skills/${encodeURIComponent(skill.name)}`} className="ss-btn pri">{t('analyze.detail.viewSkill')}</Link>}
       </div>
     </DialogShell>
   );

@@ -136,7 +136,7 @@ func cmdSyncProject(root string, dryRun, force, jsonOutput, quiet bool) (syncLog
 	}
 
 	// Compute context cost once — used by both text summary and JSON output
-	analyzeEntries, analyzeErr := buildAnalyzeEntries(discoveredSkills, runtime.targets, "", "")
+	analyzeEntries, analyzeErr := buildAnalyzeEntries(discoveredSkills, runtime.targets, "", runtime.sourcePath, "")
 
 	var ctxCost *contextCostJSON
 	if analyzeErr == nil && len(analyzeEntries) > 0 {

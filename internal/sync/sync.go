@@ -25,9 +25,12 @@ type DiscoveredSkill struct {
 	Targets     []string    // From SKILL.md frontmatter; nil = all targets
 	DescChars   int         // Rune count of name + description (populated when collectContext)
 	BodyChars   int         // Rune count of body after frontmatter (populated when collectContext)
+	DescTokens  int         // Estimated tokens of name + description (populated when collectContext)
+	BodyTokens  int         // Estimated tokens of body (populated when collectContext)
 	Description string      // Frontmatter description text (populated when collectContext)
 	LintIssues  []LintIssue // Lint issues (populated when collectContext)
 	Disabled    bool        // Whether this skill is ignored by .skillignore
+	Local       bool        // Found in a target folder rather than the source; see TargetSkills
 }
 
 // isSkillIgnored checks whether a skill inside a tracked repo should be
@@ -74,11 +77,14 @@ func DiscoverSourceSkills(sourcePath string) ([]DiscoveredSkill, error) {
 
 // DiscoverSourceSkillsForAnalyze scans skills and computes context usage
 // (name+description chars, body chars) in a single pass. Avoids re-reading
-// SKILL.md files in a separate analysis phase.
+// SKILL.md files in a separate analysis phase. Skills disabled by .skillignore
+// are kept with Disabled=true, since a symlink-mode target still loads them;
+// TargetSkills drops them for every other mode.
 func DiscoverSourceSkillsForAnalyze(sourcePath string) ([]DiscoveredSkill, error) {
 	skills, _, _, err := discoverSourceSkillsInternal(sourcePath, discoverOptions{
 		parseFrontmatter: true,
 		collectContext:   true,
+		includeIgnored:   true,
 	})
 	return skills, err
 }
