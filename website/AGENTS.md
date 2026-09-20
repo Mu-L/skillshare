@@ -1,8 +1,8 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This guidance applies to the `website/` directory.
 
-This is the **documentation website** for the skillshare CLI. See the parent `../.claude/CLAUDE.md` for CLI/Go codebase details and the project-wide rules (run frontend tooling inside the devcontainer, never on the host).
+This is the **documentation website** for the skillshare CLI. See the parent `../AGENTS.md` for CLI/Go codebase details and the project-wide rules (run frontend tooling inside the devcontainer, never on the host).
 
 ## Commands
 
