@@ -18,8 +18,8 @@ Thumbs.db
 # Test
 coverage.out
 .claude/
-AGENTS.md
-CLAUDE.md
+/AGENTS.md
+/CLAUDE.md
 docs/plans/
 docs/superpowers/
 .agents/
