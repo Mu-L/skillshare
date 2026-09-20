@@ -1,6 +1,7 @@
 package config
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -232,5 +233,59 @@ func TestProjectTargets_ClaudePath(t *testing.T) {
 	}
 	if tc.Path != ".claude/skills" {
 		t.Errorf("claude project path = %q, want %q", tc.Path, ".claude/skills")
+	}
+}
+
+func alsoScansSpec(t *testing.T, name string) targetAlsoScans {
+	t.Helper()
+	specs, err := loadTargetSpecs()
+	if err != nil {
+		t.Fatalf("loadTargetSpecs: %v", err)
+	}
+	for _, spec := range specs {
+		if spec.Name == name {
+			return spec.AlsoScans
+		}
+	}
+	t.Fatalf("target %q not found", name)
+	return targetAlsoScans{}
+}
+
+// A target's own primary path is covered by shared_target_paths; listing it in
+// also_scans would double-report every overlap.
+func TestAlsoScans_ExcludesOwnPrimaryPath(t *testing.T) {
+	specs, err := loadTargetSpecs()
+	if err != nil {
+		t.Fatalf("loadTargetSpecs: %v", err)
+	}
+	for _, spec := range specs {
+		if slices.Contains(spec.AlsoScans.Global, spec.Skills.Global) {
+			t.Errorf("%s: also_scans.global repeats its primary path %s", spec.Name, spec.Skills.Global)
+		}
+		if slices.Contains(spec.AlsoScans.Project, spec.Skills.Project) {
+			t.Errorf("%s: also_scans.project repeats its primary path %s", spec.Name, spec.Skills.Project)
+		}
+	}
+}
+
+// Kimi reads ~/.agents/skills only when ~/.config/agents/skills is absent, and
+// skillshare always creates the latter, so it is never actually scanned.
+func TestAlsoScans_KimiSkipsAgentsFallback(t *testing.T) {
+	if got := alsoScansSpec(t, "kimi").Global; slices.Contains(got, "~/.agents/skills") {
+		t.Errorf("kimi also_scans.global = %v, must not list the mutually exclusive ~/.agents/skills fallback", got)
+	}
+}
+
+func TestAlsoScans_OpencodeReadsClaudeAndAgents(t *testing.T) {
+	got := alsoScansSpec(t, "opencode")
+	for _, want := range []string{"~/.claude/skills", "~/.agents/skills"} {
+		if !slices.Contains(got.Global, want) {
+			t.Errorf("opencode also_scans.global = %v, missing %s", got.Global, want)
+		}
+	}
+	for _, want := range []string{".claude/skills", ".agents/skills"} {
+		if !slices.Contains(got.Project, want) {
+			t.Errorf("opencode also_scans.project = %v, missing %s", got.Project, want)
+		}
 	}
 }

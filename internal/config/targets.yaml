@@ -13,7 +13,7 @@ targets:
       global: "~/.config/agents/skills"
       project: ".agents/skills"
     also_scans:
-      global: ["~/.claude/skills"]
+      global: ["~/.agents/skills", "~/.config/amp/skills", "~/.claude/skills"]
       project: [".claude/skills"]
   - name: antigravity
     skills:
@@ -59,6 +59,8 @@ targets:
     skills:
       global: "~/.cline/skills"
       project: ".cline/skills"
+    also_scans:
+      project: [".clinerules/skills", ".claude/skills"]
   - name: codebuddy
     skills:
       global: "~/.codebuddy/skills"
@@ -78,10 +80,14 @@ targets:
       project: ".agents/skills"
     also_scans:
       global: ["~/.agents/skills"]
+      project: [".codex/skills"]
   - name: commandcode
     skills:
       global: "~/.commandcode/skills"
       project: ".commandcode/skills"
+    also_scans:
+      global: ["~/.agents/skills"]
+      project: [".agents/skills"]
     aliases: [command-code]
   - name: continue
     skills:
@@ -98,11 +104,17 @@ targets:
     agents:
       global: "~/.copilot/agents"
       project: ".github/agents"
+    also_scans:
+      global: ["~/.agents/skills"]
+      project: [".claude/skills", ".agents/skills"]
     aliases: [github-copilot]
   - name: crush
     skills:
       global: "~/.config/crush/skills"
       project: ".crush/skills"
+    also_scans:
+      global: ["~/.config/agents/skills", "~/.agents/skills", "~/.claude/skills"]
+      project: [".agents/skills", ".claude/skills", ".cursor/skills"]
   - name: cursor
     skills:
       global: "~/.cursor/skills"
@@ -112,11 +124,14 @@ targets:
       project: ".cursor/agents"
     also_scans:
       global: ["~/.agents/skills", "~/.claude/skills", "~/.codex/skills"]
-      project: [".claude/skills", ".codex/skills"]
+      project: [".cursor/skills", ".claude/skills", ".codex/skills"]
   - name: deepagents
     skills:
       global: "~/.deepagents/agent/skills"
       project: ".deepagents/skills"
+    also_scans:
+      global: ["~/.agents/skills"]
+      project: [".agents/skills"]
     aliases: [deep-agents]
   - name: devin
     skills:
@@ -134,6 +149,9 @@ targets:
     agents:
       global: "~/.factory/droids"
       project: ".factory/droids"
+    also_scans:
+      global: ["~/.agents/skills", "~/.agent/skills"]
+      project: [".agents/skills", ".agent/skills"]
     aliases: [factory]
   - name: firebender
     skills:
@@ -158,6 +176,9 @@ targets:
     skills:
       global: "~/.config/goose/skills"
       project: ".goose/skills"
+    also_scans:
+      global: ["~/.agents/skills", "~/.claude/skills", "~/.config/agents/skills"]
+      project: [".agents/skills", ".claude/skills"]
   - name: grok
     skills:
       global: "~/.grok/skills"
@@ -183,14 +204,17 @@ targets:
     skills:
       global: "~/.kilo/skills"
       project: ".kilo/skills"
+    also_scans:
+      global: ["~/.agents/skills"]
+      project: [".agents/skills"]
     aliases: [kilo]
   - name: kimi
     skills:
       global: "~/.config/agents/skills"
       project: ".agents/skills"
     also_scans:
-      global: ["~/.agents/skills", "~/.claude/skills", "~/.codex/skills"]
-      project: [".claude/skills", ".codex/skills"]
+      global: ["~/.kimi/skills", "~/.claude/skills", "~/.codex/skills"]
+      project: [".kimi/skills", ".claude/skills", ".codex/skills"]
     aliases: [kimi-cli]
   - name: kiro
     skills:
@@ -201,6 +225,8 @@ targets:
     skills:
       global: "~/.kode/skills"
       project: ".kode/skills"
+    also_scans:
+      project: [".claude/skills"]
   - name: letta
     skills:
       global: "~/.letta/skills"
@@ -230,6 +256,9 @@ targets:
     skills:
       global: "~/.openclaw/skills"
       project: "skills"
+    also_scans:
+      global: ["~/.agents/skills"]
+      project: [".agents/skills"]
   - name: opencode
     skills:
       global: "~/.config/opencode/skills"
@@ -237,14 +266,23 @@ targets:
     agents:
       global: "~/.config/opencode/agents"
       project: ".opencode/agents"
+    also_scans:
+      global: ["~/.claude/skills", "~/.agents/skills"]
+      project: [".claude/skills", ".agents/skills"]
   - name: openhands
     skills:
       global: "~/.openhands/skills"
       project: ".openhands/skills"
+    also_scans:
+      global: ["~/.agents/skills"]
+      project: [".agents/skills"]
   - name: pi
     skills:
       global: "~/.pi/agent/skills"
       project: ".pi/skills"
+    also_scans:
+      global: ["~/.agents/skills"]
+      project: [".agents/skills"]
   - name: pochi
     skills:
       global: "~/.pochi/skills"
