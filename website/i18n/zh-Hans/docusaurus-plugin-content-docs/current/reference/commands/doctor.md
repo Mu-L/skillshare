@@ -1,0 +1,307 @@
+---
+sidebar_position: 1
+---
+
+# doctor
+
+检查环境并诊断你的 skillshare 设置中的问题。
+
+```bash
+skillshare doctor
+skillshare doctor -p        # Project mode (.skillshare/config.yaml)
+skillshare doctor -g        # Force global mode
+skillshare doctor --json    # Structured JSON output for CI
+```
+
+![doctor demo](/img/doctor-demo.png)
+
+## 何时使用
+
+- 某些功能无法工作，但你不知道原因
+- 升级 skillshare 或操作系统之后
+- 验证所有 targets、git 和 symlinks 是否健康
+- 提交 bug report 之前的第一步诊断
+
+## 检查内容
+
+```text
+skillshare doctor
+
+Checking environment
+✓ Config: ~/.config/skillshare/config.yaml
+→ Config directory: ~/.config/skillshare
+→ Data directory:   ~/.local/share/skillshare
+→ State directory:  ~/.local/state/skillshare
+
+✓ Source: ~/.config/skillshare/skills (12 skills)
+✓ Agents source: ~/.config/skillshare/agents (8 agents)
+✓ Skillignore: 2 patterns, 1 skills ignored
+✓ Link support: OK
+✓ Git: initialized with remote
+
+✓ Skill integrity: 12/12 verified
+
+Checking targets
+claude
+  skills   [merge] merged (8 shared, 2 local)
+  agents   [merge] merged (8/8 linked)
+cursor
+  skills   [copy] copied (8 managed, 0 local)
+  agents   [merge] merged (8/8 linked)
+codex
+  skills   [merge] needs sync
+
+Extras
+✓ rules: 4 files, 1/1 targets OK
+✓ commands: 3 files, 1/1 targets OK
+
+Version
+✓ CLI: 0.17.0
+✓ Skill: 0.17.0
+
+Summary
+✓ All checks passed!
+```
+
+## 执行的检查
+
+### Environment
+
+| Check | What It Verifies |
+|-------|-----------------|
+| Config | Config file exists and is valid |
+| Source | Source directory exists and is readable |
+| Agents source | Agents source directory exists (if configured) |
+| Skillignore | `.skillignore` (and `.skillignore.local`) active patterns and ignored skill count |
+| Link support | System can create symlinks |
+| Git | Repository status and remote configuration |
+
+### Targets
+
+每个 target 都会显示 **skills** 和 **agents** 的子项（当配置了 agents 时）：
+- Skills：路径、同步模式、同步状态、共享/本地计数
+- Agents：已链接数量、drift 检测
+- 没有损坏的 symlinks
+- 针对意外本地冲突的重复 skill 检查：
+  - `merge` 模式：跳过（本地 skills 是预期存在的）
+  - `copy` 模式：忽略由 manifest 管理的副本；只警告本地冲突的副本
+- 有效的 include/exclude glob 模式
+- 适用时给出的 info 级别的每个 target 兼容性提示（示例 target 优先级：`cursor` → `antigravity` → `copilot` → `opencode`；这些 targets 都不存在时不给提示）
+
+### Path Overlap
+
+Doctor 会在两类重复 skill 风险到达运行时选择器之前将其标记出来：
+
+**`shared_target_paths`** —— 当两个或更多已启用的 targets 解析到同一个主路径时触发。常见原因：
+同时启用了 `universal` 和写入 `~/.agents/skills` 的工具（如 `warp`、`witsy`）。
+
+```text
+! Shared path ~/.agents/skills ← universal, warp
+```
+
+解决方法：禁用其中一个重叠的 target，或用 `skillshare target <name> --path <dir>` 设置一个独立的路径。
+
+**`cross_target_discovery`** —— 当某个已启用 target 的运行时文档说明它也会扫描
+另一个已启用 target 写入的目录时触发。例如，Codex Desktop 除了读取 `~/.codex/skills` 之外
+还会读取 `~/.agents/skills`，因此同时启用 `codex` 和 `universal` 会导致 Codex 看到
+universal 的内容。
+
+```text
+! codex will see content from: universal
+    ~/.agents/skills ← universal
+```
+
+解决方法：为共享内容选一个 target 作为写入方，或者接受这种重叠（如果在运行时选择器中出现重复列表是可接受的）。
+
+这两项检查都是纯元数据操作——它们只读取已配置的路径和内置的 `also_scans` 表，不做文件系统探测。
+
+### Version
+
+- CLI 版本
+- skillshare skill 版本
+- 检查是否有可用更新
+
+### Skill Integrity
+
+对于带有文件哈希 metadata 的已安装 skills，doctor 会验证自安装以来是否有文件被篡改：
+
+- 将当前的 SHA-256 哈希与存储的哈希进行比较
+- 报告每个 skill 中被修改、缺失和新增的文件
+- 本地 skills（不在 `.metadata.json` 中）会被静默跳过——这是预期行为
+- 有 metadata 但缺少 `file_hashes` 的已安装 skills 会被标记出名称
+
+```text
+⚠ _team-repo__api-helper: 1 modified, 1 missing
+✓ Skill integrity: 5/6 verified
+⚠ Skill integrity: 1 skill(s) missing file hashes: _old-repo__legacy-skill
+```
+
+### Extras
+
+当配置了 extras 时，会验证：
+- 每个 extra 的 source 目录是否存在
+- Target 目录是否可达
+- 报告缺失的 source 目录或不可达的 targets
+
+### 其他
+
+- 没有 `SKILL.md` 文件的 skills
+- Skill 级别的 `targets:` 字段验证（对未知 target 名称发出警告）
+- 最近一次备份的时间戳（global mode）
+- Trash 状态（条目数量、总大小、最旧条目的存续时间）
+- targets 中损坏的 symlinks
+
+:::note Project Mode
+当某个项目存在 `.skillshare/config.yaml` 时，`skillshare doctor` 会自动以 project mode 运行。
+
+在 project mode 下：
+- Config/source 检查使用 `.skillshare/config.yaml` 和 `.skillshare/skills`
+- Trash 状态使用 `.skillshare/trash`
+- Backups 显示 `not used in project mode`
+:::
+
+## 常见问题
+
+### "Needs sync"
+
+Target 模式已更改但尚未生效：
+
+```bash
+skillshare sync
+```
+
+### "Not synced"
+
+Target 已链接的 skills 数量少于 source（例如在安装新 skills 之后）：
+
+```bash
+skillshare sync
+```
+
+### "Has uncommitted changes"
+
+Tracked repo 有本地更改：
+
+```bash
+cd ~/.config/skillshare/skills/_team-repo
+git status
+# Commit or discard changes
+```
+
+### "Broken symlink"
+
+某个 skill 已从 source 移除，但 symlink 仍然存在：
+
+```bash
+skillshare sync  # Will prune orphaned symlinks
+```
+
+### "Skills without SKILL.md"
+
+Skill 文件夹缺少必需的文件：
+
+```bash
+# Add SKILL.md to each skill, or remove the folder
+skillshare new my-skill  # Creates proper structure
+```
+
+### "Link not supported"
+
+在未开启 Developer Mode 的 Windows 上：
+
+1. 在 Settings 中启用 Developer Mode
+2. 或以管理员身份运行
+
+## 带有问题的示例输出
+
+```
+Checking environment
+✓ Config: ~/.config/skillshare/config.yaml
+✓ Source: ~/.config/skillshare/skills (12 skills)
+✓ Agents source: ~/.config/skillshare/agents (8 agents)
+✓ Link support: OK
+⚠ Git: 3 uncommitted change(s)
+
+⚠ Skills without SKILL.md: test-dir, temp
+⚠ _team-repo__api-helper: 1 modified
+✓ Skill integrity: 5/6 verified
+
+Checking targets
+claude
+  skills   [merge] merged (8 shared, 2 local)
+  agents   [merge] merged (8/8 linked)
+cursor
+  skills   [merge] 2 broken symlink(s): old-skill, removed-skill
+codex
+  skills   [merge] needs sync
+⚠ claude: 1 skill(s) not synced (2/3 linked)
+
+Version
+✓ CLI: 0.17.0
+⚠ Skill: 0.16.0 (update available: 0.17.0)
+  Run: skillshare upgrade --skill && skillshare sync
+
+Backups: last backup 2026-01-18_09-00-00 (3 days ago)
+ℹ Trash: 2 item(s) (45.2 KB), oldest 3 day(s)
+
+ℹ Update available: 1.2.0 -> 1.3.0
+  brew upgrade skillshare  OR  curl -fsSL .../install.sh | sh
+
+Summary
+  ✗ 1 error(s), 4 warning(s)
+```
+
+## JSON 输出
+
+在 CI 流水线和自动化中使用 `--json` 获取机器可读的输出：
+
+```bash
+skillshare doctor --json
+```
+
+```json
+{
+  "checks": [
+    { "name": "source", "status": "pass", "message": "Source: ~/.config/skillshare/skills (12 skills)" },
+    { "name": "skillignore", "status": "pass", "message": ".skillignore: 3 patterns, 2 skills ignored", "details": ["test-*", "vendor/", "!important", "---", "test-draft", "vendor/lib"] },
+    { "name": "sync_drift", "status": "warning", "message": "claude: 1 skill(s) not synced (7/8 linked)", "details": ["new-skill"] },
+    { "name": "shared_target_paths", "status": "warning", "message": "1 shared target path(s) — enabled targets writing to the same directory may produce duplicate skills in runtime pickers", "details": ["~/.agents/skills ← universal, warp"], "suggestions": ["Choose one authoritative target for ~/.agents/skills and disable or reconfigure the rest (currently: universal, warp)"] },
+    { "name": "broken_symlinks", "status": "error", "message": "cursor: 1 broken symlink(s)", "details": ["old-skill"] }
+  ],
+  "summary": { "total": 14, "pass": 12, "warnings": 1, "errors": 1, "info": 0 },
+  "version": { "current": "0.17.4", "latest": "0.18.0", "update_available": true }
+}
+```
+
+检查状态：`pass`、`warning`、`error`、`info`。`info` 状态用于既非通过也非失败的信息性检查
+（例如未找到 `.skillignore`）。Info 检查计入 `total`，但不计入 `pass`、`warnings` 或 `errors`。
+
+某些警告级别的检查（如 `shared_target_paths`、`cross_target_discovery`）还会包含一个可选的
+`suggestions` 数组，给出可执行的修复步骤。当没有可建议的内容时，该字段会被省略。
+
+### 退出代码
+
+| Condition | Exit Code |
+|-----------|-----------|
+| All checks pass (or warnings only) | `0` |
+| Any check has `error` status | `1` |
+
+### CI 示例
+
+```bash
+# Fail pipeline if doctor finds errors
+skillshare doctor --json | jq -e '.summary.errors == 0'
+
+# Extract warnings for notification
+skillshare doctor --json | jq '[.checks[] | select(.status == "warning")]'
+```
+
+:::tip Web Dashboard
+Web dashboard（`skillshare ui`）中的 **Health Check** 页面提供了 `doctor --json` 的可视化版本，带有过滤开关和可展开的详情。
+:::
+
+## 另请参阅
+
+- [status](/docs/reference/commands/status) — 快速状态检查
+- [sync](/docs/reference/commands/sync) — 修复同步问题
+- [upgrade](/docs/reference/commands/upgrade) — 更新 CLI 和 skill

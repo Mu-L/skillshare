@@ -1,0 +1,241 @@
+---
+sidebar_position: 2
+---
+
+# diff
+
+显示 Source 与 Targets 之间的差异。
+
+```bash
+skillshare diff              # 所有 Target（交互式 TUI）
+skillshare diff claude       # 指定 Target
+skillshare diff agents       # 仅 Agent Target
+skillshare diff --stat       # 文件级别的变更
+skillshare diff --patch      # 完整的统一 diff
+```
+
+![diff 演示](/img/diff-demo.png)
+
+## 交互式 TUI
+
+在 TTY 环境下，`diff` 会启动一个左右分栏布局的交互式 TUI：
+
+- **左侧面板** — Target 列表，带状态图标（`✓` 已同步，`!` 有差异，`✗` 出错）
+- **右侧面板** — 所选 Target 的详情视图（mode、filters、分类后的 diff）
+- 按 **Enter** 展开某个 Skill 的文件级 diff
+- 按 **/** 筛选 Target，**Ctrl+d/u** 滚动详情面板，**q** 退出
+
+使用 `--no-tui` 输出纯文本，或通过管道自动禁用 TUI。
+
+## 使用场景
+
+- 在 sync 之前准确查看 Source 与某个 Target 之间的差异
+- 查找仅存在于某个 Target 中的 Skill（仅本地存在，尚未 collect）
+- 找出可以替换为 symlink 的本地副本
+- 使用 `--stat` 查看文件级变更，或使用 `--patch` 查看完整文本 diff
+
+## 输出示例
+
+```
+claude
+  + New 2 skills:
+      missing-skill
+      another-skill
+  ! Local Override 1 skill:
+      local-copy
+  ← Local Only 1 skill:
+      my-local-skill
+
+  2 new, 1 local override, 1 local only
+
+cursor: fully synced
+```
+
+### 分组显示多个 Target 的结果
+
+当多个 Target 的 diff 结果完全相同时，会被归并到同一个区块中以减少噪音：
+
+```
+claude, agents
+  + New 2 skills:
+      skill-1
+      skill-2
+
+cursor
+  + New 1 skill:
+      skill-1
+
+codex, copilot: fully synced
+```
+
+结果不同的 Target（例如由于 `include`/`exclude` filters）仍会分开显示。
+
+## 符号说明
+
+| Symbol | Label | Meaning | Action |
+|--------|-------|---------|--------|
+| `+` | New | 存在于 Source，但 Target 中缺失 | `sync` 会添加它 |
+| `+` | Restore | 曾存在于 Target 中，已被删除 | `sync` 会恢复它 |
+| `~` | Modified | 内容已更改（copy mode） | `sync` 会更新它 |
+| `!` | Local Override | 本地副本而非 symlink | 使用 `sync --force` 替换 |
+| `-` | Orphan | 存在于 manifest 中，但不在 Source 中 | `sync` 会清理它 |
+| `←` | Local Only | 仅存在于 Target 中，不在 Source 中 | 使用 `collect` 导入 |
+
+## 文件级详情
+
+### `--stat`
+
+显示每个 Skill 内哪些文件存在差异：
+
+```bash
+skillshare diff --stat
+```
+
+```
+claude
+  ~ Modified 1 skill:
+      my-skill
+        + new-file.md
+        ~ SKILL.md
+        - old-file.md
+```
+
+### `--patch`
+
+显示已修改文件的完整统一文本 diff：
+
+```bash
+skillshare diff --patch
+```
+
+```
+claude
+  ~ Modified 1 skill:
+      my-skill
+        --- SKILL.md
+        - old line
+        + new line
+```
+
+`--stat` 和 `--patch` 都隐含 `--no-tui`（纯文本输出）。
+
+## diff 显示的内容
+
+### Merge Mode 的 Target
+
+对于使用 merge mode（默认）的 Target：
+- 列出 Source 中尚未 symlink 到 Target 的 Skill
+- 显示以本地副本形式存在（而非 symlink）的 Skill
+- 识别 Target 中仅本地存在的 Skill（不在 Source 中 — sync 会保留它们）
+
+### Copy Mode 的 Target
+
+对于使用 copy mode 的 Target：
+- 列出 Source 中尚未被管理的 Skill（在 manifest 中缺失）
+- 通过 checksum 比对显示内容变更
+- 显示不再存在于 Source 中的孤立托管副本（sync 时会被清理）
+- 识别仅本地存在的 Skill（既不在 Source 中，也未被管理）
+
+### Symlink Mode 的 Target
+
+对于使用 symlink mode 的 Target：
+- 仅检查 symlink 是否指向正确的 Source
+- 显示 "Fully synced"，或对错误的 symlink 发出警告
+
+## 使用案例
+
+### Sync 之前
+
+查看将会发生哪些变更：
+
+```bash
+skillshare diff
+# 查看 sync 将会执行的操作，然后：
+skillshare sync
+```
+
+### 查找本地 Skill
+
+发现你直接在某个 Target 中创建的 Skill：
+
+```bash
+skillshare diff claude
+# 显示：← Local Only 1 skill: my-local-skill
+
+skillshare collect claude  # 导入到 Source
+```
+
+### 检查变更内容
+
+在 sync 之前准确查看某个 Skill 发生了哪些变更：
+
+```bash
+skillshare diff --patch claude   # 完整文本 diff
+skillshare diff --stat claude    # 文件级摘要
+```
+
+### 故障排查
+
+当 sync 状态显示存在问题时：
+
+```bash
+skillshare status          # 显示 "needs sync"
+skillshare diff claude     # 准确查看有哪些差异
+skillshare sync            # 修复问题
+```
+
+## Agent Diff {#agent-diff}
+
+使用 `agents` 关键字仅对 Agent Target 执行 diff：
+
+```bash
+skillshare diff agents             # 所有支持 Agent 的 Target
+skillshare diff agents claude      # 指定 Target
+skillshare diff agents --json      # JSON 输出
+```
+
+Agent diff 会显示缺失的 Agent（需要 sync）、孤立的 symlink（需要 prune），以及仅本地存在的 Agent 文件。只有配置了 `agents` 路径的 Target 才会被包含在内。完整列表参见 [Agents — Supported Targets](/docs/understand/agents#supported-targets)。
+
+---
+
+## 选项
+
+| Flag | Description |
+|------|-------------|
+| `--project, -p` | 使用 Project mode |
+| `--global, -g` | 使用 Global mode |
+| `--stat` | 显示文件级变更（隐含 `--no-tui`） |
+| `--patch` | 显示完整的统一 diff（隐含 `--no-tui`） |
+| `--no-tui` | 纯文本输出（跳过交互式 TUI） |
+| `--json` | 输出为 JSON（隐含 `--no-tui`） |
+
+## JSON 输出
+
+```bash
+skillshare diff --json
+```
+
+```json
+{
+  "targets": [
+    {
+      "name": "claude",
+      "mode": "merge",
+      "synced": false,
+      "items": [
+        {"action": "link", "name": "missing-skill", "reason": "not in target", "is_sync": true},
+        {"action": "update", "name": "local-copy", "reason": "local override", "is_sync": true}
+      ],
+      "include": [],
+      "exclude": []
+    }
+  ],
+  "duration": "0.045s"
+}
+```
+
+## 另请参阅
+
+- [sync](/docs/reference/commands/sync) — 同步到 Target
+- [collect](/docs/reference/commands/collect) — 导入本地 Skill
+- [status](/docs/reference/commands/status) — 快速概览

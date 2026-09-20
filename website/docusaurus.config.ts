@@ -21,7 +21,15 @@ const config: Config = {
 
   i18n: {
     defaultLocale: 'en',
-    locales: ['en'],
+    // Sorted by language code after the source language, so the order needs no judgement.
+    locales: ['en', 'ja', 'ko', 'zh-Hans', 'zh-Hant'],
+    localeConfigs: {
+      en: {label: 'English'},
+      ja: {label: '日本語', htmlLang: 'ja'},
+      ko: {label: '한국어', htmlLang: 'ko'},
+      'zh-Hans': {label: '简体中文', htmlLang: 'zh-Hans'},
+      'zh-Hant': {label: '繁體中文', htmlLang: 'zh-Hant'},
+    },
   },
 
   markdown: {
@@ -35,6 +43,9 @@ const config: Config = {
       {
         hashed: true,
         indexBlog: true,
+        // Docs content is still English in every locale, so an English index is
+        // all there is to index. Add 'zh' / 'ja' when those docs get translated —
+        // note that adding 'ko' alongside them breaks lunr.multi's trimmer regex.
         language: ['en'],
         highlightSearchTermsOnTargetPage: true,
         searchResultLimits: 8,
@@ -189,6 +200,10 @@ const config: Config = {
           to: '/changelog',
           label: 'Changelog',
           position: 'left',
+        },
+        {
+          type: 'localeDropdown',
+          position: 'right',
         },
         {
           href: 'https://github.com/runkids/skillshare',

@@ -119,7 +119,7 @@ Symlinks in project mode use **relative paths** (e.g., `../../.skillshare/skills
 
 ---
 
-## Visible Project Directory
+## Visible Project Directory {#visible-project-directory}
 
 Repositories that treat skills as reviewable content rather than tool state can use a visible `skillshare/` directory instead of the hidden `.skillshare/`:
 
@@ -209,7 +209,7 @@ Runtime metadata (install timestamps, file hashes, commit SHAs) is stored separa
 
 ---
 
-## Custom Source Directories
+## Custom Source Directories {#custom-source-directories}
 
 By default, project mode reads skills, agents, and extras from `.skillshare/skills/`, `.skillshare/agents/`, and `.skillshare/extras/`. Override these paths with the optional `sources` map when you want to keep skill content alongside other project documentation:
 

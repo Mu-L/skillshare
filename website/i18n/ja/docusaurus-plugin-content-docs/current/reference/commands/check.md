@@ -1,0 +1,182 @@
+---
+sidebar_position: 3
+---
+
+# check
+
+変更を適用せずに、トラッキング対象のリポジトリとインストール済み Skill の更新有無を確認します。
+
+```bash
+skillshare check                      # すべてのリポジトリと Skill を確認
+skillshare check my-skill             # 単一の Skill を確認
+skillshare check a b c                # 複数の Skill を確認
+skillshare check --group frontend     # frontend/ 配下のすべての Skill を確認
+skillshare check x -G backend         # 名前とグループを混在させる
+skillshare check --json               # 機械可読な出力
+```
+
+## 使うタイミング
+
+### 更新前に
+
+`update` を実行する前に、何が変わるかをプレビューする。
+
+```bash
+skillshare check         # 更新があるものを確認
+skillshare update --all  # 更新を適用
+skillshare sync          # 変更を配布
+```
+
+### CI/CD パイプライン
+
+CI 内で古くなった Skill を確認する。
+
+```bash
+result=$(skillshare check --json)
+# JSON をパースして古い Skill を検出する
+```
+
+## 実行内容
+
+`check` は Source ディレクトリを調べ、以下について更新状況を報告します。
+
+1. **トラッキング対象のリポジトリ** — origin から fetch し、何コミット遅れているかを表示
+2. **メタデータ付きのインストール済み Skill** — インストール済みのバージョンをリモートの HEAD と比較
+3. **Stale な Skill** — アップストリームリポジトリからサブディレクトリが削除された Skill を検出
+4. **ローカルの Skill** — 「local source」としてマーク（比較対象のリモートがない）
+5. **Skill レベルの `targets` 検証** — SKILL.md の `targets` フロントマターフィールドにある未知の Target 名について警告
+
+`update` とは異なり、`check` はファイルを一切変更しません。
+
+## 出力例
+
+```
+skillshare check
+
+  Tracked Repos
+  ─────────────────────────────────────────
+  ✓ _team-skills       up to date
+  ⬇ _shared-rules      3 commits behind
+  ! _design-system     has uncommitted changes
+
+  Installed Skills (remote)
+  ─────────────────────────────────────────
+  ✓ pdf                up to date          anthropics/skills
+  ⬇ commit             update available    anthropics/skills
+  ⚠ old-helper         stale (deleted upstream)
+  • local-skill        local source
+
+  ⚠ 1 skill(s) stale (deleted upstream) — run 'skillshare update --all --prune' to remove
+  Summary: 1 repo + 1 skill have updates available
+  Run 'skillshare update <name>' or 'skillshare update --all'
+```
+
+## 特定の Skill を確認する
+
+すべてをスキャンする代わりに、名前を指定して 1 つ以上の Skill を確認できます。
+
+```bash
+skillshare check my-skill                # 単一の Skill
+skillshare check skill-a skill-b         # 複数の Skill
+```
+
+グループディレクトリ内の更新可能な Skill をすべて確認するには `--group` / `-G` を使います。
+
+```bash
+skillshare check --group frontend        # frontend/ 配下のすべての Skill
+skillshare check -G frontend -G backend  # 複数のグループ
+skillshare check my-skill -G frontend    # 名前とグループを混在させる
+```
+
+位置引数がリポジトリや Skill そのものではなくグループディレクトリに一致する場合、自動的に展開されます。
+
+```bash
+skillshare check frontend               # グループとして自動検出
+```
+
+メタデータのない Skill（ローカルのみ）は、グループ展開時にスキップされます。
+
+## オプション
+
+| フラグ | 説明 |
+|------|-------------|
+| `--group`, `-G` `<name>` | グループ内の更新可能な Skill をすべて確認（繰り返し指定可） |
+| `--project`, `-p` | Project レベルの Skill（`.skillshare/`）を確認 |
+| `--global`, `-g` | グローバルの Skill（`~/.config/skillshare`）を確認 |
+| `--json` | JSON として出力（スクリプト/CI 向け） |
+| `--help`, `-h` | ヘルプを表示 |
+
+:::tip 自動検出
+`--project` も `--global` も指定しない場合、skillshare は自動検出します。カレントディレクトリに `.skillshare/config.yaml` が存在すれば Project mode、それ以外はグローバルモードになります。
+:::
+
+## JSON 出力
+
+```bash
+skillshare check --json
+```
+
+```json
+{
+  "tracked_repos": [
+    {"name": "_team-skills", "status": "up_to_date", "behind": 0, "branch": "main"},
+    {"name": "_shared-rules", "status": "behind", "behind": 3, "branch": "develop"}
+  ],
+  "skills": [
+    {"name": "pdf", "source": "anthropics/skills", "version": "a1b2c3d",
+     "status": "up_to_date", "installed_at": "2024-06-01T10:00:00Z"},
+    {"name": "commit", "source": "anthropics/skills", "version": "x9y8z7w",
+     "status": "update_available", "installed_at": "2024-05-15T08:30:00Z"},
+    {"name": "old-helper", "source": "anthropics/skills", "version": "d4e5f6g",
+     "status": "stale", "installed_at": "2024-03-10T09:00:00Z"},
+    {"name": "local-skill", "source": "", "version": "",
+     "status": "local", "installed_at": "2024-04-20T12:00:00Z"}
+  ]
+}
+```
+
+## ステータス表示
+
+| アイコン | 意味 |
+|------|---------|
+| `✓` | 最新 |
+| `⬇` | 更新あり（トラッキング対象のリポジトリ: 遅れているコミット数、Skill: 新しいバージョン） |
+| `⚠` | Stale — アップストリームでサブディレクトリが削除またはリネームされた |
+| `!` | 未コミットの変更がある |
+| `•` | ローカルソース（比較対象のリモートがない） |
+
+:::info Stale な Skill
+Skill のサブディレクトリがアップストリームでリネームまたは削除された場合、`check` はそれを **stale** として報告します。stale な Skill を掃除するには `update --prune` を使用してください。
+:::
+
+:::tip モノレポでの挙動
+サブディレクトリからインストールされた Skill については、`check` はそのディレクトリ自体が変更された場合にのみ「update available」を報告します。リポジトリの無関係な部分に新しいコミットがあっても報告されません。
+:::
+
+## Project mode
+
+```bash
+skillshare check -p                    # すべての Project の Skill を確認
+skillshare check -p my-skill           # 特定の Project の Skill を確認
+skillshare check -p --group frontend   # Project のグループを確認
+skillshare check -p --json             # Project 向けの JSON 出力
+```
+
+## Agent 対応
+
+`skillshare check agents` は確認対象を Agent のみに絞り、Agents source ディレクトリ内の `.md` ファイルについて drift と更新状況を報告します。
+
+```bash
+skillshare check agents              # すべての Agent を確認
+skillshare check agents --json       # Agent 向けの JSON 出力
+skillshare check agents -p           # Project の Agent を確認
+```
+
+`agents` 引数を指定しない場合、`check` は Skill のみを対象にします（デフォルトの挙動）。背景については [Agents](/docs/understand/agents) を参照してください。
+
+## 関連項目
+
+- [update](/docs/reference/commands/update) — 更新を適用
+- [list](/docs/reference/commands/list) — インストール済みの Skill を表示
+- [status](/docs/reference/commands/status) — sync 状態を表示
+- [Agents](/docs/understand/agents) — Agent の概念

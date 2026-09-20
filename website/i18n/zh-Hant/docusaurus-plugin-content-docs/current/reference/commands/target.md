@@ -1,0 +1,340 @@
+---
+sidebar_position: 1
+---
+
+# target
+
+管理 sync targets（AI CLI skill 目錄）。
+
+```bash
+skillshare target add <name> <path>    # 新增 target
+skillshare target remove <name>        # 移除 target
+skillshare target list                 # 列出所有 targets
+skillshare target <name>               # 顯示 target 資訊
+skillshare target <name> --mode merge  # 變更 sync 模式
+skillshare target <name> --target-naming standard  # 變更命名方式
+```
+
+## 使用時機
+
+- 安裝新的 AI CLI 工具後新增 target
+- 移除不再使用的 target
+- 變更某個 target 的 sync 模式（merge、copy 或 symlink）
+- 變更某個 target 的命名方式（flat 或 standard）
+- 逐一調整各 target 的相容性，而非強制套用單一全域模式
+- 設定 include/exclude filters 以選擇性同步 skills
+
+## 子指令
+
+### target add
+
+新增一個新的 skill 同步 target。
+
+```bash
+skillshare target add windsurf ~/.windsurf/skills
+```
+
+此指令會驗證：
+- 路徑存在，或父目錄存在
+- 路徑看起來像是一個 skills 目錄
+- target 名稱是唯一的
+
+### target remove
+
+移除某個 target，並將其 skills 還原為一般目錄。
+
+```bash
+skillshare target remove cursor           # 移除單一 target
+skillshare target remove --all            # 移除所有 targets
+skillshare target remove cursor --dry-run # 預覽
+```
+
+**執行內容：**
+1. 建立該 target 的備份
+2. 偵測 sync 模式：
+   - **Symlink 模式：** 移除目錄 symlink，將 source 內容以真實目錄的形式複製回去
+   - **Merge 模式：** 只移除指向 source 的 symlinks（依路徑前綴判斷），將每個 skill 以真實檔案複製回去。本機（非 symlink）的 skills 會被保留。
+   - **Copy 模式：** 移除 `.skillshare-manifest.json`。受管理的複本與本機 skills 會保留為一般目錄。
+3. 從設定中移除該 target
+
+### target list
+
+列出所有已設定的 targets。
+
+```bash
+skillshare target list                 # 互動式 TUI（TTY 下預設）
+skillshare target list --no-tui        # 純文字輸出
+skillshare target list --json          # 供 CI/scripts 使用的 JSON 輸出
+```
+
+#### 互動式 TUI
+
+在 TTY 上，`target list` 會啟動互動式終端機 UI，包含：
+
+- **分割版面** — 左側為 target 清單，右側為詳細面板（在較窄的終端機下會改為垂直版面）
+- **模糊篩選** — 按 `/` 依名稱篩選 targets
+- **模式選擇器** — 按 `M` 變更選定 target 的 sync 模式（merge、copy、symlink）
+- **命名選擇器** — 按 `N` 變更選定 target 的命名方式（flat、standard）
+- **Include/Exclude 編輯器** — 按 `I` 或 `E` 開啟選定 target 的 filter pattern 編輯器。用 `a` 新增模式，`d` 刪除
+- **移除 target** — 按 `R` 移除選定的 target。進行前會顯示確認提示（與 `target remove` 一樣會先備份再取消連結）
+- **鍵盤導覽** — `↑`/`↓` 瀏覽，`Ctrl+d`/`Ctrl+u` 捲動詳細面板，`q` 離開
+
+透過 TUI 所做的變更（模式、include/exclude）會立即儲存到設定中。執行 `skillshare sync` 以套用。
+
+使用 `--no-tui` 跳過 TUI，改為輸出純文字：
+
+```
+Configured Targets
+  claude       ~/.claude/skills (merge)
+  cursor       ~/.cursor/skills (merge)
+  codex        ~/.openai-codex/skills (symlink)
+```
+
+#### JSON 輸出
+
+```bash
+skillshare target list --json
+```
+
+```json
+{
+  "targets": [
+    {
+      "name": "claude",
+      "path": "~/.claude/skills",
+      "mode": "merge",
+      "targetNaming": "flat",
+      "include": [],
+      "exclude": []
+    },
+    {
+      "name": "cursor",
+      "path": "~/.cursor/skills",
+      "mode": "merge",
+      "targetNaming": "standard",
+      "include": [],
+      "exclude": []
+    }
+  ]
+}
+```
+
+### target info / settings
+
+顯示 target 詳細資訊或變更設定。
+
+```bash
+# 顯示資訊
+skillshare target claude
+
+# 變更模式
+skillshare target claude --mode symlink
+skillshare target claude --mode merge
+
+# 變更命名方式
+skillshare target claude --target-naming standard
+skillshare target claude --target-naming flat
+
+skillshare sync  # 套用變更
+```
+
+## Sync 模式
+
+| 模式 | 行為 |
+|------|----------|
+| `merge` | 每個 skill 個別以 symlink 連結。保留本機 skills。**預設。** |
+| `copy` | 每個 skill 以真實檔案複製。適合無法跟隨 symlink 的 AI CLIs。 |
+| `symlink` | 整個目錄以單一 symlink 連結。各處皆為完全一致的複本。 |
+
+`target --mode` 是主要的相容性控制手段。讓你的全域預設保持簡單，只在需要時才覆寫。
+
+## Target 命名
+
+| 命名方式 | 行為 |
+|--------|----------|
+| `flat` | 巢狀 skills 以 `__` 分隔符扁平化（例如 `frontend__dev`）。**預設。** |
+| `standard` | 直接使用 SKILL.md 的 `name` 欄位（例如 `dev`）。遵循 [Agent Skills spec](https://agentskills.io/specification)。 |
+
+`target --target-naming` 控制 target 中 skill 目錄的命名方式。在 `standard` 模式下，名稱無效或衝突的 skills 會被警告並跳過。在 symlink 模式下會被忽略。
+
+```bash
+# 將 target 設為 copy 模式（適合 Cursor、Copilot CLI 等）
+skillshare target cursor --mode copy
+skillshare sync  # 套用變更
+```
+
+### 混合策略範例
+
+```bash
+# 對大多數 targets 保持預設的 merge 行為
+skillshare target claude --mode merge
+
+# 對某個 target 優先考慮相容性
+skillshare target cursor --mode copy
+
+# 對另一個 target 做完全鏡像
+skillshare target codex --mode symlink
+
+skillshare sync
+```
+
+## Target Filters（include/exclude）{#target-filters-includeexclude}
+
+從 CLI 管理 skills 與 agents 的每個 target include/exclude filters：
+
+```bash
+# Skills
+skillshare target claude --add-include "team-*"
+skillshare target claude --add-exclude "_legacy*"
+skillshare target claude --remove-include "team-*"
+skillshare target claude --remove-exclude "_legacy*"
+
+# Agents
+skillshare target claude --add-agent-include "team-*"
+skillshare target claude --add-agent-exclude "draft-*"
+skillshare target claude --remove-agent-include "team-*"
+skillshare target claude --remove-agent-exclude "draft-*"
+```
+
+變更 filters 後，執行 `skillshare sync` 以套用。
+
+Filters 在 **merge 與 copy 模式**下才有作用。模式使用 Go 的 `filepath.Match` 語法（`*`、`?`、`[...]`）。在 symlink 模式下，filters 會被忽略。
+
+Agent filters 僅適用於有 agents 路徑的 targets，無論是來自內建的 target 定義，或設定中明確的 `agents.path` 覆寫。
+
+詳見 [Configuration](/docs/reference/targets/configuration#include--exclude-target-filters) 了解 pattern 速查表與情境範例。
+
+:::tip
+Target filters 是三層過濾機制之一。詳見 [Filtering Reference](/docs/reference/filtering) 了解它與 `.skillignore` 及 SKILL.md `targets` 的互動方式。
+:::
+
+## 選項
+
+### target add
+
+無額外選項。
+
+### target remove
+
+| Flag | 說明 |
+|------|-------------|
+| `--all, -a` | 移除所有 targets |
+| `--dry-run, -n` | 預覽而不做任何變更 |
+
+### target list
+
+| Flag | 說明 |
+|------|-------------|
+| `--json` | 以 JSON 輸出 |
+| `--no-tui` | 停用互動式 TUI，改用純文字輸出 |
+
+### target info / settings
+
+| Flag | 說明 |
+|------|-------------|
+| `--mode, -m <mode>` | 設定 sync 模式（merge、copy 或 symlink） |
+| `--agent-mode <mode>` | 設定 agents 的 sync 模式（merge、copy 或 symlink） |
+| `--target-naming <naming>` | 設定 target 命名方式（flat 或 standard） |
+| `--add-include <pattern>` | 新增一個 include filter pattern |
+| `--add-exclude <pattern>` | 新增一個 exclude filter pattern |
+| `--remove-include <pattern>` | 移除一個 include filter pattern |
+| `--remove-exclude <pattern>` | 移除一個 exclude filter pattern |
+| `--add-agent-include <pattern>` | 新增一個 agent include filter pattern |
+| `--add-agent-exclude <pattern>` | 新增一個 agent exclude filter pattern |
+| `--remove-agent-include <pattern>` | 移除一個 agent include filter pattern |
+| `--remove-agent-exclude <pattern>` | 移除一個 agent exclude filter pattern |
+
+## 支援的 AI CLIs
+
+skillshare 在 `init` 期間會自動偵測這些：
+
+| CLI | 預設路徑 |
+|-----|-------------|
+| Claude Code | `~/.claude/skills` |
+| Cursor | `~/.cursor/skills` |
+| OpenCode | `~/.opencode/skills` |
+| Windsurf | `~/.windsurf/skills` |
+| Codex | `~/.openai-codex/skills` |
+| Antigravity | `~/.gemini/config/skills` |
+| Gemini CLI | `~/.gemini/skills` |
+| Amp | `~/.amp/skills` |
+| ... 以及其他 45+ 個 | 詳見 [supported targets](/docs/reference/targets/supported-targets) |
+
+## 範例
+
+```bash
+# 新增自訂 target
+skillshare target add my-tool ~/my-tool/skills
+
+# 檢查 target 狀態
+skillshare target claude
+
+# 切換為 copy 模式（適合無法讀取 symlink 的 AI CLIs）
+skillshare target cursor --mode copy
+skillshare sync
+
+# 切換為 symlink 模式
+skillshare target claude --mode symlink
+skillshare sync
+
+# 設定 agent sync 模式
+skillshare target claude --agent-mode copy
+skillshare sync
+
+# 新增/移除 skill filters
+skillshare target claude --add-include "team-*"
+skillshare target claude --add-exclude "_legacy*"
+skillshare target claude --remove-include "team-*"
+skillshare sync
+
+# 新增/移除 agent filters
+skillshare target claude --add-agent-include "team-*"
+skillshare target claude --add-agent-exclude "draft-*"
+skillshare sync
+
+# 移除 target（還原 skills）
+skillshare target remove cursor
+```
+
+## Project 模式
+
+管理目前 project 的 targets：
+
+```bash
+skillshare target add windsurf -p                                # 新增已知的 target
+skillshare target add custom ./tools/ai/skills -p                # 新增自訂路徑
+skillshare target remove cursor -p                                # 移除 target
+skillshare target list -p                                         # 列出 project targets
+skillshare target claude -p                                  # 顯示 target 資訊
+skillshare target claude --add-include "team-*" -p          # 新增 filter
+skillshare target claude --add-agent-include "team-*" -p    # 新增 agent filter
+```
+
+### 差異之處
+
+| | Global | Project（`-p`） |
+|---|---|---|
+| 設定 | `~/.config/skillshare/config.yaml` | `.skillshare/config.yaml` |
+| 路徑 | 絕對路徑（例如 `~/.claude/skills`） | 相對或絕對路徑（例如 `.claude/skills`） |
+| Sync 模式 | Merge、copy 或 symlink | Merge、copy 或 symlink（預設 merge） |
+| 模式變更 | `--mode` flag | `--mode` flag |
+
+### Project Target List 範例
+
+```
+Project Targets
+  claude    .claude/skills (merge)
+  cursor         .cursor/skills (merge)
+  custom-tool    ./tools/ai/skills (merge)
+```
+
+Project 模式下的 targets 支援：
+- **已知的 target 名稱**（例如 `claude`、`cursor`） — 解析為 project 本機路徑
+- **自訂路徑** — 相對於 project 根目錄，或以 `~` 展開的絕對路徑
+
+## 另請參閱
+
+- [sync](/docs/reference/commands/sync) — 將 skills 同步到 targets
+- [status](/docs/reference/commands/status) — 顯示 target 狀態
+- [Targets](/docs/reference/targets) — Target 管理指南
+- [Project Skills](/docs/understand/project-skills) — Project 模式概念

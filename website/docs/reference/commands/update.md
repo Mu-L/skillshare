@@ -270,7 +270,7 @@ skillshare check --all
 Tracked repositories (`_repo`) are not affected by `--prune`. When a tracked repo removes a skill internally, `sync` automatically cleans up orphan symlinks via `PruneOrphanLinks`.
 :::
 
-## Security Audit Gate
+## Security Audit Gate {#security-audit-gate}
 
 After updating skills, `update` automatically runs a security audit:
 
@@ -309,7 +309,7 @@ skillshare update --all --skip-audit
 `--skip-audit` disables the post-update security scan entirely. Use it only when you trust the source or have an external audit process.
 :::
 
-### Accepted Findings
+### Accepted Findings {#accepted-findings}
 
 When you override the gate with `--force` (or answer `y` at the prompt), the findings you accepted are recorded in `.metadata.json` under `audit_accepted`. Later updates of the same skill no longer block on those exact findings, so you do not have to repeat `--force` on every `update --all`.
 

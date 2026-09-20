@@ -8,7 +8,7 @@ How skillshare detects security threats in AI skill files — threat model, dete
 
 For the CLI reference, see [`audit`](/docs/reference/commands/audit). For rule management, see [`audit rules`](/docs/reference/commands/audit-rules).
 
-## Why Security Scanning Matters
+## Why Security Scanning Matters {#why-security-scanning-matters}
 
 AI coding assistants execute instructions from skill files with broad system access — file reads/writes, shell commands, network requests. A malicious skill can act as a **software supply chain attack vector**, with the AI assistant as the execution engine.
 
@@ -305,7 +305,7 @@ This is why you can see:
 - no blocked findings at threshold, but an aggregate label of `critical` from accumulated lower-severity findings
 - a `high` risk label with low numeric score when a single HIGH finding triggers severity floor
 
-## Command Safety Tiering
+## Command Safety Tiering {#command-safety-tiering}
 
 In addition to pattern-based findings, the audit engine classifies every shell command found in skill files into **behavioral safety tiers**. This provides a complementary dimension to severity — while severity answers "how dangerous is this specific pattern?", tiers answer "what kind of actions does this skill perform?"
 
@@ -356,7 +356,7 @@ Certain tier combinations generate additional findings that flag profile-level r
 | T6 present | `tier-interpreter` | INFO | Interpreter commands found — Turing-complete runtime can execute arbitrary operations |
 | T6 + T3 present | `tier-interpreter-network` | MEDIUM | Interpreter combined with network commands — interpreter can generate arbitrary network requests |
 
-### Cross-Skill Interaction Detection
+### Cross-Skill Interaction Detection {#cross-skill-interaction-detection}
 
 The tier combination checks above operate on a **single skill**. But two individually harmless skills can form an attack chain when installed together — for example, one skill reads credentials while another has network access.
 
@@ -380,7 +380,7 @@ _cross-skill
   HIGH  stealth skill cleaner installed alongside high-risk skill backdoor — evasion risk
 ```
 
-## Analyzability Score
+## Analyzability Score {#analyzability-score}
 
 Each scanned skill receives an **analyzability score** — the ratio of auditable plaintext bytes to total file bytes (0–100%). This tells you how much of the skill's content the scanner was able to inspect.
 

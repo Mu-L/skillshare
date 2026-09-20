@@ -1,0 +1,6 @@
+{
+  "theme.common.skipToMainContent": {
+    "message": "跳至主要內容",
+    "description": "The skip to content label used for accessibility"
+  }
+}

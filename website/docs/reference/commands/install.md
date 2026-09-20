@@ -181,7 +181,7 @@ skillshare install /absolute/path/to/skill
 When specifying a subdirectory path like `owner/repo/skill-name`, if the exact path doesn't exist in the repo, skillshare scans all `SKILL.md` files and matches by directory basename. If multiple skills share the same name, an ambiguity error is shown with full paths so you can specify the exact one.
 :::
 
-## Install from Config (No Arguments)
+## Install from Config (No Arguments) {#install-from-config-no-arguments}
 
 When run without a source argument, `skillshare install` reads the recorded remote skill metadata (global mode) or the project `skills:` manifest (project mode) and installs all remote skills that don't already exist locally:
 
@@ -450,7 +450,7 @@ skillshare install anthropics/skills --track
   <img src="/img/team-reack-demo.png" alt="tracked repo install demo" width="720" />
 </p>
 
-## Private Repositories
+## Private Repositories {#private-repositories}
 
 ### SSH (recommended)
 
@@ -611,7 +611,7 @@ Recommended usage:
 - Use `--skip-audit` only when you intentionally need to bypass scanning.
 - If both are set, `--skip-audit` takes precedence in practice (scan is skipped).
 
-## Excluding Skills
+## Excluding Skills {#excluding-skills}
 
 ### `--exclude` flag
 

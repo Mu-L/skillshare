@@ -178,7 +178,7 @@ skillshare target codex --mode symlink
 skillshare sync
 ```
 
-## Target Filters (include/exclude)
+## Target Filters (include/exclude) {#target-filters-includeexclude}
 
 Manage per-target include/exclude filters for both skills and agents from the CLI:
 

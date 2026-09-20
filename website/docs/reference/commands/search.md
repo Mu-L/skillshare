@@ -146,7 +146,7 @@ Installed skills go to `.skillshare/skills/` and the project config is updated a
 skillshare search frontend -n 5   # Show only top 5 results
 ```
 
-## Authentication
+## Authentication {#authentication}
 
 GitHub Code Search API requires authentication. skillshare automatically detects your credentials:
 
@@ -218,7 +218,7 @@ Resolution order for `--hub <value>`:
 
 See [`hub`](./hub.md) for managing saved hubs.
 
-## Private Index Search
+## Private Index Search {#private-index-search}
 
 Search from a private hub index instead of GitHub:
 

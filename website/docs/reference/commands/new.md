@@ -198,7 +198,7 @@ Available patterns:
 | `pipeline` | `references/`, `assets/`, `scripts/` |
 | `none` | *(plain template, no directories)* |
 
-See [Skill Design Patterns](../../understand/philosophy/skill-design-patterns.md) for details on each pattern.
+See [Skill Design Patterns](/docs/understand/philosophy/skill-design-patterns) for details on each pattern.
 
 ---
 

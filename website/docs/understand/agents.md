@@ -71,7 +71,7 @@ See [Configuration — agents_source](/docs/reference/targets/configuration#agen
 
 ---
 
-## Agent File Format
+## Agent File Format {#agent-file-format}
 
 An agent is a plain `.md` file. Frontmatter is optional:
 
@@ -100,7 +100,7 @@ You are a patient math tutor. Walk through problems step by step.
 
 ---
 
-## Supported Targets
+## Supported Targets {#supported-targets}
 
 Only targets with an `agents` path definition receive agent syncs. Currently:
 

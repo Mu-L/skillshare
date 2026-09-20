@@ -54,7 +54,7 @@ flowchart TD
 
 ---
 
-## Why Sync is a Separate Step
+## Why Sync is a Separate Step {#why-sync-is-a-separate-step}
 
 Operations like `install`, `update`, and `uninstall` only modify the **source** directory. A separate `sync` step propagates changes to all targets. This two-phase design is intentional:
 
@@ -102,7 +102,7 @@ The source directory can be a symlink — common when using dotfiles managers (G
 └── ...
 ```
 
-### Organize with Folders (Auto-Flattening)
+### Organize with Folders (Auto-Flattening) {#organize-with-folders-auto-flattening}
 
 You can use folders to organize your own skills — they'll be auto-flattened when synced to targets:
 

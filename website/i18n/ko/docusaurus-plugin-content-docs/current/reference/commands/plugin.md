@@ -1,0 +1,147 @@
+---
+sidebar_position: 4
+---
+
+# plugin
+
+지원되는 도구 전반에서 완전한 native plugin을 관리합니다. Capability 검사는 설치 지원과 형식 검색(discovery)을 구분합니다. [Manage plugins across tools](/docs/how-to/daily-tasks/sharing-plugins)부터 시작하세요.
+
+```bash
+skillshare plugin                         # 대화형 관리자
+skillshare plugin add                     # Source → plugin → target → 검토
+skillshare plugin discover ./my-plugin --json
+skillshare plugin add ./my-plugin --target claude --target codex --no-tui
+skillshare plugin import review@team --from claude --no-tui
+skillshare plugin list --json
+skillshare plugin inspect review --json
+skillshare plugin disable review --target codex --no-tui
+skillshare sync plugins --dry-run --json
+skillshare sync plugins --no-tui
+skillshare plugin enable review --target codex --no-tui
+skillshare plugin check review --json
+skillshare plugin update review --target claude --no-tui
+skillshare plugin remove review --no-tui
+```
+
+`enable`과 `disable`은 Agent의 네이티브 활성화 상태가 아니라 **Skillshare의 sync 선택**을 변경합니다. target 선택을 해제하면 그 선택이 저장됩니다. 다음 `sync plugins`는 정의는 유지한 채 관리되는 설치를 제거합니다. 다시 선택하면 다음 sync에서 재설치할 수 있습니다. 관리되지 않는 plugin은 영향을 받지 않습니다.
+
+## 명령
+
+| Command | 동작 |
+|---|---|
+| `list` | 구성된 바인딩과 네이티브 설치 상태. 터미널에서는 대화형 관리자 |
+| `discover SOURCE` | 로컬 디렉터리, `owner/repo`, 또는 HTTPS Git 저장소를 검사 |
+| `add [SOURCE]` | target adapter와 함께 전체 plugin을 선택하여 설치 |
+| `import [NATIVE-ID]` | 재설치하거나 활성화하지 않고 기존 설치를 채택 |
+| `inspect NAME` | 관리되는 패키지 하나를 검사 |
+| `sync [NAME]` | 선택된 target을 재조정하고 미완료된 네이티브 작업을 재시도 |
+| `check [NAME]` | source 내용을 기록된 digest와 비교. 업데이트는 절대 하지 않음 |
+| `update [NAME]` | source 변경 사항을 검토하고 지원되는 네이티브 업데이트 작업을 사용 |
+| `enable / disable [NAME]` | 다음 sync에 target을 포함/제외 |
+| `remove [NAME]` | 관리되는 바인딩을 제거하고 정의를 삭제 |
+
+인수 없는 명령은 터미널에서 누락된 입력을 프롬프트로 요청합니다. 비대화형 변경 명령은 명시적인 입력이 필요합니다. `sync`와 `check`는 모든 패키지에 대해 동작할 수 있습니다. `sync --all`은 plugin을 포함하지 **않습니다**. `sync plugins`를 명시적으로 사용하세요.
+
+## 옵션
+
+| Option | 의미 |
+|---|---|
+| `--target TARGET` | 반복 가능한 선택: `claude`, `codex`, `cursor`, `antigravity`(`agy` alias), `antigravity-cli`, `copilot`, `grok`, `pi`, `opencode`. 아래 capability 표 참고 |
+| `--plugin NAME` | source marketplace에서 plugin 하나를 선택 |
+| `--name NAME` | 추가하거나 import할 때의 논리적 패키지 이름 |
+| `--from TARGET` | Claude, Codex, Antigravity CLI, Copilot, Grok, Pi, 또는 OpenCode에서 import |
+| `--dry-run`, `-n` | Skillshare나 Agent 설정을 변경하지 않고 미리보기 |
+| `--source-ref REF` | `discover`, `add`, `update`를 위한 Git 브랜치, 태그, 또는 커밋. 원격 source에만 해당 |
+| `--entry PATH` | 패키지 루트 기준의 명시적으로 빌드된 OpenCode JS/TS entry(`discover`와 `add`) |
+| `--revision ID` | 미리보기 이후 source, 설정, 또는 네이티브 inventory가 변경되었으면 적용을 거부 |
+| `--json` | 기계가 읽을 수 있는 출력. TUI를 비활성화 |
+| `--no-tui` | 대화형 메뉴를 비활성화. `tui: false`도 준수 |
+| `--global`, `-g` | global Skillshare config와 네이티브 사용자 scope |
+| `--project`, `-p` | project config. Claude, Antigravity, Pi, 또는 OpenCode(global로 폴백하지 않음) |
+
+JSON 출력에는 source 경로와 네이티브 식별자가 포함됩니다. source URL에 자격 증명을 넣지 마세요. 실패한 변경 작업도 target별로는 성공한 결과를 반환할 수 있습니다. 어떤 target이든 실패하면 CLI는 0이 아닌 코드로 종료됩니다. 재시도하기 전에 결과를 확인하세요.
+
+## Target 지원
+
+| Target | Format | Global | Project | Update |
+|---|---|:---:|:---:|---|
+| Claude Code | `.claude-plugin/plugin.json` | 예 | 예 | 네이티브 업데이트 |
+| Codex | `.codex-plugin/plugin.json` 또는 Agent Plugins 루트 매니페스트 | 예 | 아니요 | 지원되지 않음 |
+| Cursor | `.cursor-plugin/plugin.json` 또는 Agent Plugins 루트 매니페스트 | 예 | 아니요 | 검토된 로컬 사본 교체 |
+| Antigravity Desktop | 명시적 이름이 있는 루트 `plugin.json` | 예 | 예 | 검토된 로컬 사본 교체 |
+| Pi | `pi` 리소스가 있는 `package.json`, 또는 `pi-package` 키워드와 관례적인 리소스 폴더 | 예 | 예, 네이티브 project trust 사용 시 | 관리되는 source 스냅샷 새로고침 |
+| OpenCode | SDK dependency가 있는 `package.json`, `.opencode/plugins/` entry, 또는 명시적 `--entry` | 예 | 예 | 관리되는 source 스냅샷 새로고침 |
+
+| Antigravity CLI | `agy`가 허용하는 네이티브 루트 매니페스트 또는 Claude 매니페스트 | 예 | 아니요 | 활성화 상태를 유지하기 위해 네이티브로 업데이트 |
+| GitHub Copilot CLI | `.plugin/plugin.json`, `.github/plugin/plugin.json`, Claude 매니페스트, 또는 Agent Plugins 루트 매니페스트 | 예 | 아니요 | 네이티브 활성화 상태가 확인되고 활성화된 경우에만 검토된 source를 새로고침 |
+| Grok Build | `.grok-plugin/plugin.json` 또는 Claude 매니페스트 | import/remove만 가능. 설치에는 네이티브 trust 필요 | 아니요 | 네이티브로 업데이트 |
+| Kimi Code | `kimi.plugin.json` 또는 `.kimi-plugin/plugin.json` | discovery만 가능 | 아니요 | 자동화되지 않음 |
+| Hermes | `.hermes-plugin/plugin.yaml` | discovery만 가능 | 아니요 | 자동화되지 않음 |
+| Devin | `.devin-plugin/plugin.json` | discovery만 가능 | 아니요 | 자동화되지 않음 |
+
+Kimi의 비대화형 lifecycle, Hermes의 profile inventory/consent, Devin의 로컬 inventory/trust/cloud 구분은 아직 이러한 adapter들에 의해 검증되지 않았습니다. 이들의 형식은 discovery 중에 표시되지만, 설치는 사유와 함께 비활성화됩니다. source가 target을 선언한다고 해서 Skillshare가 이를 관리할 수 있다는 의미는 아닙니다. `list --json`과 `discover --json`은 허용된 작업과 함께 `targetDefinitions`를 포함합니다. discovery는 또한 각 형식의 버전, 구성 요소, entry, 검증 문제에 대한 `targetInfo`를 노출합니다. 손상된 매니페스트는 해당 target에만 격리되며, 잘못된 카탈로그는 유효한 형식을 숨기지 않고 경고로 보고됩니다.
+
+### Cursor와 Antigravity
+
+이 adapter들은 전체 plugin을 문서화된 로컬 discovery 디렉터리로 복사합니다. CLI 실행 파일이 필요하지 않으며 marketplace 레지스트리를 수정하지도 않습니다:
+
+- Cursor: `~/.cursor/plugins/local/<name>`. local import가 허용되어 있어야 합니다. Cursor를 다시 로드하고 Customize를 확인하세요. 동일한 이름의 설치된 marketplace plugin은 local 사본보다 우선합니다.
+- Antigravity desktop: global로는 `~/.gemini/config/plugins/<name>`, workspace에서는 `.agents/plugins/<name>`(또는 기존의 `_agents/plugins/` 디렉터리). 두 workspace 디렉터리가 모두 존재하면 먼저 통합하세요.
+- 독립형 **agy CLI**는 별도의 plugin store를 가지고 있습니다. `antigravity` target은 해당 CLI store가 아니라 desktop/workspace discovery 경로를 관리합니다. `agy`는 단지 Skillshare target alias일 뿐입니다. 독립형 CLI에는 `--target antigravity-cli`를 사용하세요. `--target agy`는 기존의 desktop 의미를 그대로 유지합니다.
+
+이러한 local 패키지에는 `plugin add`를 사용하세요. 기존의 local 폴더나 marketplace 설치를 import하는 것은 지원되지 않습니다. Skillshare는 소유하지 않은 폴더, symlink, 또는 로컬에서 편집된 관리 콘텐츠를 덮어쓰기를 거부합니다. 명시적인 Antigravity 매니페스트 이름은 Git checkout과 스냅샷 전반에서 identity를 안정적으로 유지합니다.
+
+### Pi와 OpenCode
+
+Pi는 `pi install` / `pi remove`를 사용합니다. inventory는 extension 코드를 로드하지 않고 문서화된 패키지 설정을 읽습니다. `PI_CODING_AGENT_DIR`을 준수합니다. Pi project trust는 Pi에서 직접 설정해야 합니다. Skillshare는 대신 `--approve`를 전달하지 않습니다.
+
+OpenCode는 관리되는 entry를 `opencode.json` 또는 기존의 `opencode.jsonc`에 file URL로 등록하며, 주석과 관련 없는 항목은 유지합니다. Version 1은 `plugin`을 사용하고, version 2는 `plugins`를 사용합니다. `XDG_CONFIG_HOME`과 절대 경로의 global `OPENCODE_CONFIG`를 준수합니다. 모호하거나 지원되지 않는 override는 거부됩니다. Skillshare가 버전의 스키마를 선택할 수 있도록 OpenCode는 PATH에 있어야 합니다.
+
+로컬 OpenCode source는 빌드된 entry(`main`, 문자열 root export, 또는 `index.js`)와 필요한 런타임 의존성을 이미 포함하고 있어야 합니다. Skillshare는 빌드 스크립트를 실행하거나 source에 의존성을 설치하지 않습니다. 등록되었다고 해서 모듈이 성공적으로 로드되었다는 증거는 아닙니다. 다시 로드한 후 OpenCode를 확인하세요.
+
+Import는 일반적인 Pi 패키지 source와 일반적인 OpenCode config entry를 받아들입니다. 리소스 필터/옵션이 있는 entry는 해당 설정을 보존하기 위해 거부됩니다. import된 Pi와 OpenCode v1 패키지는 해당 네이티브 도구에서 업데이트됩니다. OpenCode v2의 global import는 자체 네이티브 업데이트 명령을 사용할 수 있지만, v2 업데이트 명령이 global이기 때문에 project import는 네이티브로 업데이트해야 합니다.
+
+```bash
+skillshare plugin add ./cursor-plugin --target cursor --no-tui
+skillshare plugin add ./agy-plugin --target agy --no-tui -p
+skillshare plugin add ./pi-package --target pi --no-tui
+skillshare plugin add ./opencode-package --target opencode --no-tui
+skillshare plugin import npm:my-pi-package --from pi --name my-package --no-tui
+```
+
+## Ref와 명시적 Entry
+
+**Add plugin**의 고급 옵션은 선택적인 Git ref와 OpenCode entry를 받습니다. 일반적인 가이드 흐름을 사용하려면 비워 두세요. 터미널 마법사도 동일한 플래그를 받아들이며, 자동화에는 다음을 사용할 수 있습니다:
+
+```bash
+skillshare plugin discover obra/superpowers --source-ref v6.3.0 --json
+skillshare plugin add owner/repo --source-ref v1.0.0 --target copilot --no-tui
+skillshare plugin add ./package --entry dist/plugin.js --target opencode --no-tui
+skillshare plugin update review --source-ref v1.1.0 --target claude --dry-run --json
+```
+
+바인딩은 `source_ref`와 해석된 `commit`을 기록합니다. 설치는 검토된 commit을 사용합니다. `check`와 `update`는 구성된 ref를 다시 해석하므로, commit이 고정된 상태에서도 브랜치는 진행될 수 있습니다. `--revision`은 Git ref가 아니라 미리보기 토큰입니다. `--entry`는 각 후보의 패키지 루트를 기준으로 하며 이미 존재해야 합니다. 이는 빌드나 패키지 매니저 설치를 트리거하지 않습니다.
+
+Copilot과 Antigravity CLI 설치는 검토된 로컬 스냅샷을 사용합니다. import된 항목은 재설치를 위한 검토된 source가 없습니다: 제거 후에는 네이티브 클라이언트에서 설치하고 다시 sync하세요. Grok도 설치/재설치 전에 네이티브 trust가 필요합니다. Skillshare는 네이티브 trust 승인 플래그를 절대 제공하지 않습니다.
+
+## 호환성과 경계
+
+- Claude는 자체 네이티브 `.claude-plugin/plugin.json` 패키지를 요구합니다.
+- Codex는 `.codex-plugin/plugin.json`과 인식된 portable root `plugin.json` 패키지를 받아들입니다. Claude 전용 패키지는 자동으로 변환되지 않습니다.
+- Source에는 local plugin entry가 있는 marketplace가 포함될 수 있습니다. 외부 카탈로그는 plugin 이름/경로로 병합됩니다. 충돌하는 경로는 거부됩니다. 외부 entry는 저장소를 직접 추가하거나 네이티브로 설치한 후 import하라는 안내와 함께 보고됩니다. command 기반 source는 자동으로 승인되지 않습니다.
+- 완전한 source 스냅샷은 plugin 스크립트, asset, 그리고 안전한 상대 symlink(`AGENTS.md → CLAUDE.md` 포함)를 유지합니다. 절대 경로, 범위를 벗어나는(escaping), 끊어진(dangling), 순환(cyclic), `.git`을 참조하는 링크와 특수 파일은 거부됩니다. source는 20,000개 파일과 100MiB로 제한됩니다.
+- 네이티브 설치가 런타임 활성화의 증거는 아닙니다. Agent를 재시작/다시 로드하고 해당 Agent에서 인증 또는 hook trust를 완료하세요.
+- Codex의 네이티브 project 설치와 plugin 업데이트는 이 adapter에서 제공되지 않습니다. global Codex 설치에 대해서는 sync 선택이 여전히 동작합니다.
+- import된 plugin은 원래의 marketplace identity를 유지합니다. `check`는 source가 없는 import된 plugin에 대해 release 가능 여부를 추론할 수 없습니다.
+- 제거는 공유된 marketplace 등록과 관리되는 스냅샷을 유지합니다. 관련 없는 plugin이나 네이티브 캐시를 직접 삭제하지 않습니다.
+
+네이티브 lifecycle은 Claude Code `2.1.276`, Codex CLI `0.154.0`, Pi `0.85.1`, Copilot CLI `1.0.86`으로 검증되었습니다. Antigravity CLI `1.2.6`은 격리된 네이티브 install/list/remove 작업으로 확인되었습니다. OpenCode `1.18.31`은 버전을 인식하는 등록을 검증하는 데 사용되며, v2 스키마는 fixture 테스트로 커버됩니다. Cursor와 Antigravity의 파일시스템 lifecycle은 격리된 디렉터리에서 테스트되며, GUI 런타임 활성화까지 보장하지는 않습니다. 설치된 command capability와 inventory 스키마는 런타임에 확인되며, 지원되지 않는 작업은 설명과 함께 차단됩니다.
+
+## 공식 형식 참고 자료
+
+- [Cursor local plugins](https://prod.cursor.com/docs/plugins)
+- [Antigravity desktop plugins](https://www.antigravity.google/docs/plugins)
+- [Antigravity standalone CLI plugins](https://www.antigravity.google/docs/cli/plugins)
+- [Pi packages](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md)
+- [OpenCode v1 plugins](https://opencode.ai/docs/plugins/)
+- [OpenCode v2 plugins](https://opencode.ai/v2/docs/plugins)

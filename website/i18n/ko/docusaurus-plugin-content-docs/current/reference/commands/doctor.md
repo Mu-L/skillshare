@@ -1,0 +1,301 @@
+---
+sidebar_position: 1
+---
+
+# doctor
+
+skillshare 설정 환경을 확인하고 문제를 진단합니다.
+
+```bash
+skillshare doctor
+skillshare doctor -p        # Project mode (.skillshare/config.yaml)
+skillshare doctor -g        # global mode 강제
+skillshare doctor --json    # CI용 구조화된 JSON 출력
+```
+
+![doctor demo](/img/doctor-demo.png)
+
+## 사용 시점
+
+- 뭔가 작동하지 않는데 원인을 모를 때
+- skillshare 또는 OS를 업그레이드한 후
+- 모든 target, git, symlink가 정상인지 확인
+- 버그를 신고하기 전 첫 진단 단계
+
+## 확인 항목
+
+```text
+skillshare doctor
+
+Checking environment
+✓ Config: ~/.config/skillshare/config.yaml
+→ Config directory: ~/.config/skillshare
+→ Data directory:   ~/.local/share/skillshare
+→ State directory:  ~/.local/state/skillshare
+
+✓ Source: ~/.config/skillshare/skills (12 skills)
+✓ Agents source: ~/.config/skillshare/agents (8 agents)
+✓ Skillignore: 2 patterns, 1 skills ignored
+✓ Link support: OK
+✓ Git: initialized with remote
+
+✓ Skill integrity: 12/12 verified
+
+Checking targets
+claude
+  skills   [merge] merged (8 shared, 2 local)
+  agents   [merge] merged (8/8 linked)
+cursor
+  skills   [copy] copied (8 managed, 0 local)
+  agents   [merge] merged (8/8 linked)
+codex
+  skills   [merge] needs sync
+
+Extras
+✓ rules: 4 files, 1/1 targets OK
+✓ commands: 3 files, 1/1 targets OK
+
+Version
+✓ CLI: 0.17.0
+✓ Skill: 0.17.0
+
+Summary
+✓ All checks passed!
+```
+
+## 수행되는 검사
+
+### Environment
+
+| 검사 항목 | 확인 내용 |
+|-------|-----------------|
+| Config | config 파일 존재 여부 및 유효성 |
+| Source | source 디렉터리 존재 여부 및 읽기 가능 여부 |
+| Agents source | agents source 디렉터리 존재 여부 (구성된 경우) |
+| Skillignore | `.skillignore` (및 `.skillignore.local`) 활성 패턴과 무시된 skill 수 |
+| Link support | 시스템이 symlink를 생성할 수 있는지 여부 |
+| Git | 저장소 상태 및 remote 구성 |
+
+### Targets
+
+각 target은 **skills**와 **agents**(agent가 구성된 경우)에 대한 하위 항목을 보여줍니다:
+- Skills: 경로, sync 모드, sync 상태, shared/local 개수
+- Agents: linked 개수, drift 탐지
+- 깨진 symlink 없음
+- 의도치 않은 local 충돌에 대한 중복 skill 검사:
+  - `merge` 모드: 건너뜀 (local skill은 예상된 것)
+  - `copy` 모드: manifest로 관리되는 복사본은 무시하며, local 충돌 복사본만 경고
+- 유효한 include/exclude glob 패턴
+- 해당하는 경우 target별 호환성 힌트 (info 수준) (예시 target 우선순위: `cursor` → `antigravity` → `copilot` → `opencode`; 이 target들이 없으면 힌트 없음)
+
+### Path Overlap
+
+Doctor는 런타임 피커에 도달하기 전에 두 가지 종류의 중복 skill 위험을 표시합니다:
+
+**`shared_target_paths`** — 두 개 이상의 활성화된 target이 동일한 기본 경로로 귀결될 때 발생합니다. 흔한 원인: `universal`과 `~/.agents/skills`에 쓰는 도구(예: `warp`, `witsy`)를 동시에 활성화한 경우.
+
+```text
+! Shared path ~/.agents/skills ← universal, warp
+```
+
+해결 방법: 중복된 target 중 하나를 비활성화하거나, `skillshare target <name> --path <dir>`로 별도의 경로를 설정하십시오.
+
+**`cross_target_discovery`** — 활성화된 target의 런타임이 다른 활성화된 target이 쓰는 디렉터리도 스캔하도록 문서화되어 있을 때 발생합니다. 예를 들어 Codex Desktop은 `~/.codex/skills` 외에 `~/.agents/skills`도 읽으므로, `codex`와 `universal`을 함께 활성화하면 Codex가 universal의 콘텐츠를 보게 됩니다.
+
+```text
+! codex will see content from: universal
+    ~/.agents/skills ← universal
+```
+
+해결 방법: 공유 콘텐츠의 writer로 하나의 target을 선택하거나, 런타임 피커에 중복 항목이 나타나는 것을 감수할 수 있다면 그대로 두십시오.
+
+두 검사 모두 순수한 메타데이터 기반입니다 — 구성된 경로와 내장된 `also_scans` 테이블을 읽을 뿐, 파일시스템을 직접 프로빙하지 않습니다.
+
+### Version
+
+- CLI 버전
+- skillshare skill 버전
+- 사용 가능한 업데이트 확인
+
+### Skill Integrity
+
+파일 해시 메타데이터가 있는 설치된 skill에 대해, doctor는 설치 이후 파일이 변조되지 않았는지 검증합니다:
+
+- 현재 SHA-256 해시와 저장된 해시를 비교
+- skill별로 수정, 누락, 추가된 파일을 보고
+- Local skill(`.metadata.json`에 없는 것)은 조용히 건너뜀 — 정상적인 동작
+- 메타데이터는 있지만 `file_hashes`가 없는 설치된 skill은 이름과 함께 표시됨
+
+```text
+⚠ _team-repo__api-helper: 1 modified, 1 missing
+✓ Skill integrity: 5/6 verified
+⚠ Skill integrity: 1 skill(s) missing file hashes: _old-repo__legacy-skill
+```
+
+### Extras
+
+extras가 구성된 경우 다음을 검증합니다:
+- 각 extra에 대한 source 디렉터리 존재 여부
+- target 디렉터리 접근 가능 여부
+- 누락된 source 디렉터리 또는 접근 불가능한 target 보고
+
+### 기타
+
+- `SKILL.md` 파일이 없는 skill
+- Skill 수준 `targets:` 필드 검증 (알 수 없는 target 이름에 대해 경고)
+- 마지막 backup 타임스탬프 (global mode)
+- Trash 상태 (항목 수, 총 용량, 가장 오래된 항목의 경과 시간)
+- target 내 깨진 symlink
+
+:::note Project Mode
+project에 `.skillshare/config.yaml`이 있으면 `skillshare doctor`는 자동으로 project mode로 실행됩니다.
+
+Project mode에서는:
+- Config/source 검사가 `.skillshare/config.yaml`과 `.skillshare/skills`를 사용
+- Trash 상태가 `.skillshare/trash`를 사용
+- Backup은 `not used in project mode`로 표시
+:::
+
+## 자주 발생하는 문제
+
+### "Needs sync"
+
+Target 모드는 변경되었지만 아직 적용되지 않음:
+
+```bash
+skillshare sync
+```
+
+### "Not synced"
+
+Target이 source보다 linked skill 수가 적음 (예: 새 skill 설치 후):
+
+```bash
+skillshare sync
+```
+
+### "Has uncommitted changes"
+
+Tracked repo에 local 변경 사항이 있음:
+
+```bash
+cd ~/.config/skillshare/skills/_team-repo
+git status
+# 변경 사항을 커밋하거나 버림
+```
+
+### "Broken symlink"
+
+Source에서 skill이 제거되었지만 symlink는 남아있음:
+
+```bash
+skillshare sync  # 고아 symlink를 정리함
+```
+
+### "Skills without SKILL.md"
+
+필수 파일이 없는 skill 폴더:
+
+```bash
+# 각 skill에 SKILL.md를 추가하거나, 폴더를 제거
+skillshare new my-skill  # 올바른 구조 생성
+```
+
+### "Link not supported"
+
+Developer Mode가 없는 Windows에서:
+
+1. 설정에서 Developer Mode 활성화
+2. 또는 관리자 권한으로 실행
+
+## 문제가 있는 경우의 출력 예시
+
+```
+Checking environment
+✓ Config: ~/.config/skillshare/config.yaml
+✓ Source: ~/.config/skillshare/skills (12 skills)
+✓ Agents source: ~/.config/skillshare/agents (8 agents)
+✓ Link support: OK
+⚠ Git: 3 uncommitted change(s)
+
+⚠ Skills without SKILL.md: test-dir, temp
+⚠ _team-repo__api-helper: 1 modified
+✓ Skill integrity: 5/6 verified
+
+Checking targets
+claude
+  skills   [merge] merged (8 shared, 2 local)
+  agents   [merge] merged (8/8 linked)
+cursor
+  skills   [merge] 2 broken symlink(s): old-skill, removed-skill
+codex
+  skills   [merge] needs sync
+⚠ claude: 1 skill(s) not synced (2/3 linked)
+
+Version
+✓ CLI: 0.17.0
+⚠ Skill: 0.16.0 (update available: 0.17.0)
+  Run: skillshare upgrade --skill && skillshare sync
+
+Backups: last backup 2026-01-18_09-00-00 (3 days ago)
+ℹ Trash: 2 item(s) (45.2 KB), oldest 3 day(s)
+
+ℹ Update available: 1.2.0 -> 1.3.0
+  brew upgrade skillshare  OR  curl -fsSL .../install.sh | sh
+
+Summary
+  ✗ 1 error(s), 4 warning(s)
+```
+
+## JSON 출력
+
+CI 파이프라인과 자동화를 위한 기계 판독 가능한 출력에는 `--json`을 사용하십시오:
+
+```bash
+skillshare doctor --json
+```
+
+```json
+{
+  "checks": [
+    { "name": "source", "status": "pass", "message": "Source: ~/.config/skillshare/skills (12 skills)" },
+    { "name": "skillignore", "status": "pass", "message": ".skillignore: 3 patterns, 2 skills ignored", "details": ["test-*", "vendor/", "!important", "---", "test-draft", "vendor/lib"] },
+    { "name": "sync_drift", "status": "warning", "message": "claude: 1 skill(s) not synced (7/8 linked)", "details": ["new-skill"] },
+    { "name": "shared_target_paths", "status": "warning", "message": "1 shared target path(s) — enabled targets writing to the same directory may produce duplicate skills in runtime pickers", "details": ["~/.agents/skills ← universal, warp"], "suggestions": ["Choose one authoritative target for ~/.agents/skills and disable or reconfigure the rest (currently: universal, warp)"] },
+    { "name": "broken_symlinks", "status": "error", "message": "cursor: 1 broken symlink(s)", "details": ["old-skill"] }
+  ],
+  "summary": { "total": 14, "pass": 12, "warnings": 1, "errors": 1, "info": 0 },
+  "version": { "current": "0.17.4", "latest": "0.18.0", "update_available": true }
+}
+```
+
+검사 상태: `pass`, `warning`, `error`, `info`. `info` 상태는 통과도 실패도 아닌 정보성 검사(예: `.skillignore`를 찾을 수 없는 경우)에 사용됩니다. Info 검사는 `total`에는 포함되지만 `pass`, `warnings`, `errors`에는 포함되지 않습니다.
+
+일부 warning 검사(예: `shared_target_paths`, `cross_target_discovery`)에는 실행 가능한 해결 단계를 담은 선택적 `suggestions` 배열도 포함됩니다. 제안할 내용이 없으면 이 필드는 생략됩니다.
+
+### Exit Codes
+
+| 조건 | Exit Code |
+|-----------|-----------|
+| 모든 검사 통과 (또는 warning만 있음) | `0` |
+| `error` 상태인 검사가 있음 | `1` |
+
+### CI 예시
+
+```bash
+# doctor에서 오류가 발견되면 파이프라인 실패 처리
+skillshare doctor --json | jq -e '.summary.errors == 0'
+
+# 알림을 위해 warning 추출
+skillshare doctor --json | jq '[.checks[] | select(.status == "warning")]'
+```
+
+:::tip Web Dashboard
+web dashboard(`skillshare ui`)의 **Health Check** 페이지는 필터 토글과 펼칠 수 있는 상세 정보가 포함된 `doctor --json`의 시각화 버전을 제공합니다.
+:::
+
+## 참고
+
+- [status](/docs/reference/commands/status) — 빠른 상태 확인
+- [sync](/docs/reference/commands/sync) — sync 문제 해결
+- [upgrade](/docs/reference/commands/upgrade) — CLI 및 skill 업데이트

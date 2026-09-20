@@ -131,7 +131,7 @@ skillshare search --hub ./skillshare-hub.json
 ```
 
 :::tip Private & GitHub Enterprise repos
-SSH hub sources are cloned with your SSH agent/keys, so they work for private repos and GitHub Enterprise (GHE) hosts where raw HTTPS URLs redirect to a login page. The index path inside the repo comes from the `//path` suffix and defaults to `skillshare-hub.json` at the repo root. Both scp-style (`git@host:org/repo.git`) and scheme-style (`ssh://git@host/org/repo.git`) URLs work. Save it once with [`hub add`](../../reference/commands/hub.md#hub-add) to search by label instead.
+SSH hub sources are cloned with your SSH agent/keys, so they work for private repos and GitHub Enterprise (GHE) hosts where raw HTTPS URLs redirect to a login page. The index path inside the repo comes from the `//path` suffix and defaults to `skillshare-hub.json` at the repo root. Both scp-style (`git@host:org/repo.git`) and scheme-style (`ssh://git@host/org/repo.git`) URLs work. Save it once with [`hub add`](/docs/reference/commands/hub#hub-add) to search by label instead.
 
 When a GitHub/GHE hub is loaded over SSH, same-host domain-prefixed skill sources inherit the hub's SSH identity. For example, a hub URL of `acme@acme.ghe.com:Org/skills.git//hubs/team.json` lets an entry source of `acme.ghe.com/Org/skills/skills/reviewer` install over SSH. If the hub is loaded over HTTP, a local file, or a different host, domain-prefixed sources remain HTTPS sources.
 :::

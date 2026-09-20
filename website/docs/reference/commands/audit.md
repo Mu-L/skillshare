@@ -163,7 +163,7 @@ audit:
   enabled_analyzers: [static, dataflow]
 ```
 
-### Precedence
+### Precedence {#precedence}
 
 Settings resolve in this order (first non-empty wins):
 

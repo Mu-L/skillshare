@@ -125,7 +125,7 @@ For Grok, names must start with a letter or underscore, contain only letters,
 digits, hyphens and single underscores, and cannot end with an underscore.
 Names such as `company-docs` work across all supported clients.
 
-## Native destinations
+## Native destinations {#native-destinations}
 
 | Client | Global | Project | Section |
 |---|---|---|---|
@@ -278,7 +278,7 @@ platforms using their `.config` paths.
 Project destinations are relative to the selected project root. Project trust,
 server approval and authentication remain the receiving Agent's responsibility.
 
-## Turn off a global server in one project
+## Turn off a global server in one project {#turn-off-a-global-server-in-one-project}
 
 An Agent reads its own global MCP file and the project's file together. A server
 defined in the global file therefore loads in every project. To stop it loading in
@@ -430,7 +430,7 @@ In the dashboard, this is the **Off in this project** choice beside `stdio` and
   directory as a portable manifest.
 
 
-## Pi: choose your MCP extension
+## Pi: choose your MCP extension {#pi-choose-your-mcp-extension}
 
 Pi can use MCP through either [pi-mcp-adapter](https://pi.dev/packages/pi-mcp-adapter)
 or [pi-mcp-extension](https://pi.dev/packages/pi-mcp-extension). These are third-party

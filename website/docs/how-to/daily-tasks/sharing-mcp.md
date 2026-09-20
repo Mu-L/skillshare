@@ -214,7 +214,7 @@ In the dashboard, open it from the project folder with `skillshare ui`, choose
 
 This works with Claude Code, OpenCode, Kilo Code, and Pi with `pi-mcp-adapter`. Other Agents
 are refused. For Pi, add `--pi-extension pi-mcp-adapter`. The
-[command reference](../../reference/commands/mcp.md#turn-off-a-global-server-in-one-project)
+[command reference](/docs/reference/commands/mcp#turn-off-a-global-server-in-one-project)
 shows what is written for each Agent and why the others are not supported.
 
 ## Remove and restore

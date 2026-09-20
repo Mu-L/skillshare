@@ -69,7 +69,7 @@ Tracked repos are prefixed with `_` to distinguish them from regular skills:
 
 ---
 
-## Nested Skills & Auto-Flattening
+## Nested Skills & Auto-Flattening {#nested-skills--auto-flattening}
 
 Skill repos often organize skills in folders. skillshare automatically flattens them for AI CLIs:
 
@@ -107,7 +107,7 @@ Auto-flattening works for **all skills**, not just tracked repos. You can organi
 
 ---
 
-## Rehydrating After a Fresh Clone
+## Rehydrating After a Fresh Clone {#rehydrating-after-a-fresh-clone}
 
 Tracked repo clone directories are intentionally ignored by git because they contain their own `.git` directory. If you clone or pull your skillshare source repo on a new machine, `.metadata.json` may already declare tracked repos while the `_team-skills/` clone directory is still missing.
 

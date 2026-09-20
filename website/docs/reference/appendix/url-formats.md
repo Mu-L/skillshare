@@ -261,4 +261,4 @@ This tells skillshare to route URLs with `/_git/` on that host through Azure Dev
 
 ## Related
 
-- [Install command](../commands/install.md) — full install options and examples
+- [Install command](/docs/reference/commands/install) — full install options and examples

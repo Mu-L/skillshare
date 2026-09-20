@@ -48,7 +48,7 @@ rules:
 
 Pattern-level entries use `pattern` without `id`. Merge order: pattern-level rules apply first, then id-level rules can override individual entries within a disabled group.
 
-## Custom Rules
+## Custom Rules {#custom-rules}
 
 You can add, override, or disable audit rules using YAML files. Rules are merged in order: **built-in → global user → project user**.
 
@@ -261,7 +261,7 @@ Summary interpretation:
 - `Failed` counts skills with findings at or above the active threshold.
 - `Warning` counts skills with findings below threshold but above clean (for example `HIGH/MEDIUM/LOW/INFO` when threshold is `CRITICAL`).
 
-## Built-in Rule IDs
+## Built-in Rule IDs {#built-in-rule-ids}
 
 Use `id` values to override or disable specific built-in rules:
 

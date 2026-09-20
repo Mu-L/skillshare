@@ -191,7 +191,7 @@ If the running binary is a development build (`version == "dev"`), the upgrade e
 
 If the auto-reload doesn't complete, the dialog tells you to run `skillshare ui start` to bring the background server back up.
 
-## Reverse Proxy
+## Reverse Proxy {#reverse-proxy}
 
 If you run the dashboard on a shared server behind a reverse proxy (e.g., homelab, internal tools platform), use `--base-path` to serve it under a sub-path alongside other services:
 

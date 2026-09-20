@@ -1,0 +1,241 @@
+---
+sidebar_position: 2
+---
+
+# diff
+
+Source와 target 간의 차이점을 표시합니다.
+
+```bash
+skillshare diff              # 모든 target(interactive TUI)
+skillshare diff claude       # 특정 target
+skillshare diff agents       # agent target만
+skillshare diff --stat       # file 단위 변경 사항
+skillshare diff --patch      # 전체 unified diff
+```
+
+![diff demo](/img/diff-demo.png)
+
+## 인터랙티브 TUI
+
+TTY에서 `diff`는 좌우 패널 레이아웃의 interactive TUI를 실행합니다.
+
+- **왼쪽 패널** — 상태 아이콘이 있는 target 목록(`✓` synced, `!` diff 있음, `✗` error)
+- **오른쪽 패널** — 선택된 target의 세부 보기(mode, filter, 분류된 diff)
+- **Enter**를 눌러 skill의 file 단위 diff를 펼칩니다
+- **/**를 눌러 target을 필터링, **Ctrl+d/u**로 세부 정보 스크롤, **q**로 종료
+
+일반 text 출력을 원하면 `--no-tui`를 사용하거나, pipe로 연결하면 TUI가 자동으로 비활성화됩니다.
+
+## 사용 시점
+
+- sync 전에 source와 target 사이에 정확히 무엇이 다른지 확인
+- target에만 존재하는 skill(local-only, 아직 수집되지 않음) 찾기
+- symlink로 대체할 수 있는 local 사본 식별
+- `--stat`으로 file 단위 변경 사항을, `--patch`로 전체 text diff를 확인
+
+## 출력 예시
+
+```
+claude
+  + New 2 skills:
+      missing-skill
+      another-skill
+  ! Local Override 1 skill:
+      local-copy
+  ← Local Only 1 skill:
+      my-local-skill
+
+  2 new, 1 local override, 1 local only
+
+cursor: fully synced
+```
+
+### 그룹화된 다중 Target 출력
+
+여러 target의 diff 결과가 동일할 경우, noise를 줄이기 위해 하나의 블록으로 그룹화됩니다.
+
+```
+claude, agents
+  + New 2 skills:
+      skill-1
+      skill-2
+
+cursor
+  + New 1 skill:
+      skill-1
+
+codex, copilot: fully synced
+```
+
+결과가 다른 target(예: `include`/`exclude` filter로 인해)은 여전히 별도로 표시됩니다.
+
+## 기호
+
+| 기호 | 라벨 | 의미 | 조치 |
+|--------|-------|---------|--------|
+| `+` | New | source에 있지만 target에 없음 | `sync`가 추가함 |
+| `+` | Restore | target에 있었으나 삭제됨 | `sync`가 복원함 |
+| `~` | Modified | 콘텐츠가 변경됨(copy mode) | `sync`가 업데이트함 |
+| `!` | Local Override | symlink 대신 local 사본 | `sync --force`로 교체 |
+| `-` | Orphan | manifest에는 있지만 source에는 없음 | `sync`가 제거함 |
+| `←` | Local Only | target에만 존재, source에는 없음 | `collect`로 가져오기 |
+
+## File 단위 세부 정보
+
+### `--stat`
+
+각 skill 내에서 어떤 file이 다른지 표시합니다.
+
+```bash
+skillshare diff --stat
+```
+
+```
+claude
+  ~ Modified 1 skill:
+      my-skill
+        + new-file.md
+        ~ SKILL.md
+        - old-file.md
+```
+
+### `--patch`
+
+수정된 file에 대한 전체 unified text diff를 표시합니다.
+
+```bash
+skillshare diff --patch
+```
+
+```
+claude
+  ~ Modified 1 skill:
+      my-skill
+        --- SKILL.md
+        - old line
+        + new line
+```
+
+`--stat`과 `--patch` 모두 `--no-tui`(plain text 출력)를 암시합니다.
+
+## Diff가 보여주는 내용
+
+### Merge Mode Target
+
+merge mode(기본값)를 사용하는 target의 경우:
+- source에는 있지만 아직 target에 symlink되지 않은 skill을 나열
+- symlink 대신 local 사본으로 존재하는 skill을 표시
+- target에서 local-only인 skill을 식별(source에는 없음 — sync에 의해 보존됨)
+
+### Copy Mode Target
+
+copy mode를 사용하는 target의 경우:
+- source에는 있지만 아직 관리되지 않은 skill을 나열(manifest에 없음)
+- checksum 비교를 통해 콘텐츠 변경 사항을 표시
+- source에 더 이상 없는 orphan managed 사본을 표시(sync 시 제거됨)
+- local-only skill을 식별(source에도 없고 관리되지도 않음)
+
+### Symlink Mode Target
+
+symlink mode를 사용하는 target의 경우:
+- symlink가 올바른 source를 가리키는지 단순히 확인
+- "Fully synced"를 표시하거나 잘못된 symlink에 대해 경고
+
+## 사용 사례
+
+### Sync 전에
+
+무엇이 변경될지 확인합니다.
+
+```bash
+skillshare diff
+# sync가 무엇을 할지 확인한 뒤:
+skillshare sync
+```
+
+### Local Skill 찾기
+
+target에서 직접 만든 skill을 찾아냅니다.
+
+```bash
+skillshare diff claude
+# 표시: ← Local Only 1 skill: my-local-skill
+
+skillshare collect claude  # source로 가져오기
+```
+
+### 변경 사항 검사
+
+sync 전에 skill에서 정확히 무엇이 변경되었는지 확인합니다.
+
+```bash
+skillshare diff --patch claude   # 전체 text diff
+skillshare diff --stat claude    # file 단위 요약
+```
+
+### 문제 해결
+
+sync status가 문제를 표시할 때:
+
+```bash
+skillshare status          # "needs sync"를 표시
+skillshare diff claude     # 정확히 무엇이 다른지 확인
+skillshare sync            # 해결
+```
+
+## Agent Diff {#agent-diff}
+
+`agents` 키워드를 사용하면 agent target만 diff합니다.
+
+```bash
+skillshare diff agents             # agent를 지원하는 모든 target
+skillshare diff agents claude      # 특정 target
+skillshare diff agents --json      # JSON 출력
+```
+
+Agent diff는 누락된 agent(sync 필요), orphan symlink(prune 필요), local-only agent file을 표시합니다. `agents` path가 구성된 target만 포함됩니다. 전체 목록은 [Agents — Supported Targets](/docs/understand/agents#supported-targets)를 참고하세요.
+
+---
+
+## 옵션
+
+| Flag | 설명 |
+|------|-------------|
+| `--project, -p` | project mode 사용 |
+| `--global, -g` | global mode 사용 |
+| `--stat` | file 단위 변경 사항 표시(`--no-tui`를 암시) |
+| `--patch` | 전체 unified diff 표시(`--no-tui`를 암시) |
+| `--no-tui` | plain text 출력(interactive TUI 생략) |
+| `--json` | JSON으로 출력(`--no-tui`를 암시) |
+
+## JSON 출력
+
+```bash
+skillshare diff --json
+```
+
+```json
+{
+  "targets": [
+    {
+      "name": "claude",
+      "mode": "merge",
+      "synced": false,
+      "items": [
+        {"action": "link", "name": "missing-skill", "reason": "not in target", "is_sync": true},
+        {"action": "update", "name": "local-copy", "reason": "local override", "is_sync": true}
+      ],
+      "include": [],
+      "exclude": []
+    }
+  ],
+  "duration": "0.045s"
+}
+```
+
+## 참고
+
+- [sync](/docs/reference/commands/sync) — target으로 sync
+- [collect](/docs/reference/commands/collect) — local skill 가져오기
+- [status](/docs/reference/commands/status) — 간단한 개요

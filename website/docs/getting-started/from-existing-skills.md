@@ -36,7 +36,7 @@ BEFORE                                  AFTER
 
 ---
 
-## Single-CLI migration
+## Single-CLI migration {#single-cli-migration}
 
 If every skill lives in a single target (say, Claude), `init --copy-from` handles it in one step:
 
@@ -49,7 +49,7 @@ skillshare sync
 
 ---
 
-## Multi-CLI consolidation
+## Multi-CLI consolidation {#multi-cli-consolidation}
 
 Skills are scattered across multiple targets. Initialize empty, snapshot, then `collect` from each target.
 
@@ -90,7 +90,7 @@ Resolve by hand: diff the two copies, keep whichever you want in source, then ei
 
 ---
 
-## Connect an existing repo
+## Connect an existing repo {#connect-an-existing-repo}
 
 If you already have a skills repo on GitHub (perhaps from a previous machine), don't `collect` — just clone it:
 
