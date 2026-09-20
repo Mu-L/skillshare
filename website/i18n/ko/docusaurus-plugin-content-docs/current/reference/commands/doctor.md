@@ -107,7 +107,7 @@ Doctor는 런타임 피커에 도달하기 전에 두 가지 종류의 중복 sk
     ~/.agents/skills ← universal
 ```
 
-해결 방법: 공유 콘텐츠의 writer로 하나의 target을 선택하거나, 런타임 피커에 중복 항목이 나타나는 것을 감수할 수 있다면 그대로 두십시오.
+해결 방법: 먼저 스캔하는 쪽 target(위 예시의 `codex`)을 제거하십시오. 해당 런타임은 이미 공유 디렉터리를 읽고 있으며, 다른 도구에는 영향을 주지 않습니다. `skillshare target remove codex --dry-run`으로 미리 확인할 수 있습니다. 대신 writer(`universal`)를 제거하면 `~/.agents/skills`를 읽는 다른 도구에서도 해당 skill이 보이지 않게 됩니다. 스캔하는 쪽 target에 writer가 필터링한 skill이 있는 경우에만 둘 다 유지하고, 런타임 피커에 중복 항목이 나타나는 것을 감수하십시오.
 
 두 검사 모두 순수한 메타데이터 기반입니다 — 구성된 경로와 내장된 `also_scans` 테이블을 읽을 뿐, 파일시스템을 직접 프로빙하지 않습니다.
 

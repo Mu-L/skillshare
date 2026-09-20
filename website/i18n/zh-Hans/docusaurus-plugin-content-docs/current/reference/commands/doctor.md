@@ -111,7 +111,7 @@ universal 的内容。
     ~/.agents/skills ← universal
 ```
 
-解决方法：为共享内容选一个 target 作为写入方，或者接受这种重叠（如果在运行时选择器中出现重复列表是可接受的）。
+解决方法：先移除负责扫描的 target（上例中的 `codex`）。它的运行时本来就会读取共享目录，而且不会影响其他工具。可用 `skillshare target remove codex --dry-run` 预览。如果改为移除写入方（`universal`），其他读取 `~/.agents/skills` 的工具也会看不到这些 skill。只有当扫描端 target 带有被写入方过滤掉的 skill 时才同时保留两者，并接受运行时选择器中出现重复列表。
 
 这两项检查都是纯元数据操作——它们只读取已配置的路径和内置的 `also_scans` 表，不做文件系统探测。
 

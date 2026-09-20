@@ -125,7 +125,9 @@ func TestCheckCrossTargetDiscovery_CodexSeesUniversal(t *testing.T) {
 		t.Fatalf("expected one suggestion, got %v", r.checks[0].Suggestions)
 	}
 	suggestion := r.checks[0].Suggestions[0]
-	for _, want := range []string{"Choose one authoritative route", "skillshare target remove <name> --global --dry-run", "codex", "universal"} {
+	// Removing the scanner only affects that runtime; removing the writer would
+	// also hide skills from every other tool that reads the shared path.
+	for _, want := range []string{"Choose one authoritative route", "skillshare target remove <name> --global --dry-run", "removing the codex target", "universal"} {
 		if !strings.Contains(suggestion, want) {
 			t.Errorf("suggestion %q missing %q", suggestion, want)
 		}

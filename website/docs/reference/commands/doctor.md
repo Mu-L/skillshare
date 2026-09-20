@@ -107,7 +107,7 @@ Resolution: disable one of the overlapping targets, or set a distinct path with 
     ~/.agents/skills ← universal
 ```
 
-Resolution: pick one target as the writer for the shared content, or accept the overlap if duplicate listings in the runtime picker are acceptable.
+Resolution: start by removing the scanning target (`codex` above). Its runtime already reads the shared directory, and no other tool is affected. Preview with `skillshare target remove codex --dry-run`. Removing the writer (`universal`) instead also hides those skills from every other tool that reads `~/.agents/skills`. Keep both targets only if the scanning target carries skills the writer filters out, and accept the duplicate listings in the runtime picker.
 
 Both checks are pure metadata — they read configured paths and the built-in `also_scans` table, no filesystem probing.
 

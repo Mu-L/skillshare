@@ -24,8 +24,10 @@ func sharedTargetPathsSuggestion(path string, targets []string, isProject bool) 
 }
 
 func crossTargetDiscoverySuggestion(scanner string, writers []string, isProject bool) string {
-	return fmt.Sprintf("Choose one authoritative route for %s-visible skills; keep %s's primary target or preview removing overlapping writer target(s) with `%s`: %s.",
-		scanner, scanner, targetRemoveDryRunCommand(isProject), strings.Join(writers, ", "))
+	// Point at the scanner first: removing it only affects that runtime, while
+	// removing a writer also hides skills from every other tool reading its path.
+	return fmt.Sprintf("Choose one authoritative route for %s-visible skills; %s already reads the path written by %s, so start by removing the %s target (preview with `%s`). Removing %s instead also affects other tools that read the same path.",
+		scanner, scanner, strings.Join(writers, ", "), scanner, targetRemoveDryRunCommand(isProject), strings.Join(writers, ", "))
 }
 
 // checkSharedTargetPaths warns when two or more enabled targets resolve to the

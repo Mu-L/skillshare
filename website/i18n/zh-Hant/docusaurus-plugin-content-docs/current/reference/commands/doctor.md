@@ -107,7 +107,7 @@ Doctor 會在兩類重複 skill 風險到達 runtime picker 之前先標示出�
     ~/.agents/skills ← universal
 ```
 
-解決方式：選定一個 target 作為共用內容的寫入者，或者如果可以接受 runtime picker 出現重複列表，就接受此重疊情況。
+解決方式：先移除負責掃描的 target（上例中的 `codex`）。它的 runtime 本來就會讀取共用目錄，而且不會影響其他工具。可用 `skillshare target remove codex --dry-run` 預覽。若改為移除寫入者（`universal`），其他讀取 `~/.agents/skills` 的工具也會看不到這些 skill。只有在掃描端 target 帶有被寫入者過濾掉的 skill 時才同時保留兩者，並接受 runtime picker 出現重複列表。
 
 這兩項檢查都是純粹的 metadata 比對——它們讀取已設定的路徑與內建的 `also_scans` 表，不會進行檔案系統探測。
 
