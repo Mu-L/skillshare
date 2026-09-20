@@ -265,6 +265,15 @@ skillshare install github.com/team/skills --branch develop --all
 
 The branch is persisted in skill metadata, so `skillshare update` and `skillshare check` use the correct branch automatically.
 
+For reproducible installs, `--branch` also accepts a tag or a commit SHA:
+
+```bash
+skillshare install github.com/team/skills --branch v1.2.0 --all
+skillshare install github.com/team/skills --branch 8f14e45 --all
+```
+
+A commit SHA cannot be combined with `--track`: a tracked repo pulls from a branch, and a detached commit has nothing to pull. Pin tags or SHAs with regular installs instead.
+
 ---
 
 ## Collision Detection

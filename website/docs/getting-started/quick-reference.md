@@ -189,6 +189,9 @@ skillshare install github.com/team/skills --track
 skillshare install github.com/team/skills --branch develop --all
 skillshare install github.com/team/skills --track --branch develop
 
+# Pin to a tag or commit SHA (regular install only)
+skillshare install github.com/team/skills --branch v1.2.0 --all
+
 # Update from team
 skillshare update --all
 skillshare sync

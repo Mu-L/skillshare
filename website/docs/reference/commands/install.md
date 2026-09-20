@@ -266,7 +266,7 @@ See [Project Setup](/docs/how-to/sharing/project-setup) for the full guide.
 | `--into <dir>` | | Install into subdirectory (e.g. `--into frontend` or `--into frontend/react`) |
 | `--force` | `-f` | Overwrite existing skill; override audit blocking and cross-path duplicate check |
 | `--update` | `-u` | Update if exists (git pull or reinstall) |
-| `--branch <name>` | `-b` | Git branch to clone from (default: remote default branch) |
+| `--branch <ref>` | `-b` | Git branch, tag, or commit SHA to install from (default: remote default branch) |
 | `--track` | `-t` | Keep `.git` for tracked repos |
 | `--kind <skill\|agent>` | | Limit install to one resource kind |
 | `--agent <names>` | `-a` | Select specific agents from a repo (comma-separated) |
@@ -440,6 +440,17 @@ skillshare install github.com/team/skills --track --branch frontend
 skillshare install github.com/team/skills --track --branch frontend --name team-frontend
 skillshare install github.com/team/skills --track --branch backend --name team-backend
 ```
+
+**Pin to a tag or commit SHA (reproducible installs):**
+```bash
+# Pin to a release tag
+skillshare install github.com/team/skills --branch v1.2.0 --all
+
+# Pin to an exact commit (full or abbreviated SHA)
+skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
+```
+
+The pinned ref is stored in skill metadata, so `skillshare update` reinstalls the same revision and `skillshare check` reports a SHA pin as up to date without contacting the remote. `--track` accepts tags and branches but rejects commit SHAs, because a tracked repo must follow a branch to pull updates.
 
 **Install team repo (tracked):**
 ```bash
