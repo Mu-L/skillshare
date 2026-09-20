@@ -158,6 +158,8 @@ func (sb *Sandbox) CreateTarget(name string) string {
 		path = filepath.Join(sb.Home, ".cursor", "skills")
 	case "antigravity":
 		path = filepath.Join(sb.Home, ".gemini", "config", "skills")
+	case "antigravity-cli":
+		path = filepath.Join(sb.Home, ".gemini", "antigravity-cli", "skills")
 	case "gemini":
 		path = filepath.Join(sb.Home, ".gemini", "skills")
 	case "opencode":

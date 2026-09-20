@@ -21,7 +21,10 @@ targets:
       project: ".agents/skills"
     also_scans:
       global: ["~/.agents/skills"]
-    aliases: [antigravity-cli]
+  - name: antigravity-cli
+    skills:
+      global: "~/.gemini/antigravity-cli/skills"
+      project: ".agents/skills"
   - name: aiderdesk
     skills:
       global: "~/.aider-desk/skills"

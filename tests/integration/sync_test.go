@@ -1036,3 +1036,29 @@ targets:
 		t.Error("my-skill should be synced")
 	}
 }
+
+// A built-in target listed without a path takes its path from targets.yaml.
+// antigravity-cli used to be an alias, and DefaultTargets() is not alias-aware,
+// so a path-less entry failed validation instead of resolving.
+func TestSync_BuiltinTargetWithoutPath_UsesDefaultPath(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	sb.CreateSkill("my-skill", map[string]string{
+		"SKILL.md": "# My Skill",
+	})
+	targetPath := sb.CreateTarget("antigravity-cli")
+
+	sb.WriteConfig(`source: ` + sb.SourcePath + `
+mode: merge
+targets:
+  antigravity-cli:
+`)
+
+	result := sb.RunCLI("sync")
+	result.AssertSuccess(t)
+
+	if !sb.IsSymlink(filepath.Join(targetPath, "my-skill")) {
+		t.Errorf("symlink not created at %s", filepath.Join(targetPath, "my-skill"))
+	}
+}

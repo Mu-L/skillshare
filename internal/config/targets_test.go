@@ -378,3 +378,35 @@ func TestAlsoScans_OpencodeReadsClaudeAndAgents(t *testing.T) {
 		}
 	}
 }
+
+// The Antigravity CLI (agy) reads its own global directory and never the
+// Antigravity app's ~/.gemini/config/skills, so it is a target of its own
+// rather than an alias.
+func TestDefaultTargets_AntigravityCLIHasOwnPath(t *testing.T) {
+	tc, ok := DefaultTargets()["antigravity-cli"]
+	if !ok {
+		t.Fatal("expected antigravity-cli in DefaultTargets")
+	}
+	if want := normalizeTargetPath("~/.gemini/antigravity-cli/skills"); tc.Path != want {
+		t.Errorf("antigravity-cli global path = %q, want %q", tc.Path, want)
+	}
+}
+
+func TestLookupProjectTarget_AntigravityCLIIsNotAntigravityAlias(t *testing.T) {
+	tc, ok := LookupProjectTarget("antigravity-cli")
+	if !ok {
+		t.Fatal("LookupProjectTarget should find antigravity-cli")
+	}
+	if tc.Path != ".agents/skills" {
+		t.Errorf("antigravity-cli project path = %q, want %q", tc.Path, ".agents/skills")
+	}
+	if _, ok := ProjectTargets()["antigravity-cli"]; !ok {
+		t.Error("antigravity-cli should be a canonical project target, not an alias")
+	}
+}
+
+func TestAlsoScans_AntigravityCLIHasNone(t *testing.T) {
+	if got := AlsoScansGlobal("antigravity-cli"); len(got) != 0 {
+		t.Errorf("AlsoScansGlobal(antigravity-cli) = %v, want none", got)
+	}
+}

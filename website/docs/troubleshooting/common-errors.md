@@ -489,9 +489,9 @@ skillshare doctor
 
 ### Antigravity does not load synced skills {#antigravity-does-not-load-synced-skills}
 
-**Cause:** Antigravity's skill scanner only discovers **real directories** — it skips symlinks. skillshare's default `merge` mode creates one symlink per skill (an NTFS junction on Windows), so none of them are picked up. On Windows this surfaces as an `Incorrect function` error; on macOS and Linux the skills are silently absent.
+**Cause:** The Antigravity app's skill scanner only discovers **real directories** — it skips symlinks. skillshare's default `merge` mode creates one symlink per skill (an NTFS junction on Windows), so none of them are picked up. On Windows this surfaces as an `Incorrect function` error; on macOS and Linux the skills are silently absent.
 
-This is an Antigravity-side limitation, not a skillshare bug. Two workarounds:
+This is an Antigravity-side limitation, not a skillshare bug. It applies to the `antigravity` target (the app, `~/.gemini/config/skills`); the standalone `agy` CLI is a separate `antigravity-cli` target reading `~/.gemini/antigravity-cli/skills`. Two workarounds:
 
 **Option 1 — switch the target to `copy` mode**
 
