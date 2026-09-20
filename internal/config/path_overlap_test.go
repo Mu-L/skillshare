@@ -33,6 +33,21 @@ func TestDetectPathOverlap_CodexSharesUniversalPath(t *testing.T) {
 	}
 }
 
+func TestDetectPathOverlap_LegacyGoosePathStillWarns(t *testing.T) {
+	// A config written before the default moved keeps goose on its own path;
+	// goose still reads universal's ~/.agents/skills, so the warning must stay.
+	involved := DetectPathOverlap(map[string]TargetConfig{
+		"goose":     {Skills: &ResourceTargetConfig{Path: "~/.config/goose/skills"}},
+		"universal": {Skills: &ResourceTargetConfig{Path: "~/.agents/skills"}},
+	}, false)
+
+	for _, want := range []string{"goose", "universal"} {
+		if !slices.Contains(involved, want) {
+			t.Errorf("DetectPathOverlap = %v, missing %s", involved, want)
+		}
+	}
+}
+
 func TestDetectPathOverlap_IgnoresScannerOwnPath(t *testing.T) {
 	// claude's runtime scans its own ~/.claude/skills; that is not an overlap
 	// with the unrelated target writing elsewhere.

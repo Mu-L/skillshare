@@ -274,12 +274,58 @@ func TestMatchesTargetName_CodexMatchesUniversal(t *testing.T) {
 	}
 }
 
+// goose and openhands both document ~/.agents/skills and .agents/skills as the
+// recommended skills locations, keeping their own directories for compatibility.
+func TestDefaultTargets_GooseAndOpenHandsShareUniversalPath(t *testing.T) {
+	targets := DefaultTargets()
+	projects := ProjectTargets()
+	for _, name := range []string{"goose", "openhands"} {
+		if got, want := targets[name].Path, targets["universal"].Path; got != want {
+			t.Errorf("%s default global path = %q, want universal's %q", name, got, want)
+		}
+		if got, want := projects[name].Path, ".agents/skills"; got != want {
+			t.Errorf("%s default project path = %q, want %q", name, got, want)
+		}
+	}
+}
+
+func TestAlsoScans_GooseAndOpenHandsKeepLegacyPaths(t *testing.T) {
+	for name, want := range map[string][2]string{
+		"goose":     {"~/.config/goose/skills", ".goose/skills"},
+		"openhands": {"~/.openhands/skills", ".openhands/skills"},
+	} {
+		spec := alsoScansSpec(t, name)
+		if !slices.Contains(spec.Global, want[0]) {
+			t.Errorf("%s also_scans.global = %v, missing the legacy %s", name, spec.Global, want[0])
+		}
+		if !slices.Contains(spec.Project, want[1]) {
+			t.Errorf("%s also_scans.project = %v, missing the legacy %s", name, spec.Project, want[1])
+		}
+	}
+}
+
+func TestDetectDir_GooseAndOpenHands(t *testing.T) {
+	// Their skills paths belong to universal, so only the install dir identifies
+	// the tool.
+	for name, want := range map[string]string{"goose": "~/.config/goose", "openhands": "~/.openhands"} {
+		if got := DetectDir(name); got != normalizeTargetPath(want) {
+			t.Errorf("DetectDir(%s) = %q, want %q", name, got, normalizeTargetPath(want))
+		}
+	}
+}
+
 func TestProjectTargetDotDirs_IncludesAlsoScans(t *testing.T) {
 	dirs := ProjectTargetDotDirs()
 
 	// .clinerules only appears in cline's also_scans.project.
 	if !dirs[".clinerules"] {
 		t.Error("expected .clinerules (cline also_scans.project) in ProjectTargetDotDirs")
+	}
+	// .goose and .openhands moved out of the primary paths into also_scans.
+	for _, dir := range []string{".goose", ".openhands"} {
+		if !dirs[dir] {
+			t.Errorf("expected %s (also_scans.project) in ProjectTargetDotDirs", dir)
+		}
 	}
 }
 

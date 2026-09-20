@@ -101,6 +101,13 @@ func cmdSyncProject(root string, dryRun, force, jsonOutput, quiet bool) (syncLog
 	}
 	failedTargets += notFoundCount
 
+	movedTargets := sync.MovedProjectTargets(runtime.config, runtime.targets)
+	for _, msg := range sync.CleanMovedProjectDirs(root, runtime.sourcePath, movedTargets, dryRun) {
+		if !jsonOutput {
+			ui.Info("%s", msg)
+		}
+	}
+
 	var totals syncModeStats
 	for _, r := range results {
 		totals.linked += r.stats.linked

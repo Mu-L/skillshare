@@ -209,6 +209,14 @@ func (s *Server) syncResources(start time.Time, dryRun, force bool, kind string)
 
 			results = append(results, res)
 		}
+
+		// Clean skillshare entries left in also_scans dirs a target no longer
+		// writes to, so the runtime stops seeing every skill twice.
+		if s.IsProjectMode() {
+			warnings = append(warnings, ssync.CleanMovedProjectDirs(
+				s.projectRoot, s.cfg.EffectiveSkillsSource(),
+				ssync.MovedProjectTargets(s.projectCfg, s.cfg.Targets), dryRun)...)
+		}
 	}
 
 	// Agent sync (skip when kind == "skill")

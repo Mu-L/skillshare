@@ -685,6 +685,11 @@ type PruneOptions struct {
 	TargetName   string
 	DryRun       bool
 	Force        bool
+	// ManagedOnly removes only entries that are provably skillshare's: symlinks
+	// into the source and manifest-tracked directories. The name heuristic and
+	// broken-external-link cleanup are skipped. For directories that are not a
+	// configured target's own path.
+	ManagedOnly bool
 }
 
 // PruneOrphanLinks removes target entries that are no longer managed by sync.
@@ -799,7 +804,7 @@ func PruneOrphanLinksWithSkills(opts PruneOptions) (*PruneResult, error) {
 					shouldRemove = true
 					reason = "orphan symlink to source"
 				}
-			} else if !targetExists {
+			} else if !targetExists && !opts.ManagedOnly {
 				// External symlink whose target no longer exists (e.g. after data migration)
 				shouldRemove = true
 				reason = "broken external symlink"
@@ -816,7 +821,7 @@ func PruneOrphanLinksWithSkills(opts PruneOptions) (*PruneResult, error) {
 			if _, inManifest := manifest.Managed[name]; inManifest {
 				shouldRemove = true
 				reason = "orphan skillshare-managed directory (manifest)"
-			} else if naming == "flat" && (utils.HasNestedSeparator(name) || utils.IsTrackedRepoDir(name)) {
+			} else if naming == "flat" && !opts.ManagedOnly && (utils.HasNestedSeparator(name) || utils.IsTrackedRepoDir(name)) {
 				// Fallback: naming pattern heuristic
 				shouldRemove = true
 				reason = "orphan skillshare-managed directory"

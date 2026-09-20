@@ -1283,3 +1283,29 @@ func TestSync_CodexTarget_WritesToAgentsPath(t *testing.T) {
 		t.Error("skill should not be written to the deprecated ~/.codex/skills")
 	}
 }
+
+func TestInit_GooseOnly_AddsUniversalInsteadOfGoose(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	os.Remove(sb.ConfigPath)
+
+	// Goose now reads ~/.agents/skills, so only ~/.config/goose identifies it
+	// and the detection must be credited to the universal target.
+	for _, dir := range []string{".claude", ".codex", ".cursor"} {
+		os.RemoveAll(filepath.Join(sb.Home, dir))
+	}
+	os.MkdirAll(filepath.Join(sb.Home, ".config", "goose"), 0755)
+
+	result := sb.RunCLI("init", "--no-copy", "--all-targets", "--no-git", "--no-skill")
+
+	result.AssertSuccess(t)
+
+	configContent := sb.ReadFile(sb.ConfigPath)
+	if !strings.Contains(configContent, "universal:") {
+		t.Errorf("config should contain universal target, got:\n%s", configContent)
+	}
+	if strings.Contains(configContent, "goose:") {
+		t.Errorf("config should not contain a separate goose target, got:\n%s", configContent)
+	}
+}

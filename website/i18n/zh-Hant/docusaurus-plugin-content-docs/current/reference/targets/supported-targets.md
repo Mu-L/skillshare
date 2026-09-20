@@ -125,7 +125,7 @@ skillshare 支援 **65+ 個 AI CLI 工具**。當你執行 `skillshare init` 時
 <tr id="target-forgecode"><td>forgecode</td><td><code>&#126;/forge/skills</code></td><td><code>.forge/skills</code></td></tr>
 
 <tr id="target-gemini"><td>gemini</td><td><code>&#126;/.gemini/skills</code></td><td><code>.gemini/skills</code></td></tr>
-<tr id="target-goose"><td>goose</td><td><code>&#126;/.config/goose/skills</code></td><td><code>.goose/skills</code></td></tr>
+<tr id="target-goose"><td>goose</td><td><code>&#126;/.agents/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-grok"><td>grok</td><td><code>&#126;/.grok/skills</code></td><td><code>.grok/skills</code></td></tr>
 <tr id="target-hermes"><td>hermes</td><td><code>&#126;/.hermes/skills</code></td><td><code>.hermes/skills</code></td></tr>
 <tr id="target-iflow"><td>iflow</td><td><code>&#126;/.iflow/skills</code></td><td><code>.iflow/skills</code></td></tr>
@@ -142,7 +142,7 @@ skillshare 支援 **65+ 個 AI CLI 工具**。當你執行 `skillshare init` 時
 <tr id="target-omp"><td>omp</td><td><code>&#126;/.omp/agent/skills</code></td><td><code>.omp/skills</code></td></tr>
 <tr id="target-openclaw"><td>openclaw</td><td><code>&#126;/.openclaw/skills</code></td><td><code>skills</code></td></tr>
 <tr id="target-opencode"><td>opencode</td><td><code>&#126;/.config/opencode/skills</code></td><td><code>.opencode/skills</code></td></tr>
-<tr id="target-openhands"><td>openhands</td><td><code>&#126;/.openhands/skills</code></td><td><code>.openhands/skills</code></td></tr>
+<tr id="target-openhands"><td>openhands</td><td><code>&#126;/.agents/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-pi"><td>pi</td><td><code>&#126;/.pi/agent/skills</code></td><td><code>.pi/skills</code></td></tr>
 <tr id="target-pochi"><td>pochi</td><td><code>&#126;/.pochi/skills</code></td><td><code>.pochi/skills</code></td></tr>
 <tr id="target-purecode"><td>purecode</td><td><code>&#126;/.purecode/skills</code></td><td><code>.agents/skills</code></td></tr>
