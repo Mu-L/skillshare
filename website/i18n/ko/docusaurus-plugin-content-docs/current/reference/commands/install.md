@@ -450,6 +450,8 @@ skillshare install github.com/team/skills --branch v1.2.0 --all
 skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
 ```
 
+프로젝트에서는 보통 이 방법이 필요 없습니다: `.skillshare/skills.lock.json`이 이미 모든 원격 skill을 설치된 커밋에 고정해두며, `skillshare update`가 그 고정을 옮깁니다. 자세한 내용은 [Lockfile](/docs/understand/project-skills#lockfile)을 참고하세요.
+
 고정된 ref는 skill 메타데이터에 저장되므로, `skillshare update`는 동일한 리비전을 다시 설치하고 `skillshare check`는 SHA 고정을 remote에 접속하지 않고 최신 상태로 보고합니다. `--track`에는 브랜치가 필요합니다. tag나 commit SHA는 clone을 detached 상태로 두어 `skillshare update`가 pull할 대상이 없으므로 설치가 거부됩니다.
 
 **팀 repo 설치 (tracked):**

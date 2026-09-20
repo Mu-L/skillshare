@@ -409,6 +409,10 @@ skillshare update --all -p --skip-audit  # Skip security audit gate
 
 The `_` prefix is optional — `skillshare update team-skills -p` auto-detects `_team-skills`.
 
+### Lockfile
+
+`update -p` is how a pinned commit moves forward. Each skill or tracked repo that lands on a new commit gets its entry in `.skillshare/skills.lock.json` rewritten; skills that did not change keep their pin. Commit the lockfile so teammates get the same commit on their next `skillshare install -p`. See [Lockfile](/docs/understand/project-skills#lockfile).
+
 ### Handling Conflicts
 
 Tracked repos with uncommitted changes are blocked by default:

@@ -450,6 +450,8 @@ skillshare install github.com/team/skills --branch v1.2.0 --all
 skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
 ```
 
+In a project you usually do not need this: `.skillshare/skills.lock.json` already pins every remote skill to the commit it was installed from, and `skillshare update` moves the pin. See [Lockfile](/docs/understand/project-skills#lockfile).
+
 The pinned ref is stored in skill metadata, so `skillshare update` reinstalls the same revision and `skillshare check` reports a SHA pin as up to date without contacting the remote. `--track` requires a branch: a tag or commit SHA leaves the clone detached with nothing for `skillshare update` to pull, so the install is rejected.
 
 **Install team repo (tracked):**

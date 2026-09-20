@@ -450,6 +450,8 @@ skillshare install github.com/team/skills --branch v1.2.0 --all
 skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
 ```
 
+プロジェクトでは通常これは不要です。`.skillshare/skills.lock.json` がすでにすべてのリモート skill をインストール時のコミットに固定しており、`skillshare update` がその固定を移動させるためです。[ロックファイル](/docs/understand/project-skills#lockfile)を参照してください。
+
 固定した ref は Skill のメタデータに保存されるため、`skillshare update` は同じリビジョンを再インストールし、`skillshare check` は SHA 固定をリモートに接続せずに最新として報告します。`--track` にはブランチが必要です。タグや commit SHA ではクローンが detached 状態になり、`skillshare update` が pull するものがないため、インストールは拒否されます。
 
 **チームリポジトリのインストール（トラック対象）:**

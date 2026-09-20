@@ -107,6 +107,7 @@ git commit -m "Add project-level skills"
 
 **What gets committed:**
 - `.skillshare/config.yaml` — targets and remote skill list
+- `.skillshare/skills.lock.json` — the commit each remote skill is pinned to, so everyone installs the same version
 - `.skillshare/.gitignore` — ignore patterns for project logs, trash, backups, and cloned skills
 - `.skillshare/skills/<local-skills>/` — local skill content
 

@@ -409,6 +409,10 @@ skillshare update --all -p --skip-audit  # 跳過安全性 audit 關卡
 
 `_` 前綴是選填的 — `skillshare update team-skills -p` 會自動偵測為 `_team-skills`。
 
+### Lockfile
+
+`update -p` 是讓釘選的 commit 往前推進的方式。每個移動到新 commit 的 skill 或 tracked 儲存庫，它在 `.skillshare/skills.lock.json` 中的項目都會被重寫；沒有變更的 skills 則保留原本的釘選。把 lockfile commit 進 git，隊友下次執行 `skillshare install -p` 時就會得到相同的 commit。詳見 [Lockfile](/docs/understand/project-skills#lockfile)。
+
 ### 處理衝突
 
 有未提交變更的 tracked 儲存庫預設會被封鎖：

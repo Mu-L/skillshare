@@ -110,6 +110,7 @@ git commit -m "Add project-level skills"
 
 **コミットされるもの:**
 - `.skillshare/config.yaml` — Target とリモート Skill のリスト
+- `.skillshare/skills.lock.json` — 各リモート Skill を固定する commit。全員が同じバージョンをインストールできます
 - `.skillshare/.gitignore` — プロジェクトのログ、trash、バックアップ、clone された Skill の無視パターン
 - `.skillshare/skills/<local-skills>/` — ローカルの Skill の内容
 

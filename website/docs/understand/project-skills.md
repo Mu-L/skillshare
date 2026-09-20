@@ -88,6 +88,7 @@ There is a third option for projects that are yours alone: list the folders unde
 <project-root>/
 ├── .skillshare/
 │   ├── config.yaml              # Targets + settings (incl. extras)
+│   ├── skills.lock.json         # Commit each remote skill is pinned to (auto-managed, commit it)
 │   ├── skills/.metadata.json     # Runtime metadata (hashes, timestamps — auto-managed, gitignored)
 │   ├── .gitignore               # Ignores logs/, trash/, backups/, and cloned remote/tracked skill dirs
 │   ├── extras/                  # Extras source directories
@@ -208,6 +209,40 @@ Runtime metadata (install timestamps, file hashes, commit SHAs) is stored separa
 :::tip Portable Skill Manifest
 `config.yaml` is the declarative skill manifest. In a project, commit it to git and anyone can run `skillshare install -p && skillshare sync`. For global mode, `.metadata.json` serves as the manifest since global config doesn't need to be shared via git.
 :::
+
+### Lockfile {#lockfile}
+
+`config.yaml` says what a skill follows, such as a repo's default branch. `.skillshare/skills.lock.json` records which commit that was when someone last installed or updated it. Commit both, and everyone who runs `skillshare install -p` gets the same content, even after the upstream repo has moved on.
+
+```json
+{
+  "version": 1,
+  "skills": {
+    "pdf": {
+      "source": "github.com/anthropics/skills/skills/pdf",
+      "commit": "8f14e45fceea167a5a36dedd4bea2543ce848564",
+      "tree_hash": "f88c87101780018cfabdd229d5d92abedd6f640e"
+    }
+  }
+}
+```
+
+The file is written for you. You never edit it:
+
+| Command | Effect on the lockfile |
+|---------|------------------------|
+| `skillshare install <source> -p` | Pins the new skill to the commit it was installed from |
+| `skillshare install -p` | Installs every skill at its pinned commit. A skill that is already installed at another commit is moved to the pinned one |
+| `skillshare update <name> -p` | Moves the skill to the latest commit and rewrites its pin, so the change shows up in code review |
+| `skillshare uninstall <name> -p` | Removes the pin |
+
+Tracked repos are pinned too. They are reset to the pinned commit but stay on their branch, so `skillshare update` can still pull. A pin is ignored once the skill's `source` in `config.yaml` no longer matches it. Local-path sources have no commit and are not pinned.
+
+A pin only moves when you move the skill, with `update` or a forced reinstall. If a teammate's pin is newer than your copy, other commands leave the pin alone until `skillshare install -p` brings your copy up to it. `install -p` does not move a tracked repo that has uncommitted changes; commit or discard them first.
+
+Skills installed with an earlier skillshare version have no recorded commit. They are pinned the next time they are updated or reinstalled.
+
+The lockfile is different from `--branch <sha>`: that flag pins a skill permanently, and `update` reinstalls the same revision. With the lockfile the skill keeps following its branch, and only an explicit `update` moves it.
 
 ---
 

@@ -107,6 +107,7 @@ git commit -m "Add project-level skills"
 
 **会被 commit 的内容：**
 - `.skillshare/config.yaml` —— Target 与远端 Skill 清单
+- `.skillshare/skills.lock.json` —— 每个远端 Skill 固定的 commit，让所有人安装到相同版本
 - `.skillshare/.gitignore` —— 专案日志、trash、backup 与克隆 Skill 的忽略规则
 - `.skillshare/skills/<local-skills>/` —— 本地 Skill 内容
 

@@ -44,6 +44,8 @@ skills:
 
 这个文件会被提交到 git——队友克隆仓库后运行 `skillshare install -p` 即可安装所有列出的 Skill。
 
+Manifest 记录的是要安装*什么*。每个 Skill 实际解析到的确切 commit 则记录在它旁边的 `.skillshare/skills.lock.json` 中,该文件由系统自动写入,也应该一并提交。有了这两个文件,即使上游已经继续往前推进,`skillshare install -p` 也能让每位队友得到相同的 commit。参见[锁定文件](./project-skills.md#lockfile)。
+
 ### Global Mode Manifest
 
 在 Global mode 中,Skill 记录存储在 `.metadata.json`(集中式元数据存储)中。这个文件还包含运行时追踪数据(哈希、时间戳),并且是自动管理的。
@@ -65,7 +67,7 @@ skillshare install -p
 skillshare install --dry-run
 ```
 
-已存在的 Skill 会被自动跳过。
+已存在的 Skill 会被自动跳过。在 Project mode 中,如果某个 Skill 已安装的 commit 与锁定文件不一致,则会被移动到固定的 commit。
 
 ### 自动协调
 
@@ -74,7 +76,7 @@ Manifest 会与你实际的 Skill 集合保持同步:
 - **`skillshare install <source>`** —— 自动将已安装的 Skill 添加到 manifest 中
 - **`skillshare uninstall <name>...`** —— 自动从 manifest 中移除该条目
 
-在 Project mode 中,更新的是 `config.yaml`。在 Global mode 中,更新的是 `.metadata.json`。你永远不需要手动编辑 manifest(不过你也可以这样做)。
+在 Project mode 中,更新的是 `config.yaml` 和 `skills.lock.json`。在 Global mode 中,更新的是 `.metadata.json`。你永远不需要手动编辑 manifest(不过你也可以这样做)。
 
 ## Skill 条目字段
 
@@ -151,7 +153,7 @@ skillshare install anthropics/skills/skills/pdf --into frontend -p
 ```
 Project mode:
 1. Install skills normally      →  config.yaml skills: auto-updates
-2. Commit config.yaml via git   →  portable across team members
+2. Commit config.yaml and skills.lock.json via git  →  same skills, same commits for the team
 3. Run `skillshare install -p`  →  reproduce on clone
 4. Run `skillshare sync`        →  distribute to all targets
 

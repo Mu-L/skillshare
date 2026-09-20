@@ -88,6 +88,7 @@ skillshare sync -g       # Force global mode
 <project-root>/
 ├── .skillshare/
 │   ├── config.yaml              # Targets + settings (incl. extras)
+│   ├── skills.lock.json         # Commit each remote skill is pinned to (auto-managed, commit it)
 │   ├── skills/.metadata.json     # Runtime metadata (hashes, timestamps — auto-managed, gitignored)
 │   ├── .gitignore               # Ignores logs/, trash/, backups/, and cloned remote/tracked skill dirs
 │   ├── extras/                  # Extras source directories
@@ -208,6 +209,40 @@ skills:
 :::tip 可攜的 Skill Manifest
 `config.yaml` 就是宣告式的 skill manifest。在 project 中，把它 commit 進 git，任何人都能執行 `skillshare install -p && skillshare sync`。至於 global mode，由於 global config 不需要透過 git 分享，`.metadata.json` 就扮演 manifest 的角色。
 :::
+
+### Lockfile {#lockfile}
+
+`config.yaml` 說明一個 skill 跟隨的對象，例如某個 repo 的預設分支。`.skillshare/skills.lock.json` 則記錄上次有人安裝或更新它時，那是哪一個 commit。把兩者都 commit 進 git，任何人執行 `skillshare install -p` 都會得到相同的內容，即使 upstream repo 之後已經往前推進。
+
+```json
+{
+  "version": 1,
+  "skills": {
+    "pdf": {
+      "source": "github.com/anthropics/skills/skills/pdf",
+      "commit": "8f14e45fceea167a5a36dedd4bea2543ce848564",
+      "tree_hash": "f88c87101780018cfabdd229d5d92abedd6f640e"
+    }
+  }
+}
+```
+
+這個檔案是自動幫你寫入的，你永遠不需要自己編輯它：
+
+| 指令 | 對 lockfile 的影響 |
+|---------|------------------------|
+| `skillshare install <source> -p` | 把新 skill 釘選到它安裝時的 commit |
+| `skillshare install -p` | 依釘選的 commit 安裝每個 skill。若某個 skill 已安裝在其他 commit，會被移動到釘選的 commit |
+| `skillshare update <name> -p` | 把 skill 移動到最新 commit 並重寫它的釘選，讓這項變更能出現在 code review 中 |
+| `skillshare uninstall <name> -p` | 移除釘選 |
+
+Tracked repos 也會被釘選。它們會被重設到釘選的 commit，但仍留在原本的分支上，讓 `skillshare update` 還是能繼續 pull。一旦 skill 在 `config.yaml` 中的 `source` 不再與釘選相符，該釘選就會被忽略。Local-path 來源沒有 commit，也不會被釘選。
+
+釘選只會在你移動 skill 時跟著移動，也就是執行 `update` 或強制重新安裝的時候。如果隊友的釘選比你本機的版本新，其他指令不會動它，直到你執行 `skillshare install -p` 把本機更新到該版本。Tracked repo 若有未 commit 的變更，`install -p` 不會移動它，請先 commit 或捨棄變更。
+
+用較舊版本 skillshare 安裝的 skill 沒有記錄 commit，會在下次更新或重新安裝時被釘選。
+
+Lockfile 與 `--branch <sha>` 不同：該旗標會把 skill 永久釘選，`update` 只會重新安裝同一個版本。使用 lockfile 時，skill 仍會持續跟隨它的分支，只有明確執行 `update` 才會移動它。
 
 ---
 

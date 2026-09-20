@@ -88,6 +88,7 @@ skillshare sync -g       # Force global mode
 <project-root>/
 ├── .skillshare/
 │   ├── config.yaml              # Targets + settings (incl. extras)
+│   ├── skills.lock.json         # Commit each remote skill is pinned to (auto-managed, commit it)
 │   ├── skills/.metadata.json     # Runtime metadata (hashes, timestamps — auto-managed, gitignored)
 │   ├── .gitignore               # Ignores logs/, trash/, backups/, and cloned remote/tracked skill dirs
 │   ├── extras/                  # Extras source directories
@@ -208,6 +209,40 @@ skills:
 :::tip 可移植的 Skill 清单
 `config.yaml` 是声明式的 skill manifest。在项目中,将其提交到 git,任何人都可以运行 `skillshare install -p && skillshare sync`。对于 Global mode,由于全局配置不需要通过 git 共享,`.metadata.json` 就充当了这个 manifest。
 :::
+
+### 锁定文件 {#lockfile}
+
+`config.yaml` 声明一个 Skill 所跟随的目标,例如某个仓库的默认分支。`.skillshare/skills.lock.json` 记录的则是上次安装或更新时,那实际对应的是哪个 commit。把两者都提交到 git,任何运行 `skillshare install -p` 的人都会得到相同的内容,即使上游仓库已经继续往前推进。
+
+```json
+{
+  "version": 1,
+  "skills": {
+    "pdf": {
+      "source": "github.com/anthropics/skills/skills/pdf",
+      "commit": "8f14e45fceea167a5a36dedd4bea2543ce848564",
+      "tree_hash": "f88c87101780018cfabdd229d5d92abedd6f640e"
+    }
+  }
+}
+```
+
+该文件由系统自动写入,你无需手动编辑:
+
+| 命令 | 对锁定文件的影响 |
+|---------|------------------------|
+| `skillshare install <source> -p` | 将新 Skill 固定到其安装时所在的 commit |
+| `skillshare install -p` | 按固定的 commit 安装每个 Skill。已安装在其他 commit 上的 Skill 会被移动到固定的 commit |
+| `skillshare update <name> -p` | 将 Skill 移动到最新 commit 并重写其固定点,使该变更能在代码审查中体现出来 |
+| `skillshare uninstall <name> -p` | 移除固定 |
+
+Tracked 仓库同样会被固定。它们会被重置到固定的 commit,但仍留在原本的分支上,因此 `skillshare update` 依旧可以 pull。一旦 Skill 在 `config.yaml` 中的 `source` 与固定点不再匹配,该固定就会被忽略。本地路径来源没有 commit,因此不会被固定。
+
+固定只会在你移动 Skill 时跟着移动,也就是执行 `update` 或强制重新安装的时候。如果队友的固定比你本机的版本新,其他命令不会改动它,直到你执行 `skillshare install -p` 把本机更新到该版本。Tracked 仓库若有未 commit 的变更,`install -p` 不会移动它,请先 commit 或丢弃变更。
+
+用较旧版本 skillshare 安装的 Skill 没有记录 commit,会在下次更新或重新安装时被固定。
+
+锁定文件不同于 `--branch <sha>`:该 flag 会永久固定一个 Skill,`update` 只会重新安装同一版本。使用锁定文件时,Skill 会继续跟随其分支,只有显式的 `update` 才会移动它。
 
 ---
 

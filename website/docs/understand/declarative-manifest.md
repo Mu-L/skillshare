@@ -44,6 +44,8 @@ skills:
 
 This file is committed to git — teammates clone the repo and run `skillshare install -p` to install all listed skills.
 
+The manifest records *what* to install. The exact commit each skill resolved to is recorded next to it in `.skillshare/skills.lock.json`, which is written automatically and should be committed too. With both files, `skillshare install -p` gives every teammate the same commit even after upstream moves on. See [Lockfile](./project-skills.md#lockfile).
+
 ### Global Mode Manifest
 
 In global mode, skill records are stored in `.metadata.json` (the centralized metadata store). This file also contains runtime tracking data (hashes, timestamps) and is auto-managed.
@@ -65,7 +67,7 @@ skillshare install -p
 skillshare install --dry-run
 ```
 
-Skills that already exist are skipped automatically.
+Skills that already exist are skipped automatically. In project mode, a skill whose installed commit differs from the lockfile is brought to the locked commit instead.
 
 ### Automatic Reconciliation
 
@@ -74,7 +76,7 @@ The manifest stays in sync with your actual skill collection:
 - **`skillshare install <source>`** — adds the installed skill to the manifest automatically
 - **`skillshare uninstall <name>...`** — removes the entry from the manifest automatically
 
-In project mode, `config.yaml` is updated. In global mode, `.metadata.json` is updated. You never need to edit the manifest manually (though you can).
+In project mode, `config.yaml` and `skills.lock.json` are updated. In global mode, `.metadata.json` is updated. You never need to edit the manifest manually (though you can).
 
 ## Skill Entry Fields
 
@@ -151,7 +153,7 @@ Contributors clone and run `skillshare install -p` to get project-specific AI co
 ```
 Project mode:
 1. Install skills normally      →  config.yaml skills: auto-updates
-2. Commit config.yaml via git   →  portable across team members
+2. Commit config.yaml and skills.lock.json via git  →  same skills, same commits for the team
 3. Run `skillshare install -p`  →  reproduce on clone
 4. Run `skillshare sync`        →  distribute to all targets
 

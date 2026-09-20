@@ -279,6 +279,7 @@ In project mode, uninstall:
 - Moves the skill directory to `.skillshare/trash/` (kept 7 days)
 - Removes the skill's entry from `.skillshare/config.yaml` `skills:` list (for remote skills)
 - Removes the entry from `.skillshare/.gitignore` (for remote/tracked skills)
+- Removes the skill's pin from `.skillshare/skills.lock.json` (for a group, every pin under it)
 - For tracked repos: checks for uncommitted changes (use `--force` to override)
 - The `_` prefix is optional — auto-detected
 

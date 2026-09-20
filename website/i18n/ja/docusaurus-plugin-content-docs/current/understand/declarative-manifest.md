@@ -44,6 +44,8 @@ skills:
 
 このファイルは git にコミットされます — チームメンバーはリポジトリを clone し、`skillshare install -p` を実行して、リストされたすべての skill をインストールします。
 
+マニフェストは*何を*インストールするかを記録します。各 skill が解決された正確なコミットは、その隣の `.skillshare/skills.lock.json` に記録されます。このファイルは自動的に書き込まれ、こちらもコミットしておく必要があります。両方のファイルがあれば、upstream が先に進んだ後でも、`skillshare install -p` はチームメンバー全員に同じコミットを提供します。[ロックファイル](./project-skills.md#lockfile)を参照してください。
+
 ### Global Mode のマニフェスト
 
 Global mode では、skill のレコードは `.metadata.json`（一元化されたメタデータストア）に保存されます。このファイルにはランタイムのトラッキングデータ（ハッシュ、タイムスタンプ）も含まれており、自動的に管理されます。
@@ -65,7 +67,7 @@ skillshare install -p
 skillshare install --dry-run
 ```
 
-すでに存在する skill は自動的にスキップされます。
+すでに存在する skill は自動的にスキップされます。Project mode では、インストール済みのコミットがロックファイルと異なる skill は、代わりに固定されたコミットへ移動します。
 
 ### 自動的な整合性維持
 
@@ -74,7 +76,7 @@ skillshare install --dry-run
 - **`skillshare install <source>`** — インストールされた skill を自動的にマニフェストに追加します
 - **`skillshare uninstall <name>...`** — マニフェストからそのエントリを自動的に削除します
 
-Project mode では `config.yaml` が更新されます。Global mode では `.metadata.json` が更新されます。マニフェストを手動で編集する必要は（可能ではありますが）ありません。
+Project mode では `config.yaml` と `skills.lock.json` が更新されます。Global mode では `.metadata.json` が更新されます。マニフェストを手動で編集する必要は（可能ではありますが）ありません。
 
 ## Skill エントリのフィールド
 
@@ -151,7 +153,7 @@ skillshare install anthropics/skills/skills/pdf --into frontend -p
 ```
 Project mode:
 1. Install skills normally      →  config.yaml skills: auto-updates
-2. Commit config.yaml via git   →  portable across team members
+2. Commit config.yaml and skills.lock.json via git  →  same skills, same commits for the team
 3. Run `skillshare install -p`  →  reproduce on clone
 4. Run `skillshare sync`        →  distribute to all targets
 

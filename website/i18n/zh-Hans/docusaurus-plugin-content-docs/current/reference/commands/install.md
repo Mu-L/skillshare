@@ -450,6 +450,8 @@ skillshare install github.com/team/skills --branch v1.2.0 --all
 skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
 ```
 
+在项目中你通常不需要这样做：`.skillshare/skills.lock.json` 已经把每个远程 Skill 固定到了其安装时所在的 commit，`skillshare update` 会移动这个固定点。参见[锁定文件](/docs/understand/project-skills#lockfile)。
+
 固定的 ref 会保存在 Skill 元数据中，因此 `skillshare update` 会重新安装同一版本，`skillshare check` 对 SHA 固定会直接报告为最新，不会连接远程。`--track` 必须是分支：tag 或 commit SHA 会让克隆处于 detached 状态，`skillshare update` 没有可以 pull 的内容，因此安装会被拒绝。
 
 **安装团队仓库（tracked）：**

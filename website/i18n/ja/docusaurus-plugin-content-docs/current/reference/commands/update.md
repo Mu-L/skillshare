@@ -409,6 +409,10 @@ skillshare update --all -p --skip-audit  # security audit gate をスキップ
 
 `_` prefix は省略可能です — `skillshare update team-skills -p` は自動的に `_team-skills` を検出します。
 
+### ロックファイル
+
+固定されたコミットを先へ進めるのが `update -p` です。新しいコミットに移動した skill や tracked repo は、`.skillshare/skills.lock.json` 内のエントリが書き換えられます。変更のなかった skill は固定をそのまま保持します。ロックファイルをコミットしておけば、チームメンバーは次回の `skillshare install -p` で同じコミットを取得できます。[ロックファイル](/docs/understand/project-skills#lockfile)を参照してください。
+
 ### コンフリクトの処理
 
 未コミットの変更がある tracked repos はデフォルトでブロックされます。

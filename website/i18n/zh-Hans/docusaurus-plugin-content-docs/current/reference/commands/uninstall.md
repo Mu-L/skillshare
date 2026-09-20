@@ -284,6 +284,7 @@ skillshare uninstall team-skills -p                # Tracked repo (_ prefix opti
 - 将 skill 目录移动到 `.skillshare/trash/`（保留 7 天）
 - 从 `.skillshare/config.yaml` 的 `skills:` 列表中移除该 skill 的条目（对于远程 skills）
 - 从 `.skillshare/.gitignore` 中移除该条目（对于远程/tracked skills）
+- 从 `.skillshare/skills.lock.json` 中移除该 skill 的固定（对于 group，则移除其下的所有固定）
 - 对于 tracked repos：检查是否有未提交的更改（使用 `--force` 覆盖）
 - `_` 前缀是可选的——会自动检测
 

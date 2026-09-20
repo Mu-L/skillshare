@@ -44,6 +44,8 @@ skills:
 
 이 파일은 git에 커밋됩니다 — 팀원이 repo를 clone하고 `skillshare install -p`를 실행하면 나열된 모든 skill이 설치됩니다.
 
+manifest는 *무엇을* 설치할지를 기록합니다. 각 skill이 실제로 해석된 정확한 커밋은 그 옆의 `.skillshare/skills.lock.json`에 기록되며, 이 파일은 자동으로 작성되고 함께 커밋해야 합니다. 두 파일이 모두 있으면 upstream이 그 사이 진행되었더라도 `skillshare install -p`는 모든 팀원에게 동일한 커밋을 제공합니다. [Lockfile](./project-skills.md#lockfile)을 참고하세요.
+
 ### Global Mode Manifest
 
 global mode에서는 skill 기록이 `.metadata.json`(중앙화된 메타데이터 저장소)에 저장됩니다. 이 파일에는 런타임 추적 데이터(해시, 타임스탬프)도 포함되며 자동으로 관리됩니다.
@@ -65,7 +67,7 @@ skillshare install -p
 skillshare install --dry-run
 ```
 
-이미 존재하는 skill은 자동으로 건너뜁니다.
+이미 존재하는 skill은 자동으로 건너뜁니다. project mode에서는 설치된 커밋이 lockfile과 다른 skill은 건너뛰는 대신 고정된 커밋으로 이동됩니다.
 
 ### 자동 조정(Reconciliation)
 
@@ -74,7 +76,7 @@ manifest는 실제 skill 컬렉션과 동기화 상태를 유지합니다:
 - **`skillshare install <source>`** — 설치된 skill을 manifest에 자동으로 추가
 - **`skillshare uninstall <name>...`** — manifest에서 해당 항목을 자동으로 제거
 
-project mode에서는 `config.yaml`이 업데이트됩니다. global mode에서는 `.metadata.json`이 업데이트됩니다. manifest를 수동으로 편집할 필요는 없습니다 (물론 할 수는 있습니다).
+project mode에서는 `config.yaml`과 `skills.lock.json`이 업데이트됩니다. global mode에서는 `.metadata.json`이 업데이트됩니다. manifest를 수동으로 편집할 필요는 없습니다 (물론 할 수는 있습니다).
 
 ## Skill 항목 필드
 
@@ -151,7 +153,7 @@ skillshare install anthropics/skills/skills/pdf --into frontend -p
 ```
 Project mode:
 1. Install skills normally      →  config.yaml skills: auto-updates
-2. Commit config.yaml via git   →  portable across team members
+2. Commit config.yaml and skills.lock.json via git  →  same skills, same commits for the team
 3. Run `skillshare install -p`  →  reproduce on clone
 4. Run `skillshare sync`        →  distribute to all targets
 

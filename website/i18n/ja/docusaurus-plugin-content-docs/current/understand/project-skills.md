@@ -88,6 +88,7 @@ skillshare sync -g       # Force global mode
 <project-root>/
 ├── .skillshare/
 │   ├── config.yaml              # Targets + settings (incl. extras)
+│   ├── skills.lock.json         # 各リモート skill が固定されているコミット（自動管理、コミットしてください）
 │   ├── skills/.metadata.json     # Runtime metadata (hashes, timestamps — auto-managed, gitignored)
 │   ├── .gitignore               # Ignores logs/, trash/, backups/, and cloned remote/tracked skill dirs
 │   ├── extras/                  # Extras source directories
@@ -208,6 +209,40 @@ skills:
 :::tip ポータブルな Skill マニフェスト
 `config.yaml` は宣言的な skill マニフェストです。プロジェクトでは、これを git にコミットすれば、誰でも `skillshare install -p && skillshare sync` を実行できます。Global mode では、`.metadata.json` がマニフェストとして機能します。グローバル config は git 経由で共有する必要がないためです。
 :::
+
+### ロックファイル {#lockfile}
+
+`config.yaml` は skill が何に追従するか、たとえばリポジトリのデフォルトブランチを記述します。`.skillshare/skills.lock.json` は、誰かが最後にそれをインストールまたは更新した時点のコミットを記録します。両方をコミットしておけば、`skillshare install -p` を実行した全員が同じ内容を得られます。たとえ upstream リポジトリが先に進んでいても変わりません。
+
+```json
+{
+  "version": 1,
+  "skills": {
+    "pdf": {
+      "source": "github.com/anthropics/skills/skills/pdf",
+      "commit": "8f14e45fceea167a5a36dedd4bea2543ce848564",
+      "tree_hash": "f88c87101780018cfabdd229d5d92abedd6f640e"
+    }
+  }
+}
+```
+
+このファイルはあなたの代わりに書き込まれます。自分で編集することはありません。
+
+| コマンド | ロックファイルへの効果 |
+|---------|------------------------|
+| `skillshare install <source> -p` | 新しい skill を、インストール元のコミットに固定します |
+| `skillshare install -p` | すべての skill をそれぞれの固定コミットでインストールします。別のコミットで既にインストール済みの skill は、固定されたコミットへ移動します |
+| `skillshare update <name> -p` | skill を最新コミットへ移動し、固定を書き換えます。これによりコードレビューで変更が確認できます |
+| `skillshare uninstall <name> -p` | 固定を解除します |
+
+Tracked リポジトリも固定されます。固定されたコミットにリセットされますが、ブランチ上には留まるため、`skillshare update` は引き続き pull できます。`config.yaml` 内の skill の `source` が一致しなくなると、固定は無視されます。ローカルパスの source にはコミットがなく、固定されません。
+
+固定が動くのは、`update` または強制再インストールで skill を動かしたときだけです。チームメイトの固定が手元のコピーより新しい場合、他のコマンドはその固定を変更せず、`skillshare install -p` を実行すると手元のコピーがそのコミットに揃います。コミットされていない変更がある Tracked リポジトリは `install -p` では移動されません。先にコミットするか破棄してください。
+
+以前のバージョンの skillshare でインストールした skill にはコミットが記録されていません。次に更新または再インストールしたときに固定されます。
+
+ロックファイルは `--branch <sha>` とは異なります。そのフラグは skill を恒久的に固定し、`update` は同じリビジョンを再インストールします。ロックファイルを使う場合、skill はブランチに追従し続け、明示的な `update` だけが移動させます。
 
 ---
 

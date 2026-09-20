@@ -450,6 +450,8 @@ skillshare install github.com/team/skills --branch v1.2.0 --all
 skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
 ```
 
+在 project 中，你通常不需要這麼做：`.skillshare/skills.lock.json` 已經把每個遠端 skill 釘選到它安裝時的 commit，而 `skillshare update` 會移動這個釘選。詳見 [Lockfile](/docs/understand/project-skills#lockfile)。
+
 釘選的 ref 會存在 skill metadata 中，因此 `skillshare update` 會重新安裝同一個版本，`skillshare check` 對 SHA 釘選會直接回報已是最新，不會連線 remote。`--track` 必須是 branch：tag 或 commit SHA 會讓 clone 處於 detached 狀態，`skillshare update` 沒有東西可以 pull，因此安裝會被拒絕。
 
 **安裝團隊 repo（tracked）：**

@@ -409,6 +409,10 @@ skillshare update --all -p --skip-audit  # 보안 audit gate 건너뛰기
 
 `_` 접두사는 선택 사항입니다 — `skillshare update team-skills -p`는 `_team-skills`를 자동으로 감지합니다.
 
+### Lockfile
+
+`update -p`는 고정된 커밋을 앞으로 이동시키는 방법입니다. 새 커밋으로 이동한 각 skill 또는 tracked repo는 `.skillshare/skills.lock.json`의 항목이 다시 쓰이며, 변경되지 않은 skill은 고정을 그대로 유지합니다. 팀원이 다음 `skillshare install -p`에서 동일한 커밋을 받을 수 있도록 lockfile을 커밋하세요. [Lockfile](/docs/understand/project-skills#lockfile)을 참고하세요.
+
 ### 충돌 처리
 
 커밋되지 않은 변경 사항이 있는 tracked 저장소는 기본적으로 차단됩니다:

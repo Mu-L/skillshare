@@ -107,6 +107,7 @@ git commit -m "Add project-level skills"
 
 **커밋되는 것:**
 - `.skillshare/config.yaml` — Target과 원격 Skill 목록
+- `.skillshare/skills.lock.json` — 각 원격 Skill이 고정된 commit. 모두가 같은 버전을 설치하게 됩니다
 - `.skillshare/.gitignore` — 프로젝트 로그, trash, 백업, clone된 Skill에 대한 무시 패턴
 - `.skillshare/skills/<local-skills>/` — 로컬 Skill 콘텐츠
 

@@ -279,6 +279,7 @@ skillshare uninstall team-skills -p                # Tracked repo（_ 前綴為�
 - 把 skill 目錄移到 `.skillshare/trash/`（保留 7 天）
 - 從 `.skillshare/config.yaml` 的 `skills:` 清單移除該 skill 項目（適用於 remote skills）
 - 從 `.skillshare/.gitignore` 移除該項目（適用於 remote/tracked skills）
+- 從 `.skillshare/skills.lock.json` 移除該 skill 的釘選（若是群組，則移除其下的每個釘選）
 - 對於 tracked repos：檢查未提交的變更（用 `--force` 可覆蓋）
 - `_` 前綴為選填 — 會自動偵測
 

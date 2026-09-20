@@ -279,6 +279,7 @@ Project mode에서 uninstall은 다음을 수행합니다.
 - skill 디렉터리를 `.skillshare/trash/`로 이동합니다(7일간 보관)
 - `.skillshare/config.yaml`의 `skills:` 목록에서 skill 항목을 제거합니다(remote skill의 경우)
 - `.skillshare/.gitignore`에서 항목을 제거합니다(remote/tracked skill의 경우)
+- `.skillshare/skills.lock.json`에서 skill의 고정을 제거합니다(group의 경우 그 아래의 모든 고정)
 - tracked repo의 경우: 커밋되지 않은 변경 사항을 확인합니다(재정의하려면 `--force` 사용)
 - `_` 접두사는 선택 사항입니다 — 자동 감지됨
 

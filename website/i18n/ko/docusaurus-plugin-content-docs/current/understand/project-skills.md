@@ -88,6 +88,7 @@ skillshare sync -g       # Force global mode
 <project-root>/
 ├── .skillshare/
 │   ├── config.yaml              # Targets + settings (incl. extras)
+│   ├── skills.lock.json         # Commit each remote skill is pinned to (auto-managed, commit it)
 │   ├── skills/.metadata.json     # Runtime metadata (hashes, timestamps — auto-managed, gitignored)
 │   ├── .gitignore               # Ignores logs/, trash/, backups/, and cloned remote/tracked skill dirs
 │   ├── extras/                  # Extras source directories
@@ -208,6 +209,42 @@ skills:
 :::tip 이식 가능한 Skill Manifest
 `config.yaml`은 선언적 skill manifest입니다. 프로젝트에서는 git에 커밋하면 누구나 `skillshare install -p && skillshare sync`를 실행할 수 있습니다. global mode의 경우, global config는 git으로 공유할 필요가 없으므로 `.metadata.json`이 manifest 역할을 합니다.
 :::
+
+---
+
+### Lockfile {#lockfile}
+
+`config.yaml`은 skill이 따르는 대상 — 예를 들어 repo의 기본 브랜치 — 을 나타냅니다. `.skillshare/skills.lock.json`은 누군가 마지막으로 설치하거나 업데이트했을 때 그것이 어떤 커밋이었는지를 기록합니다. 둘 다 커밋해두면, upstream repo가 그 사이 진행되었더라도 `skillshare install -p`를 실행하는 모든 사람이 동일한 콘텐츠를 받게 됩니다.
+
+```json
+{
+  "version": 1,
+  "skills": {
+    "pdf": {
+      "source": "github.com/anthropics/skills/skills/pdf",
+      "commit": "8f14e45fceea167a5a36dedd4bea2543ce848564",
+      "tree_hash": "f88c87101780018cfabdd229d5d92abedd6f640e"
+    }
+  }
+}
+```
+
+이 파일은 자동으로 작성됩니다. 직접 편집할 일은 없습니다:
+
+| Command | Lockfile에 대한 효과 |
+|---------|------------------------|
+| `skillshare install <source> -p` | 새 skill을 설치된 커밋에 고정합니다 |
+| `skillshare install -p` | 모든 skill을 고정된 커밋으로 설치합니다. 이미 다른 커밋으로 설치되어 있는 skill은 고정된 커밋으로 이동됩니다 |
+| `skillshare update <name> -p` | skill을 최신 커밋으로 이동시키고 고정을 다시 씁니다. 그러면 코드 리뷰에 변경 사항이 나타납니다 |
+| `skillshare uninstall <name> -p` | 고정을 제거합니다 |
+
+Tracked repo도 고정됩니다. 고정된 커밋으로 초기화되지만 브랜치는 그대로 유지되므로 `skillshare update`는 계속 pull할 수 있습니다. `config.yaml`의 skill `source`가 더 이상 일치하지 않게 되면 고정은 무시됩니다. Local-path source는 커밋이 없으므로 고정되지 않습니다.
+
+고정은 `update`나 강제 재설치로 skill을 직접 움직일 때만 이동합니다. 팀원의 고정이 내 로컬 복사본보다 최신이면 다른 명령은 그 고정을 건드리지 않으며, `skillshare install -p`를 실행하면 로컬 복사본이 해당 커밋으로 맞춰집니다. 커밋되지 않은 변경이 있는 Tracked repo는 `install -p`가 이동시키지 않습니다. 먼저 커밋하거나 변경을 버리세요.
+
+이전 버전의 skillshare로 설치한 skill에는 기록된 커밋이 없습니다. 다음에 업데이트하거나 재설치할 때 고정됩니다.
+
+Lockfile은 `--branch <sha>`와 다릅니다: 그 flag는 skill을 영구적으로 고정하며, `update`는 동일한 리비전을 다시 설치합니다. Lockfile을 사용하면 skill은 계속 브랜치를 따라가며, 명시적으로 `update`를 실행해야만 이동합니다.
 
 ---
 

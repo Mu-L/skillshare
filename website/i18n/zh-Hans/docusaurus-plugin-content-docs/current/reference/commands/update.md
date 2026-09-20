@@ -409,6 +409,10 @@ skillshare update --all -p --skip-audit  # Skip security audit gate
 
 `_` 前缀是可选的——`skillshare update team-skills -p` 会自动检测为 `_team-skills`。
 
+### 锁定文件
+
+`update -p` 是让固定的 commit 向前推进的方式。每个移动到新 commit 的 skill 或 tracked repo，其在 `.skillshare/skills.lock.json` 中的条目都会被重写；没有变化的 skills 则保留原有的固定。请提交锁定文件，这样队友下次运行 `skillshare install -p` 时就会得到相同的 commit。参见[锁定文件](/docs/understand/project-skills#lockfile)。
+
 ### 处理冲突
 
 有未提交变更的 tracked repos 默认会被阻止：
