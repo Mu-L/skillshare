@@ -266,7 +266,7 @@ skillshare sync
 | `--into <dir>` | | 安裝到子目錄中（例如 `--into frontend` 或 `--into frontend/react`） |
 | `--force` | `-f` | 覆蓋既有 skill；略過 audit 阻擋與跨路徑重複檢查 |
 | `--update` | `-u` | 若已存在則更新（git pull 或重新安裝） |
-| `--branch <name>` | `-b` | 要 clone 的 git branch（預設：remote 的預設分支） |
+| `--branch <ref>` | `-b` | 要安裝的 git branch、tag 或 commit SHA（預設：remote 的預設分支） |
 | `--track` | `-t` | 保留 tracked repos 的 `.git` |
 | `--kind <skill\|agent>` | | 限制只安裝一種資源類型 |
 | `--agent <names>` | `-a` | 從 repo 中選擇特定 agents（以逗號分隔） |
@@ -440,6 +440,17 @@ skillshare install github.com/team/skills --track --branch frontend
 skillshare install github.com/team/skills --track --branch frontend --name team-frontend
 skillshare install github.com/team/skills --track --branch backend --name team-backend
 ```
+
+**釘選到 tag 或 commit SHA（可重現的安裝）：**
+```bash
+# 釘選到某個 release tag
+skillshare install github.com/team/skills --branch v1.2.0 --all
+
+# 釘選到確切的 commit（完整或縮寫 SHA）
+skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
+```
+
+釘選的 ref 會存在 skill metadata 中，因此 `skillshare update` 會重新安裝同一個版本，`skillshare check` 對 SHA 釘選會直接回報已是最新，不會連線 remote。`--track` 必須是 branch：tag 或 commit SHA 會讓 clone 處於 detached 狀態，`skillshare update` 沒有東西可以 pull，因此安裝會被拒絕。
 
 **安裝團隊 repo（tracked）：**
 ```bash

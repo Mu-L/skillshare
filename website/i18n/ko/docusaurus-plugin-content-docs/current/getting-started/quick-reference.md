@@ -189,6 +189,9 @@ skillshare install github.com/team/skills --track
 skillshare install github.com/team/skills --branch develop --all
 skillshare install github.com/team/skills --track --branch develop
 
+# tag 또는 commit SHA로 고정 (일반 설치만)
+skillshare install github.com/team/skills --branch v1.2.0 --all
+
 # 팀 리포지터리에서 업데이트
 skillshare update --all
 skillshare sync

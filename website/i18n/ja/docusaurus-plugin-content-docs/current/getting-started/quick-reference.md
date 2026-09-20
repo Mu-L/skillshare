@@ -189,6 +189,9 @@ skillshare install github.com/team/skills --track
 skillshare install github.com/team/skills --branch develop --all
 skillshare install github.com/team/skills --track --branch develop
 
+# タグまたは commit SHA に固定（通常インストールのみ）
+skillshare install github.com/team/skills --branch v1.2.0 --all
+
 # チームの変更を取り込む
 skillshare update --all
 skillshare sync

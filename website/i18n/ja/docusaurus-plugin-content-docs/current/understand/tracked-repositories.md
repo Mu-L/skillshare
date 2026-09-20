@@ -265,6 +265,15 @@ skillshare install github.com/team/skills --branch develop --all
 
 ブランチは Skill のメタデータに永続化されるため、`skillshare update` と `skillshare check` は自動的に正しいブランチを使用します。
 
+再現可能なインストールのために、`--branch` はタグや commit SHA も受け付けます。
+
+```bash
+skillshare install github.com/team/skills --branch v1.2.0 --all
+skillshare install github.com/team/skills --branch 8f14e45 --all
+```
+
+タグと commit SHA は `--track` と組み合わせられません。トラックされたリポジトリはブランチから pull しますが、detached なチェックアウトには pull するものがありません。タグや SHA を固定する場合は通常のインストールを使用してください。
+
 ---
 
 ## 衝突の検出

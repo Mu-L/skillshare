@@ -265,6 +265,15 @@ skillshare install github.com/team/skills --branch develop --all
 
 Branch 會被記錄在 skill metadata 中，因此 `skillshare update` 與 `skillshare check` 會自動使用正確的 branch。
 
+若需要可重現的安裝，`--branch` 也接受 tag 或 commit SHA：
+
+```bash
+skillshare install github.com/team/skills --branch v1.2.0 --all
+skillshare install github.com/team/skills --branch 8f14e45 --all
+```
+
+Tag 與 commit SHA 不能搭配 `--track`：tracked repo 是從 branch pull，detached 的 checkout 沒有東西可以 pull。請改用一般安裝來釘選 tag 或 SHA。
+
 ---
 
 ## 名稱衝突偵測

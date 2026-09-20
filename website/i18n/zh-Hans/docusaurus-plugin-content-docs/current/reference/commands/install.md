@@ -266,7 +266,7 @@ skillshare sync
 | `--into <dir>` | | 安装到子目录中（例如 `--into frontend` 或 `--into frontend/react`） |
 | `--force` | `-f` | 覆盖已存在的 Skill；跳过 audit 拦截和跨路径重复检测 |
 | `--update` | `-u` | 如果已存在则更新（git pull 或重新安装） |
-| `--branch <name>` | `-b` | 要克隆的 git branch（默认：远程默认分支） |
+| `--branch <ref>` | `-b` | 要安装的 git branch、tag 或 commit SHA（默认：远程默认分支） |
 | `--track` | `-t` | 为 tracked repo 保留 `.git` |
 | `--kind <skill\|agent>` | | 限制只安装某一种资源类型 |
 | `--agent <names>` | `-a` | 从仓库中选择指定的 agent（逗号分隔） |
@@ -440,6 +440,17 @@ skillshare install github.com/team/skills --track --branch frontend
 skillshare install github.com/team/skills --track --branch frontend --name team-frontend
 skillshare install github.com/team/skills --track --branch backend --name team-backend
 ```
+
+**固定到 tag 或 commit SHA（可复现的安装）：**
+```bash
+# 固定到某个 release tag
+skillshare install github.com/team/skills --branch v1.2.0 --all
+
+# 固定到确切的 commit（完整或缩写 SHA）
+skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
+```
+
+固定的 ref 会保存在 Skill 元数据中，因此 `skillshare update` 会重新安装同一版本，`skillshare check` 对 SHA 固定会直接报告为最新，不会连接远程。`--track` 必须是分支：tag 或 commit SHA 会让克隆处于 detached 状态，`skillshare update` 没有可以 pull 的内容，因此安装会被拒绝。
 
 **安装团队仓库（tracked）：**
 ```bash

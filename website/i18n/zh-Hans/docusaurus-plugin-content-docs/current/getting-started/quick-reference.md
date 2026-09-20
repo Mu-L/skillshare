@@ -189,6 +189,9 @@ skillshare install github.com/team/skills --track
 skillshare install github.com/team/skills --branch develop --all
 skillshare install github.com/team/skills --track --branch develop
 
+# 固定到 tag 或 commit SHA（仅限普通安装）
+skillshare install github.com/team/skills --branch v1.2.0 --all
+
 # Update from team
 skillshare update --all
 skillshare sync

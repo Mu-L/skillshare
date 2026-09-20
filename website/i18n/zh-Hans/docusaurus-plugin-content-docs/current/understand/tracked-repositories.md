@@ -265,6 +265,15 @@ skillshare install github.com/team/skills --branch develop --all
 
 分支信息会被持久化到 Skill 元数据中，因此 `skillshare update` 和 `skillshare check` 会自动使用正确的分支。
 
+如需可复现的安装，`--branch` 也接受 tag 或 commit SHA：
+
+```bash
+skillshare install github.com/team/skills --branch v1.2.0 --all
+skillshare install github.com/team/skills --branch 8f14e45 --all
+```
+
+Tag 和 commit SHA 不能与 `--track` 组合使用：tracked 仓库从分支 pull，而 detached 的 checkout 没有可以 pull 的内容。请改用普通安装来固定 tag 或 SHA。
+
 ---
 
 ## 冲突检测

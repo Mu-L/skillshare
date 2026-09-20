@@ -265,6 +265,15 @@ skillshare install github.com/team/skills --branch develop --all
 
 브랜치는 skill 메타데이터에 유지되므로, `skillshare update`와 `skillshare check`가 자동으로 올바른 브랜치를 사용합니다.
 
+재현 가능한 설치를 위해 `--branch`는 tag 또는 commit SHA도 허용합니다:
+
+```bash
+skillshare install github.com/team/skills --branch v1.2.0 --all
+skillshare install github.com/team/skills --branch 8f14e45 --all
+```
+
+tag와 commit SHA는 `--track`과 함께 사용할 수 없습니다. tracked repo는 브랜치에서 pull하는데, detached 체크아웃에는 pull할 대상이 없습니다. tag나 SHA를 고정하려면 일반 install을 사용하세요.
+
 ---
 
 ## 충돌 감지

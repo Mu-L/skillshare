@@ -266,7 +266,7 @@ skillshare sync
 | `--into <dir>` | | 하위 디렉터리에 설치 (예: `--into frontend` 또는 `--into frontend/react`) |
 | `--force` | `-f` | 기존 skill을 덮어쓰기; audit 차단 및 cross-path 중복 검사를 재정의 |
 | `--update` | `-u` | 존재하면 업데이트 (git pull 또는 재설치) |
-| `--branch <name>` | `-b` | clone할 git branch (기본값: remote 기본 브랜치) |
+| `--branch <ref>` | `-b` | 설치할 git branch, tag 또는 commit SHA (기본값: remote 기본 브랜치) |
 | `--track` | `-t` | tracked repo용으로 `.git`을 유지 |
 | `--kind <skill\|agent>` | | 설치를 하나의 리소스 종류로 제한 |
 | `--agent <names>` | `-a` | repo에서 특정 agent만 선택 (쉼표로 구분) |
@@ -440,6 +440,17 @@ skillshare install github.com/team/skills --track --branch frontend
 skillshare install github.com/team/skills --track --branch frontend --name team-frontend
 skillshare install github.com/team/skills --track --branch backend --name team-backend
 ```
+
+**tag 또는 commit SHA로 고정 (재현 가능한 설치):**
+```bash
+# 릴리스 tag로 고정
+skillshare install github.com/team/skills --branch v1.2.0 --all
+
+# 특정 커밋으로 고정 (전체 또는 축약 SHA)
+skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
+```
+
+고정된 ref는 skill 메타데이터에 저장되므로, `skillshare update`는 동일한 리비전을 다시 설치하고 `skillshare check`는 SHA 고정을 remote에 접속하지 않고 최신 상태로 보고합니다. `--track`에는 브랜치가 필요합니다. tag나 commit SHA는 clone을 detached 상태로 두어 `skillshare update`가 pull할 대상이 없으므로 설치가 거부됩니다.
 
 **팀 repo 설치 (tracked):**
 ```bash

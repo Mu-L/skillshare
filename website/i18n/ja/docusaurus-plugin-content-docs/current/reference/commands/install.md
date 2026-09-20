@@ -266,7 +266,7 @@ skillshare sync
 | `--into <dir>` | | サブディレクトリへインストール（例: `--into frontend` または `--into frontend/react`） |
 | `--force` | `-f` | 既存の Skill を上書き。監査によるブロックとクロスパス重複チェックを無視 |
 | `--update` | `-u` | 存在する場合は更新（git pull または再インストール） |
-| `--branch <name>` | `-b` | クローン元の git ブランチ（デフォルト: リモートのデフォルトブランチ） |
+| `--branch <ref>` | `-b` | インストール元の git ブランチ、タグ、または commit SHA（デフォルト: リモートのデフォルトブランチ） |
 | `--track` | `-t` | トラック対象リポジトリとして `.git` を保持 |
 | `--kind <skill\|agent>` | | インストールを 1 種類のリソースに限定 |
 | `--agent <names>` | `-a` | リポジトリから特定の agent を選択（カンマ区切り） |
@@ -440,6 +440,17 @@ skillshare install github.com/team/skills --track --branch frontend
 skillshare install github.com/team/skills --track --branch frontend --name team-frontend
 skillshare install github.com/team/skills --track --branch backend --name team-backend
 ```
+
+**タグまたは commit SHA に固定（再現可能なインストール）:**
+```bash
+# リリースタグに固定
+skillshare install github.com/team/skills --branch v1.2.0 --all
+
+# 特定のコミットに固定（完全または短縮 SHA）
+skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
+```
+
+固定した ref は Skill のメタデータに保存されるため、`skillshare update` は同じリビジョンを再インストールし、`skillshare check` は SHA 固定をリモートに接続せずに最新として報告します。`--track` にはブランチが必要です。タグや commit SHA ではクローンが detached 状態になり、`skillshare update` が pull するものがないため、インストールは拒否されます。
 
 **チームリポジトリのインストール（トラック対象）:**
 ```bash
