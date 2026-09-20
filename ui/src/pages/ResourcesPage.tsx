@@ -678,7 +678,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
         icon={isAgent ? Bot : Puzzle}
         title={t(isAgent ? 'resources.agents.empty.title' : 'resources.skills.empty.title')}
         description={t(isAgent ? 'resources.agents.empty.description' : 'resources.skills.empty.description')}
-        action={<Button variant="primary" onClick={() => setInstall('search')}><Download size={15} />{t('resources.install')}</Button>}
+        action={<Button variant="primary" onClick={() => setInstall('url')}><Download size={15} />{t('resources.install')}</Button>}
       />
     ) : (
       <EmptyState
@@ -756,7 +756,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
                 {t('resources.newSkill')}
               </Link>
             )}
-            <Button variant="primary" data-tour="install-button" onClick={() => setInstall('search')}>
+            <Button variant="primary" data-tour="install-button" onClick={() => setInstall('url')}>
               <Download size={15} />
               {t('resources.install')}
             </Button>

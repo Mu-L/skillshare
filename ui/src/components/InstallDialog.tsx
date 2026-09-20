@@ -362,7 +362,7 @@ export default function InstallDialog({ kind, initialTab, initialSource, onClose
 
   const tabs = !isAgent && (
     <div className="ss-tabs" role="tablist">
-      {(['search', 'url'] as const).map((k) => (
+      {(['url', 'search'] as const).map((k) => (
         <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
           {t(k === 'search' ? 'install.tab.search' : 'install.tab.url')}
         </button>
