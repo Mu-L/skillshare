@@ -3,24 +3,45 @@ package mcp
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Source is a single resolved declaration plus the files used to obtain it.
 type Source struct {
-	ConfigPath  string            `json:"configPath"`
-	Path        string            `json:"path"`
-	Targets     []string          `json:"targets"`
-	Servers     map[string]Server `json:"servers"`
-	configDoc   yaml.Node
-	doc         yaml.Node
-	configBytes []byte
-	bytes       []byte
+	ConfigPath string            `json:"configPath"`
+	Path       string            `json:"path"`
+	Targets    []string          `json:"targets"`
+	Servers    map[string]Server `json:"servers"`
+	// DirectTools is the default for pi-mcp-adapter servers that do not set their own,
+	// as Targets is for targets. It stands in for the adapter's settings.directTools,
+	// which shares Pi's file with the servers and a plan edits each file once.
+	DirectTools any `json:"directTools,omitempty"`
+	// Projects are project roots a global config syncs into, keyed by absolute path.
+	Projects map[string]Project `json:"projects,omitempty"`
+	// projectKeys holds each root as config.yaml spells it, so saving keeps a leading ~.
+	projectKeys map[string]string
+	// What a draft changed, so save re-encodes nothing else.
+	touched                         map[string]bool
+	serversChanged, settingsChanged bool
+	configDoc                       yaml.Node
+	doc                             yaml.Node
+	configBytes                     []byte
+	bytes                           []byte
+}
+
+// Project is what a project's own config.yaml would hold under mcp, declared in the
+// global config instead so one sync reaches every root.
+type Project struct {
+	Targets     []string          `yaml:"targets,omitempty" json:"targets,omitempty"`
+	DirectTools any               `yaml:"directTools,omitempty" json:"directTools,omitempty"`
+	Servers     map[string]Server `yaml:"servers,omitempty" json:"servers,omitempty"`
 }
 
 func mapping(node *yaml.Node) *yaml.Node {
@@ -63,7 +84,8 @@ func put(node *yaml.Node, key string, value any) error {
 }
 
 func expandHome(path string) (string, error) {
-	if path == "~" || len(path) > 1 && path[:2] == "~/" {
+	// ~\ is how a Windows user writes it; elsewhere a backslash is part of a file name.
+	if path == "~" || len(path) > 1 && path[0] == '~' && (path[1] == '/' || path[1] == filepath.Separator) {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", err
@@ -101,7 +123,7 @@ func LoadSource(configPath string) (*Source, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Source{ConfigPath: path, Path: path, Servers: map[string]Server{}}
+	s := &Source{ConfigPath: path, Path: path, Servers: map[string]Server{}, projectKeys: map[string]string{}, touched: map[string]bool{}}
 	s.configBytes, err = os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read MCP config: %w", err)
@@ -115,7 +137,7 @@ func LoadSource(configPath string) (*Source, error) {
 			return nil, fmt.Errorf("mcp must be a mapping")
 		}
 		for i := 0; i < len(mcp.Content); i += 2 {
-			if k := mcp.Content[i].Value; k != "targets" && k != "servers" {
+			if k := mcp.Content[i].Value; k != "targets" && k != "servers" && k != "projects" && k != "directTools" {
 				return nil, fmt.Errorf("unknown mcp field %q", k)
 			}
 		}
@@ -127,6 +149,23 @@ func LoadSource(configPath string) (*Source, error) {
 	}
 	if err := validateTargets(s.Targets); err != nil {
 		return nil, err
+	}
+	if mcp != nil {
+		if s.Projects, err = ParseProjects(field(mcp, "projects")); err != nil {
+			return nil, err
+		}
+		if projects := field(mcp, "projects"); projects != nil {
+			for i := 0; i+1 < len(projects.Content); i += 2 {
+				// ParseProjects has already accepted every key.
+				root, _ := expandHome(projects.Content[i].Value)
+				s.projectKeys[filepath.Clean(root)] = projects.Content[i].Value
+			}
+		}
+		if n := field(mcp, "directTools"); n != nil {
+			if err := n.Decode(&s.DirectTools); err != nil || !ValidDirectTools(s.DirectTools) {
+				return nil, fmt.Errorf("mcp.directTools must be true, false, \"search\" or a list of tool names")
+			}
+		}
 	}
 	var servers *yaml.Node
 	if mcp != nil {
@@ -192,6 +231,78 @@ func LoadSource(configPath string) (*Source, error) {
 		}
 	}
 	return s, nil
+}
+
+// ParseProjects reads and validates mcp.projects. The config editor shares it, so it
+// never accepts a section that sync would then refuse.
+func ParseProjects(node *yaml.Node) (map[string]Project, error) {
+	if node == nil {
+		return nil, nil
+	}
+	// The section is decoded on its own to reject unknown fields, so an alias to an
+	// anchor outside it, such as one on mcp.servers, has to be expanded first.
+	data, err := yaml.Marshal(expandAliases(node))
+	if err != nil {
+		return nil, err
+	}
+	var declared map[string]Project
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&declared); err != nil {
+		reason := "invalid value"
+		var typeErr *yaml.TypeError
+		if errors.As(err, &typeErr) {
+			// Line numbers refer to the re-marshalled section, not the user's file.
+			for i, e := range typeErr.Errors {
+				if _, after, ok := strings.Cut(e, ": "); ok && strings.HasPrefix(e, "line ") {
+					typeErr.Errors[i] = after
+				}
+			}
+			reason = strings.Join(typeErr.Errors, "; ")
+		}
+		return nil, fmt.Errorf("mcp.projects: %s; each project root takes only targets, servers and directTools", reason)
+	}
+	projects := map[string]Project{}
+	for root, project := range declared {
+		path, err := expandHome(root)
+		if err != nil {
+			return nil, err
+		}
+		if !filepath.IsAbs(path) {
+			return nil, fmt.Errorf("mcp.projects: %s must be an absolute path or start with ~", root)
+		}
+		path = filepath.Clean(path)
+		if _, duplicate := projects[path]; duplicate {
+			return nil, fmt.Errorf("mcp.projects: %s is listed twice", path)
+		}
+		if err := validateTargets(project.Targets); err != nil {
+			return nil, err
+		}
+		if !ValidDirectTools(project.DirectTools) {
+			return nil, fmt.Errorf("mcp.projects: %s: directTools must be true, false, \"search\" or a list of tool names", root)
+		}
+		for name, server := range project.Servers {
+			if err := server.Validate(name); err != nil {
+				return nil, err
+			}
+		}
+		projects[path] = project
+	}
+	return projects, nil
+}
+
+// expandAliases copies a tree with every alias replaced by what it points to. parseYAML
+// has already decoded the whole document, which refuses an anchor that contains itself.
+func expandAliases(n *yaml.Node) *yaml.Node {
+	if n.Kind == yaml.AliasNode {
+		return expandAliases(n.Alias)
+	}
+	c := *n
+	c.Anchor, c.Content = "", nil
+	for _, child := range n.Content {
+		c.Content = append(c.Content, expandAliases(child))
+	}
+	return &c
 }
 
 func digest(data []byte) string { return fmt.Sprintf("%x", sha256.Sum256(data)) }

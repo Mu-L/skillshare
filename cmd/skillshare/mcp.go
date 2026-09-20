@@ -15,6 +15,8 @@ import (
 
 type mcpOptions struct {
 	name, url, from, file, revision, piExtension string
+	// directTools is nil unless --direct-tools was given.
+	directTools                                  any
 	targets                                      []string
 	command                                      []string
 	sync, dryRun, json, replace, noTUI, disabled bool
@@ -27,7 +29,7 @@ func parseMCPOptions(args []string) (mcpOptions, error) {
 		case "--":
 			o.command = args[i+1:]
 			return o, nil
-		case "--url", "--target", "--from", "--file", "--revision", "--pi-extension":
+		case "--url", "--target", "--from", "--file", "--revision", "--pi-extension", "--direct-tools":
 			if i+1 == len(args) {
 				return o, fmt.Errorf("%s requires a value", a)
 			}
@@ -36,6 +38,15 @@ func parseMCPOptions(args []string) (mcpOptions, error) {
 			switch a {
 			case "--pi-extension":
 				o.piExtension = value
+			case "--direct-tools":
+				switch value {
+				case "true", "false":
+					o.directTools = value == "true"
+				case "search":
+					o.directTools = value
+				default:
+					o.directTools = strings.Split(value, ",")
+				}
 			case "--url":
 				o.url = value
 			case "--target":
@@ -178,8 +189,16 @@ func printMCPPlan(p *mcp.Plan, asJSON bool) error {
 		return json.NewEncoder(os.Stdout).Encode(p)
 	}
 	ui.Info("MCP source: %s", p.SourcePath)
+	// mcp.projects puts one server into several roots; name the file only then.
+	seen := map[string]int{}
+	for _, c := range p.Changes {
+		seen[c.Name+"\x00"+c.Target]++
+	}
 	for _, c := range p.Changes {
 		detail := c.Target
+		if seen[c.Name+"\x00"+c.Target] > 1 {
+			detail += " (" + c.Path + ")"
+		}
 		if c.Message != "" {
 			detail += " — " + c.Message
 		}
@@ -230,6 +249,7 @@ Commands:
 
 Options:
   --pi-extension <package>  pi-mcp-adapter or pi-mcp-extension (requires installation in Pi)
+  --direct-tools <value>    pi-mcp-adapter only: true, false, search, or tool names separated by commas
   --target <client>  Receiving client; repeat for multiple clients
   --from <client>    Native client ID (see mcp documentation for destinations)
   --file <path>      Native configuration file to import

@@ -186,6 +186,13 @@ func Import(target string, data []byte, singleName string) ([]Candidate, error) 
 		if target == "codex" {
 			allowed = map[string]bool{"command": true, "args": true, "url": true, "env": true, "env_vars": true, "http_headers": true, "env_http_headers": true, "bearer_token_env_var": true}
 		}
+		if target == "pi" {
+			allowed["directTools"] = true
+			if c.Server.DirectTools = entry["directTools"]; c.Server.DirectTools != nil {
+				// Only pi-mcp-adapter has this field, so the file does identify the extension.
+				c.Server.PiExtension = "pi-mcp-adapter"
+			}
+		}
 		// Agent-only fields such as timeouts stay in existing Agent entries on sync.
 		for _, key := range sortedKeys(entry) {
 			if !allowed[key] {

@@ -1,9 +1,70 @@
 package mcp
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 )
+
+// ValidDirectTools accepts what pi-mcp-adapter documents: a switch, "search", or tool names.
+func ValidDirectTools(value any) bool {
+	valid := true
+	switch v := value.(type) {
+	case nil, bool:
+	case string:
+		valid = v == "search"
+	case []string:
+		valid = len(v) > 0 && !slices.Contains(v, "")
+	case []any:
+		valid = len(v) > 0
+		for _, item := range v {
+			if tool, ok := item.(string); !ok || tool == "" {
+				valid = false
+			}
+		}
+	default:
+		valid = false
+	}
+	return valid
+}
+
+func (s Server) validateDirectTools(name string) error {
+	if s.DirectTools == nil {
+		return nil
+	}
+	switch {
+	case !ValidDirectTools(s.DirectTools):
+		return fmt.Errorf("MCP %s: directTools must be true, false, \"search\" or a list of tool names", name)
+	case s.Disabled:
+		return fmt.Errorf("MCP %s: directTools cannot be set on a disabled entry; it only switches the server off", name)
+	case s.PiExtension != "pi-mcp-adapter":
+		return fmt.Errorf("MCP %s: directTools is a pi-mcp-adapter setting; set piExtension: pi-mcp-adapter", name)
+	}
+	return nil
+}
+
+// withDirectToolsDefault fills in mcp.directTools for a pi-mcp-adapter server that sets none.
+func (s Server) withDirectToolsDefault(value any) Server {
+	if s.DirectTools == nil && s.PiExtension == "pi-mcp-adapter" && !s.Disabled {
+		s.DirectTools = value
+	}
+	return s
+}
+
+// directToolsChanged reports a directTools the config sets and the file does not have
+// yet. The field stays out of the ownership hash: people added it to Pi's file by hand
+// before Skillshare could set it, and hashing it would turn their next sync into a conflict.
+func directToolsChanged(current, want map[string]any) bool {
+	value, set := want["directTools"]
+	if !set {
+		return false
+	}
+	a, _ := json.Marshal(value)
+	b, _ := json.Marshal(current["directTools"])
+	return !bytes.Equal(a, b)
+}
 
 // Pi's extensions share a destination, but not transport or credential syntax.
 // Sync config only: installing or starting either extension remains explicit.
@@ -40,6 +101,9 @@ func renderPi(s Server) (map[string]any, error) {
 			out["transport"] = "streamable-http"
 		}
 	} else {
+		if s.DirectTools != nil {
+			out["directTools"] = s.DirectTools
+		}
 		for _, key := range []string{"env", "headers"} {
 			values, _ := out[key].(map[string]string)
 			for name, value := range values {

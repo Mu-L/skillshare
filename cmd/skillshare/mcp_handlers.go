@@ -21,7 +21,7 @@ func runMCPAdd(service *mcp.Service, o mcpOptions) error {
 		}
 		return mcpAddWizard(service, o)
 	}
-	server := mcp.Server{URL: o.url, Targets: o.targets, PiExtension: o.piExtension, Disabled: o.disabled}
+	server := mcp.Server{URL: o.url, Targets: o.targets, PiExtension: o.piExtension, DirectTools: o.directTools, Disabled: o.disabled}
 	if len(o.command) > 0 {
 		server.Command, server.Args = o.command[0], o.command[1:]
 	}

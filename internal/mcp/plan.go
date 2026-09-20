@@ -118,38 +118,80 @@ func (s *Service) previewSource(source *Source) (*Plan, error) {
 	return s.previewResolved(source, nil)
 }
 
-// render builds every native entry the source asks for, keyed by native path.
+// render builds every native entry the source asks for, keyed by native path. A global
+// source's projects land in the same maps, so one plan, one revision and one ledger owner
+// cover every root: separate plans would each read the others' entries as leftovers.
 func (s *Service) render(source *Source) (map[string]map[string]map[string]any, map[string]string, error) {
 	desired := map[string]map[string]map[string]any{}
 	targets := map[string]string{}
+	if s.ProjectRoot != "" && len(source.Projects) > 0 {
+		return nil, nil, fmt.Errorf("mcp.projects belongs in the global config; this project already syncs its own mcp.servers")
+	}
+	if err := s.renderScope(desired, targets, source.Servers, source.Targets, source.DirectTools); err != nil {
+		return nil, nil, err
+	}
+	for _, root := range sortedKeys(source.Projects) {
+		project := source.Projects[root]
+		scoped := *s
+		scoped.ProjectRoot = root
+		defaults := project.Targets
+		if defaults == nil {
+			defaults = source.Targets
+		}
+		for name, server := range project.Servers {
+			selected := server.Targets
+			if selected == nil {
+				selected = defaults
+			}
+			if server.Disabled && slices.Contains(selected, "claude") {
+				// ponytail: Claude's off list lives in ~/.claude.json, the file the global
+				// servers also write, and a plan edits each file once under one native target.
+				// Key file plans by path and target if this is ever needed.
+				return nil, nil, fmt.Errorf("MCP %s in %s: turning off a Claude server from mcp.projects is not supported; use project mode in that folder", name, root)
+			}
+		}
+		directTools := project.DirectTools
+		if directTools == nil {
+			directTools = source.DirectTools
+		}
+		if err := scoped.renderScope(desired, targets, project.Servers, defaults, directTools); err != nil {
+			return nil, nil, fmt.Errorf("%s: %w", root, err)
+		}
+	}
+	return desired, targets, nil
+}
+
+// renderScope adds one scope's servers: the global one, or a single project root.
+func (s *Service) renderScope(desired map[string]map[string]map[string]any, targets map[string]string, servers map[string]Server, defaults []string, directTools any) error {
 	piExtension := ""
-	for _, name := range sortedKeys(source.Servers) {
-		server := source.Servers[name]
+	for _, name := range sortedKeys(servers) {
+		server := servers[name]
+		server = server.withDirectToolsDefault(directTools)
 		selected := server.Targets
 		if selected == nil {
-			selected = source.Targets
+			selected = defaults
 		}
 		if len(selected) == 0 {
-			return nil, nil, fmt.Errorf("MCP %s has no targets; select at least one Agent", name)
+			return fmt.Errorf("MCP %s has no targets; select at least one Agent", name)
 		}
 		for _, target := range selected {
 			if err := s.checkScope(name, target, server); err != nil {
-				return nil, nil, err
+				return err
 			}
 			if target == "pi" {
 				if piExtension != "" && piExtension != server.PiExtension {
-					return nil, nil, fmt.Errorf("Pi servers share one config file; select the same piExtension for every Pi server")
+					return fmt.Errorf("Pi servers share one config file; select the same piExtension for every Pi server")
 				}
 				piExtension = server.PiExtension
 			}
 			path, native, err := s.destination(target, server)
 			if err != nil {
-				return nil, nil, err
+				return err
 			}
 			targets[path] = native
 			entry, err := Render(target, server)
 			if err != nil {
-				return nil, nil, fmt.Errorf("%s / %s: %w", target, name, err)
+				return fmt.Errorf("%s / %s: %w", target, name, err)
 			}
 			if target == "goose" {
 				entry["name"] = name
@@ -162,10 +204,10 @@ func (s *Service) render(source *Source) (map[string]map[string]map[string]any, 
 	}
 	if s.ProjectRoot != "" {
 		if desired[filepath.Join(s.ProjectRoot, ".mcp.json")] != nil && desired[filepath.Join(s.ProjectRoot, ".github", "mcp.json")] != nil {
-			return nil, nil, fmt.Errorf("Claude and Copilot project MCP destinations overlap in precedence; use global mode for one client")
+			return fmt.Errorf("Claude and Copilot project MCP destinations overlap in precedence; use global mode for one client")
 		}
 	}
-	return desired, targets, nil
+	return nil
 }
 
 // destination is the file one server lands in for one Agent, and the native target that
@@ -272,9 +314,22 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 		Servers     map[string]Server
 		Targets     []string
 		Resolutions []Resolution
-	}{source.Servers, source.Targets, resolutions})
+		DirectTools any
+		Projects    map[string]Project
+	}{source.Servers, source.Targets, resolutions, source.DirectTools, source.Projects})
 	revision := digest(source.configBytes) + digest(source.bytes) + digest(stateBytes) + digest(proposal)
-	local := s.claudeLocalServers()
+	// Claude's local scope is per project, so look it up by the project file it shadows.
+	local := map[string]map[string]any{}
+	for _, root := range append(sortedKeys(source.Projects), s.ProjectRoot) {
+		if root == "" {
+			continue
+		}
+		scoped := *s
+		scoped.ProjectRoot = root
+		if path, err := scoped.nativePath("claude"); err == nil {
+			local[path] = scoped.claudeLocalServers()
+		}
+	}
 	for _, path := range sortedKeys(targets) {
 		target := targets[path]
 		data, exists, mode, err := safeRead(path)
@@ -334,6 +389,9 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 				change.Action, change.Message = "update", "same settings, laid out one field per line"
 				f.changes[name] = withAgentFields(target, current, want)
 				p.state.Entries[key] = ownership{Owner: source.ConfigPath, Target: target, Path: path, Name: name, Hash: wantHash}
+			case currentHash == wantHash && managed && directToolsChanged(current, want):
+				change.Action = "update"
+				f.changes[name] = withAgentFields(target, current, want)
 			case currentHash == wantHash:
 				// Already as desired, e.g. after pulling a teammate's change or
 				// moving a project. Refresh an owned baseline, but never claim an
@@ -364,7 +422,7 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 			}
 			if change.Action == "conflict" {
 				p.Blocked = true
-			} else if target == "claude" && want != nil && local[name] != nil {
+			} else if target == "claude" && want != nil && local[path][name] != nil {
 				change.Message = "a local scope server of the same name in ~/.claude.json overrides this one in this project; remove it with: claude mcp remove " + name + " -s local"
 			}
 			p.Changes = append(p.Changes, change)

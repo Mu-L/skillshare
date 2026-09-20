@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -60,7 +63,16 @@ func (s *Server) handleMCPList(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, err.Error())
 		return
 	}
-	writeJSON(w, map[string]any{"source": source, "paths": paths, "detected": service.DetectedClients(paths), "plan": p, "previewError": message, "backups": backups})
+	// A root with its own project config is managed from two places; the plan reports a
+	// conflict when both hold one entry, so the dashboard says so up front.
+	ownConfig := []string{}
+	for root := range source.Projects {
+		if _, err := os.Stat(filepath.Join(root, ".skillshare", "config.yaml")); err == nil {
+			ownConfig = append(ownConfig, root)
+		}
+	}
+	slices.Sort(ownConfig)
+	writeJSON(w, map[string]any{"source": source, "paths": paths, "detected": service.DetectedClients(paths), "plan": p, "previewError": message, "backups": backups, "projectConfigs": ownConfig})
 }
 
 func (s *Server) handleMCPPreview(w http.ResponseWriter, r *http.Request) {

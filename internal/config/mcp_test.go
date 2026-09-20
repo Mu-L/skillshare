@@ -77,3 +77,43 @@ func TestInvalidMCPSectionStillLoadsAndSaves(t *testing.T) {
 		t.Fatalf("invalid MCP section was not kept as written: %v\n%s", err, data)
 	}
 }
+
+func TestMCPProjectsSurviveSaveAndAreValidated(t *testing.T) {
+	var cfg Config
+	if err := yaml.Unmarshal([]byte("mcp:\n  projects:\n    /work/p1:\n      servers:\n        docs:\n          command: docs\n          targets: [cursor]\n"), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateMCP(cfg.MCP, ""); err != nil {
+		t.Fatalf("valid projects rejected: %v", err)
+	}
+	data, err := yaml.Marshal(cfg)
+	if err != nil || !strings.Contains(string(data), "/work/p1:") {
+		t.Fatalf("projects lost on save: %v\n%s", err, data)
+	}
+	if err := yaml.Unmarshal([]byte("mcp:\n  projects:\n    work/p1:\n      servers: {}\n"), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateMCP(cfg.MCP, ""); err == nil {
+		t.Fatal("relative project root passed validation")
+	}
+}
+
+func TestMCPDirectToolsDefaultSurvivesSaveAndIsValidated(t *testing.T) {
+	var cfg Config
+	if err := yaml.Unmarshal([]byte("mcp:\n  directTools: [search]\n"), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateMCP(cfg.MCP, ""); err != nil {
+		t.Fatalf("valid default rejected: %v", err)
+	}
+	data, err := yaml.Marshal(cfg)
+	if err != nil || !strings.Contains(string(data), "directTools:") {
+		t.Fatalf("default lost on save: %v\n%s", err, data)
+	}
+	if err := yaml.Unmarshal([]byte("mcp:\n  directTools: all\n"), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateMCP(cfg.MCP, ""); err == nil {
+		t.Fatal("bad default passed validation")
+	}
+}

@@ -159,6 +159,10 @@ type Rendered struct {
 // format (JSON, TOML, YAML) come from the code that writes the real file, not from a guess
 // made in the dashboard. Nothing is read from the environment or written to disk.
 func (s *Service) RenderNative(name string, server Server) []Rendered {
+	// The saved mcp.directTools default is what sync would write; an unreadable config has none.
+	if source, err := LoadSource(s.ConfigPath); err == nil {
+		server = server.withDirectToolsDefault(source.DirectTools)
+	}
 	out := make([]Rendered, 0, len(server.Targets))
 	for _, target := range server.Targets {
 		r := Rendered{Target: target}

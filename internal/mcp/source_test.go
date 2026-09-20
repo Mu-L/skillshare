@@ -17,7 +17,7 @@ func TestSourceSaveBlockFormatting(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		source.Servers = map[string]Server{"docs": {URL: "https://example.com/mcp"}}
+		source.Servers, source.serversChanged = map[string]Server{"docs": {URL: "https://example.com/mcp"}}, true
 		if err := source.save(); err != nil {
 			t.Fatal(err)
 		}

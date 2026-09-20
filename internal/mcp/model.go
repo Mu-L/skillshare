@@ -77,6 +77,9 @@ type Server struct {
 	Headers     map[string]Value `yaml:"headers,omitempty" json:"headers,omitempty"`
 	BearerToken *Value           `yaml:"bearerToken,omitempty" json:"bearerToken,omitempty"`
 	Targets     []string         `yaml:"targets,omitempty" json:"targets,omitempty"`
+	// DirectTools is pi-mcp-adapter's directTools: true, false, "search" or a list of
+	// tool names. Only Pi receives it.
+	DirectTools any `yaml:"directTools,omitempty" json:"directTools,omitempty"`
 	// Disabled is the whole entry: it turns off, for one project, a server that the
 	// Agent's global config defines. Unselecting an Agent already covers a server
 	// Skillshare defines, so a disabled server carries no command or url.
@@ -135,6 +138,9 @@ func (s Server) Validate(name string) error {
 	}
 	if !serverName.MatchString(name) {
 		return fmt.Errorf("invalid MCP name %q: use letters, digits, dots, underscores or hyphens", name)
+	}
+	if err := s.validateDirectTools(name); err != nil {
+		return err
 	}
 	if s.Disabled {
 		if s.Command != "" || s.URL != "" || s.Transport != "" || s.BearerToken != nil || len(s.Args)+len(s.Env)+len(s.Headers) > 0 {

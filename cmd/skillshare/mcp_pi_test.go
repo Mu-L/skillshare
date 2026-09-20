@@ -54,3 +54,31 @@ func TestMCPPiTUI(t *testing.T) {
 		}
 	}
 }
+
+func TestMCPDirectToolsFlag(t *testing.T) {
+	s := mcpTUIService(t)
+	run := func(handler func(*mcp.Service, mcpOptions) error, args ...string) any {
+		t.Helper()
+		o, err := parseMCPOptions(append(args, "--no-tui"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = handler(s, o); err != nil {
+			t.Fatal(err)
+		}
+		source, err := mcp.LoadSource(s.ConfigPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return source.Servers["tools"].DirectTools
+	}
+	if got := run(runMCPAdd, "tools", "--target", "pi", "--pi-extension", "pi-mcp-adapter", "--direct-tools", "true", "--url", "https://example.com/mcp"); got != true {
+		t.Fatalf("add: %v", got)
+	}
+	if got, ok := run(runMCPEdit, "tools", "--direct-tools", "search_docs,fetch").([]any); !ok || len(got) != 2 || got[1] != "fetch" {
+		t.Fatalf("edit to a list: %v", got)
+	}
+	if got := run(runMCPEdit, "tools", "--direct-tools", "search"); got != "search" {
+		t.Fatalf("edit to search: %v", got)
+	}
+}

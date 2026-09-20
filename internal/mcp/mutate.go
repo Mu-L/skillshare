@@ -17,11 +17,84 @@ type Resolution struct {
 
 // Mutation is shared by CLI and UI preview/save/apply flows.
 type Mutation struct {
+	// Project is a root under mcp.projects. Set, the rest of the mutation applies to that
+	// project; with Remove and no Name, the project itself is dropped.
+	Project string `json:"project,omitempty"`
+	// Settings replaces targets and directTools of the scope, so a value left out is cleared.
+	Settings    *Settings    `json:"settings,omitempty"`
 	Name        string       `json:"name,omitempty"`
 	Server      *Server      `json:"server,omitempty"`
 	Remove      bool         `json:"remove,omitempty"`
 	Resolutions []Resolution `json:"resolutions,omitempty"`
 	Replace     bool         `json:"replace,omitempty"`
+}
+
+// Settings are a scope's defaults: mcp.targets and mcp.directTools, or a project's own.
+type Settings struct {
+	Targets     []string `json:"targets,omitempty"`
+	DirectTools any      `json:"directTools,omitempty"`
+}
+
+func (v Settings) validate() error {
+	if !ValidDirectTools(v.DirectTools) {
+		return fmt.Errorf("directTools must be true, false, \"search\" or a list of tool names")
+	}
+	return validateTargets(v.Targets)
+}
+
+// draftProject applies one mutation to a root under mcp.projects.
+func (s *Source) draftProject(m Mutation) error {
+	root, err := expandHome(m.Project)
+	if err != nil {
+		return err
+	}
+	if !filepath.IsAbs(root) {
+		return fmt.Errorf("mcp.projects: %s must be an absolute path or start with ~", m.Project)
+	}
+	root = filepath.Clean(root)
+	project, exists := s.Projects[root]
+	if _, known := s.projectKeys[root]; !known {
+		s.projectKeys[root] = m.Project
+	}
+	s.touched[root] = true
+	switch {
+	case m.Remove && m.Name == "":
+		if !exists {
+			return fmt.Errorf("project %s is not in mcp.projects", m.Project)
+		}
+		delete(s.Projects, root)
+		return nil
+	case m.Remove:
+		if _, ok := project.Servers[m.Name]; !ok {
+			return fmt.Errorf("MCP server %q not found in %s", m.Name, m.Project)
+		}
+		delete(project.Servers, m.Name)
+	case m.Server != nil:
+		if _, ok := project.Servers[m.Name]; ok && !m.Replace {
+			return fmt.Errorf("MCP server %q already exists in %s; explicitly choose edit or replace", m.Name, m.Project)
+		}
+		if err := m.Server.Validate(m.Name); err != nil {
+			return err
+		}
+		if project.Servers == nil {
+			project.Servers = map[string]Server{}
+		}
+		project.Servers[m.Name] = *m.Server
+	}
+	if m.Settings != nil {
+		if exists && m.Name == "" && !m.Replace {
+			return fmt.Errorf("project %s is already in mcp.projects", m.Project)
+		}
+		if err := m.Settings.validate(); err != nil {
+			return err
+		}
+		project.Targets, project.DirectTools = m.Settings.Targets, m.Settings.DirectTools
+	}
+	if s.Projects == nil {
+		s.Projects = map[string]Project{}
+	}
+	s.Projects[root] = project
+	return nil
 }
 
 func (s *Service) draftMutations(mutations []Mutation) (*Source, error) {
@@ -31,13 +104,30 @@ func (s *Service) draftMutations(mutations []Mutation) (*Source, error) {
 	}
 	seen := map[string]bool{}
 	for _, m := range mutations {
-		if m.Name != "" && seen[m.Name] {
+		key := m.Project + "\x00" + m.Name
+		if m.Name != "" && seen[key] {
 			return nil, fmt.Errorf("duplicate MCP mutation for %q", m.Name)
 		}
-		seen[m.Name] = true
+		seen[key] = true
 		if m.Remove && m.Server != nil {
 			return nil, fmt.Errorf("cannot add and remove the same server")
 		}
+		if m.Project != "" {
+			if s.ProjectRoot != "" {
+				return nil, fmt.Errorf("mcp.projects belongs in the global config")
+			}
+			if err := source.draftProject(m); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		if m.Settings != nil {
+			if err := m.Settings.validate(); err != nil {
+				return nil, err
+			}
+			source.Targets, source.DirectTools, source.settingsChanged = m.Settings.Targets, m.Settings.DirectTools, true
+		}
+		source.serversChanged = source.serversChanged || m.Remove || m.Server != nil
 		if m.Remove {
 			if _, ok := source.Servers[m.Name]; !ok {
 				return nil, fmt.Errorf("MCP server %q not found", m.Name)
@@ -83,30 +173,82 @@ func (s *Source) save() error {
 	if err := s.CheckUnchanged(); err != nil {
 		return err
 	}
-	doc := &s.configDoc
-	if s.Path != s.ConfigPath {
-		doc = &s.doc
-		if err := put(doc, "servers", s.Servers); err != nil {
+	external := s.Path != s.ConfigPath
+	if external && s.serversChanged {
+		if err := put(&s.doc, "servers", s.Servers); err != nil {
 			return err
 		}
-	} else {
-		mcp := field(doc, "mcp")
-		if mcp == nil {
-			if err := put(doc, "mcp", map[string]any{}); err != nil {
-				return err
-			}
-			mcp = field(doc, "mcp")
+		if err := writeYAML(s.Path, &s.doc, mapping(&s.doc)); err != nil {
+			return err
 		}
+	}
+	if external && !s.settingsChanged && len(s.touched) == 0 {
+		return nil
+	}
+	doc := &s.configDoc
+	mcp := field(doc, "mcp")
+	if mcp == nil {
+		if err := put(doc, "mcp", map[string]any{}); err != nil {
+			return err
+		}
+		mcp = field(doc, "mcp")
+	}
+	if !external && s.serversChanged {
 		if err := put(mcp, "servers", s.Servers); err != nil {
 			return err
 		}
 	}
-	// Empty mappings are encoded in flow style; expand the generated MCP
-	// subtree before adding connections so it remains readable in the editor.
-	section := field(doc, "mcp")
-	if s.Path != s.ConfigPath {
-		section = mapping(doc)
+	if s.settingsChanged {
+		if err := putOrDrop(mcp, "targets", s.Targets, len(s.Targets) > 0); err != nil {
+			return err
+		}
+		if err := putOrDrop(mcp, "directTools", s.DirectTools, s.DirectTools != nil); err != nil {
+			return err
+		}
 	}
+	if len(s.touched) > 0 {
+		if field(mcp, "projects") == nil {
+			if err := put(mcp, "projects", map[string]any{}); err != nil {
+				return err
+			}
+		}
+		// Only the roots that changed are re-encoded; the rest stay as the user wrote them.
+		projects := field(mcp, "projects")
+		for root := range s.touched {
+			project, kept := s.Projects[root]
+			if err := putOrDrop(projects, s.projectKeys[root], project, kept); err != nil {
+				return err
+			}
+		}
+		if len(projects.Content) == 0 {
+			drop(mcp, "projects")
+		}
+	}
+	inlineOrphanAliases(doc)
+	return writeYAML(s.ConfigPath, doc, mcp)
+}
+
+func putOrDrop(node *yaml.Node, key string, value any, keep bool) error {
+	if keep {
+		return put(node, key, value)
+	}
+	drop(node, key)
+	return nil
+}
+
+func drop(node *yaml.Node, key string) {
+	node = mapping(node)
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			node.Content = append(node.Content[:i], node.Content[i+2:]...)
+			return
+		}
+	}
+}
+
+// writeYAML saves doc to path. Empty mappings are encoded in flow style, so the generated
+// section is expanded first to stay readable in the editor.
+func writeYAML(path string, doc, section *yaml.Node) error {
 	blockCollections(section)
 	var buffer bytes.Buffer
 	encoder := yaml.NewEncoder(&buffer)
@@ -114,9 +256,7 @@ func (s *Source) save() error {
 	if err := encoder.Encode(doc); err != nil {
 		return err
 	}
-	data := buffer.Bytes()
 	// Dotfile managers often symlink config.yaml; write its target so the link survives.
-	path := s.Path
 	if resolved, err := filepath.EvalSymlinks(path); err == nil {
 		path = resolved
 	}
@@ -124,7 +264,29 @@ func (s *Source) save() error {
 	if err != nil {
 		return err
 	}
-	return atomicWrite(path, data, mode)
+	return atomicWrite(path, buffer.Bytes(), mode)
+}
+
+// inlineOrphanAliases writes out in full every alias whose anchor put just dropped by
+// re-encoding mcp.servers, such as a project reusing a global server. Left alone, the
+// saved file would not parse.
+func inlineOrphanAliases(doc *yaml.Node) {
+	kept := map[*yaml.Node]bool{}
+	var walk func(n *yaml.Node, visit func(*yaml.Node))
+	walk = func(n *yaml.Node, visit func(*yaml.Node)) {
+		visit(n)
+		for _, child := range n.Content {
+			walk(child, visit)
+		}
+	}
+	walk(doc, func(n *yaml.Node) { kept[n] = true })
+	walk(doc, func(n *yaml.Node) {
+		for i, child := range n.Content {
+			if child.Kind == yaml.AliasNode && !kept[child.Alias] {
+				n.Content[i] = expandAliases(child.Alias)
+			}
+		}
+	})
 }
 
 func blockCollections(node *yaml.Node) {
@@ -182,7 +344,7 @@ func (s *Service) MutateBatch(mutations []Mutation, revision string, sync bool) 
 	}
 	changed := false
 	for _, m := range mutations {
-		changed = changed || m.Server != nil || m.Remove
+		changed = changed || m.Server != nil || m.Remove || m.Settings != nil
 	}
 	if changed {
 		if err := source.save(); err != nil {

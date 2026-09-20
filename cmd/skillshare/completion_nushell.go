@@ -54,6 +54,7 @@ export extern "skillshare mcp" [
     command?: string
     name?: string
     --pi-extension: string # pi-mcp-adapter or pi-mcp-extension
+    --direct-tools: string # pi-mcp-adapter only: true, false, search or tool names
     --target: string
     --from: string
     --url: string

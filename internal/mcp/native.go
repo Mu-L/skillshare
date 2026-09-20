@@ -423,7 +423,8 @@ func sectionDigest(n *Native) string {
 func withAgentFields(target string, current, want map[string]any) map[string]any {
 	out := maps.Clone(want)
 	for key, value := range current {
-		if !slices.Contains(additionalManagedFields(target), key) {
+		// A field the config sets wins over the one in the file, e.g. Pi's directTools.
+		if _, set := want[key]; !set && !slices.Contains(additionalManagedFields(target), key) {
 			out[key] = value
 		}
 	}

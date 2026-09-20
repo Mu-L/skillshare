@@ -29,7 +29,7 @@ func runMCPEdit(service *mcp.Service, o mcpOptions) error {
 	if o.url != "" && len(o.command) > 0 {
 		return fmt.Errorf("choose either --url or -- command args")
 	}
-	if o.piExtension != "" || o.url != "" || len(o.command) > 0 || o.targets != nil {
+	if o.piExtension != "" || o.directTools != nil || o.url != "" || len(o.command) > 0 || o.targets != nil {
 		server = patchMCPServer(server, o)
 		if err := source.CheckUnchanged(); err != nil {
 			return err
@@ -38,7 +38,7 @@ func runMCPEdit(service *mcp.Service, o mcpOptions) error {
 		return finishMCPMutation(service, mcp.Mutation{Name: name, Server: &server, Replace: true}, o, time.Now())
 	}
 	if !interactive {
-		return fmt.Errorf("provide --url, --target or -- command args with --no-tui/--json; omit --no-tui for the editor")
+		return fmt.Errorf("provide --url, --target, --pi-extension, --direct-tools or -- command args with --no-tui/--json; omit --no-tui for the editor")
 	}
 	server, err = editMCPDraft(service, name, server, source.Targets, prompts)
 	if err != nil {
@@ -53,6 +53,9 @@ func runMCPEdit(service *mcp.Service, o mcpOptions) error {
 func patchMCPServer(server mcp.Server, o mcpOptions) mcp.Server {
 	if o.piExtension != "" {
 		server.PiExtension = o.piExtension
+	}
+	if o.directTools != nil {
+		server.DirectTools = o.directTools
 	}
 	if o.url != "" || len(o.command) > 0 {
 		// A connection makes this a server of its own, no longer a switch for a global one.
