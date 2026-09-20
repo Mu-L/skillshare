@@ -171,7 +171,7 @@ rules:
 
 For the full custom rules reference (merge semantics, disabling rules, exclude patterns), see [`audit rules` — Custom Rules](/docs/reference/commands/audit-rules#custom-rules).
 
-### Periodic Scanning
+### Periodic Scanning {#periodic-scanning}
 
 Rules evolve — a skill that was clean at install time may match new rules added later. Schedule periodic scans:
 

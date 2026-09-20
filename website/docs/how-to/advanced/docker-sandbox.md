@@ -231,7 +231,7 @@ spec:
 
 ---
 
-## Dev Profile
+## Dev Profile {#dev-profile}
 
 Two ways to develop the frontend with Vite HMR:
 

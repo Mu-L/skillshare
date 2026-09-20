@@ -171,7 +171,7 @@ See [enable / disable](/docs/reference/commands/enable) and [.skillignore syntax
 
 ---
 
-## Install Directly into Folders
+## Install Directly into Folders {#install-directly-into-folders}
 
 Use `--into` to install a skill into a subdirectory in one step — no manual `mv` needed:
 

@@ -75,7 +75,7 @@ Review the code and make it better.
 ```
 
 **Include examples:**
-```markdown
+````markdown
 ## Example
 
 User: "Review this function"
@@ -85,7 +85,7 @@ def add(a, b):
 ```
 
 Response: Suggest adding type hints...
-```
+````
 
 **Specify when NOT to use:**
 ```markdown
