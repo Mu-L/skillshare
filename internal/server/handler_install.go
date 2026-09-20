@@ -93,6 +93,7 @@ func (s *Server) handleInstallBatch(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	defer s.trackProjectLock()()
 
 	var body struct {
 		Source string `json:"source"`
@@ -312,6 +313,7 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	defer s.trackProjectLock()()
 
 	var body struct {
 		Source    string `json:"source"`

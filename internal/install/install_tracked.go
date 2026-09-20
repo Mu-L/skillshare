@@ -96,6 +96,12 @@ func installTrackedRepoImpl(source *Source, sourceDir string, opts InstallOption
 		_ = os.RemoveAll(destPath)
 		return nil, errTrackedNeedsBranch(cloneBranch)
 	}
+	if source.Commit != "" {
+		if err := resetTrackedToCommit(destPath, source.Commit, source.authEnv()); err != nil {
+			_ = os.RemoveAll(destPath)
+			return nil, err
+		}
+	}
 
 	// Discover skills in the cloned repo. Include root SKILL.md so the count
 	// matches what `skillshare sync` will see: every SKILL.md inside a tracked

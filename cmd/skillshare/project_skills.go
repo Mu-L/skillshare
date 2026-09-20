@@ -3,6 +3,7 @@ package main
 import (
 	"skillshare/internal/config"
 	"skillshare/internal/install"
+	"skillshare/internal/ui"
 )
 
 func reconcileProjectRemoteSkills(runtime *projectRuntime) error {
@@ -13,4 +14,15 @@ func reconcileProjectRemoteSkills(runtime *projectRuntime) error {
 		runtime.skillsStore = fresh
 	}
 	return config.ReconcileProjectSkills(runtime.root, runtime.config, runtime.skillsStore, runtime.sourcePath)
+}
+
+// trackProjectLock returns a function for defer: it moves the lockfile pins of
+// the skills this command changed.
+func trackProjectLock(runtime *projectRuntime) func() {
+	done := config.TrackProjectLock(runtime.root, runtime.config, runtime.sourcePath)
+	return func() {
+		if err := done(); err != nil {
+			ui.Warning("Could not update %s: %v", install.LockFileName, err)
+		}
+	}
 }

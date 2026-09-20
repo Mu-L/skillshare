@@ -26,6 +26,7 @@ type SkillMeta struct {
 	TreeHash    string            `json:"tree_hash,omitempty"`   // Git tree SHA of Subdir
 	FileHashes  map[string]string `json:"file_hashes,omitempty"` // sha256:<hex> per file
 	Branch      string            `json:"branch,omitempty"`      // Git branch (when non-default)
+	Commit      string            `json:"commit,omitempty"`      // Full commit SHA, what the lockfile records
 }
 
 // EffectiveKind returns "skill" if Kind is empty, otherwise the Kind value.
@@ -139,6 +140,7 @@ func NewMetaFromSource(source *Source) *SkillMeta {
 		Type:        source.MetaType(),
 		InstalledAt: time.Now(),
 		Branch:      source.Branch,
+		Commit:      source.Commit,
 	}
 
 	if source.IsGit() {

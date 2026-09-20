@@ -76,6 +76,7 @@ func (s *Server) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	defer s.trackProjectLock()()
 
 	var body updateRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -596,4 +597,18 @@ func getServerUpdatableSkills(sourceDir string, store *install.MetadataStore) ([
 		return nil, err
 	}
 	return skills, nil
+}
+
+// trackProjectLock returns a function for defer: it moves the lockfile pins of
+// the skills the request changed. Global mode has no lockfile.
+func (s *Server) trackProjectLock() func() {
+	if !s.IsProjectMode() {
+		return func() {}
+	}
+	done := config.TrackProjectLock(s.projectRoot, s.projectCfg, s.cfg.EffectiveSkillsSource())
+	return func() {
+		if err := done(); err != nil {
+			log.Printf("warning: failed to update %s: %v", install.LockFileName, err)
+		}
+	}
 }

@@ -126,6 +126,10 @@ type Source struct {
 	Path     string // Local path (empty for git)
 	Name     string // Derived skill name
 	Branch   string // Git branch to clone from (empty = remote default)
+	// Commit is the exact commit to check out. A lockfile sets it before the
+	// install; a clone fills it with the full SHA it ended up on. Unlike
+	// Branch it is never written back to the config as the skill's ref.
+	Commit string
 	// CNBHosts contains configured CNB hostnames for platform-specific auth/API behavior.
 	CNBHosts []string
 	// GiteaHosts contains configured Gitea hostnames for platform-specific auth/API behavior.

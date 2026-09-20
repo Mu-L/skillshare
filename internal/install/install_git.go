@@ -213,7 +213,33 @@ func isDetachedHead(repoPath string) bool {
 	return cmd.Run() != nil
 }
 
+// ref is what to clone: the locked commit when there is one, else the branch.
+func (s *Source) ref() string {
+	if s.Commit != "" {
+		return s.Commit
+	}
+	return s.Branch
+}
+
+// recordCommit notes the full SHA a clone landed on, for the lockfile.
+func (s *Source) recordCommit(repoPath string) {
+	if hash, err := getGitFullHash(repoPath); err == nil {
+		s.Commit = hash
+	}
+}
+
 func cloneRepoForSource(source *Source, destPath, branch string, shallow bool, onProgress ProgressCallback) error {
+	if source.Commit != "" {
+		branch = source.Commit
+	}
+	err := cloneSourceWithFallback(source, destPath, branch, shallow, onProgress)
+	if err == nil {
+		source.recordCommit(destPath)
+	}
+	return err
+}
+
+func cloneSourceWithFallback(source *Source, destPath, branch string, shallow bool, onProgress ProgressCallback) error {
 	err := cloneRepoWithEnv(source.CloneURL, destPath, branch, shallow, source.authEnv(), onProgress)
 	if err == nil {
 		return nil

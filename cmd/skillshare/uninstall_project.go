@@ -9,6 +9,7 @@ import (
 
 	"skillshare/internal/config"
 	"skillshare/internal/install"
+	"skillshare/internal/projectdir"
 	"skillshare/internal/sync"
 	"skillshare/internal/trash"
 	"skillshare/internal/ui"
@@ -428,6 +429,21 @@ func cmdUninstallProject(args []string, root string) error {
 		skillsStore.RemoveByNames(removedNames)
 		if saveErr := skillsStore.Save(sourceDir); saveErr != nil {
 			ui.Warning("Failed to update metadata after uninstall: %v", saveErr)
+		}
+		// The config keeps the entry until the next reconcile; the pin goes now.
+		lockDir := projectdir.Resolve(root)
+		if lock, lockErr := install.LoadLock(lockDir); lockErr == nil {
+			for name := range lock.Skills {
+				for removed := range removedNames {
+					// A group uninstall names the folder; its pins are "folder/skill".
+					if name == removed || strings.HasPrefix(name, removed+"/") {
+						delete(lock.Skills, name)
+					}
+				}
+			}
+			if saveErr := lock.Save(lockDir); saveErr != nil {
+				ui.Warning("Failed to update %s: %v", install.LockFileName, saveErr)
+			}
 		}
 	}
 

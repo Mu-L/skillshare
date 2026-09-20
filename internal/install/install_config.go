@@ -14,6 +14,16 @@ import (
 type configSkillEntry struct {
 	dto    SkillEntryDTO
 	source *Source
+	relock bool // already installed, but at another commit than the lockfile's
+}
+
+// optsFor stages a relock like an update, so a blocked audit keeps the
+// installed copy.
+func (e configSkillEntry) optsFor(opts InstallOptions) InstallOptions {
+	if e.relock {
+		opts.Force, opts.Update = true, true
+	}
+	return opts
 }
 
 // configSkillGroup holds config skills sharing the same CloneURL.
@@ -41,6 +51,8 @@ func groupConfigSkillsByRepo(entries []configSkillEntry) (groups []configSkillGr
 		if e.source.Branch != "" {
 			key += "\t" + e.source.Branch
 		}
+		// Skills of one repo installed at different times are locked apart.
+		key += "\t" + e.source.Commit
 		if g, ok := buckets[key]; ok {
 			g.skills = append(g.skills, e)
 		} else {
@@ -119,6 +131,8 @@ func InstallFromConfig(ctx InstallContext, opts InstallOptions) (ConfigInstallRe
 	var tracked []SkillEntryDTO
 	var plain []configSkillEntry
 
+	store := LoadMetadataOrNew(sourcePath)
+
 	for _, skill := range ctx.ConfigSkills() {
 		_, bareName := skill.EffectiveParts()
 		if strings.TrimSpace(bareName) == "" {
@@ -127,14 +141,41 @@ func InstallFromConfig(ctx InstallContext, opts InstallOptions) (ConfigInstallRe
 
 		displayName := skill.FullName()
 		destPath := filepath.Join(sourcePath, filepath.FromSlash(displayName))
+		locked := opts.Lock.CommitFor(displayName, skill.Source)
 
-		// Skip skills that already exist on disk.
+		// Skip skills that already exist on disk, unless the lockfile moved on
+		// (a teammate updated) and this copy has to follow.
+		relock := false
 		if _, err := os.Stat(destPath); err == nil {
-			result.Skipped++
-			if !opts.Quiet {
-				ui.StepDone(displayName, "skipped (already exists)")
+			if locked == "" || InstalledCommit(destPath, store.GetByPath(displayName)) == locked {
+				result.Skipped++
+				if !opts.Quiet {
+					ui.StepDone(displayName, "skipped (already exists)")
+				}
+				continue
 			}
-			continue
+			if opts.DryRun {
+				if !opts.Quiet {
+					ui.StepDone(displayName, "would move to locked commit "+shortHash(locked))
+				}
+				continue
+			}
+			if IsGitRepo(destPath) {
+				if err := relockGitRepo(destPath, locked, opts); err != nil {
+					if !opts.Quiet {
+						ui.StepFail(displayName, err.Error())
+					}
+					result.FailedSkills = append(result.FailedSkills, displayName)
+					continue
+				}
+				if !opts.Quiet {
+					ui.StepDone(displayName, "moved to locked commit "+shortHash(locked))
+				}
+				result.InstalledSkills = append(result.InstalledSkills, displayName)
+				result.Installed++
+				continue
+			}
+			relock = true
 		}
 
 		source, err := ParseSourceWithOptions(skill.Source, parseOpts)
@@ -149,11 +190,12 @@ func InstallFromConfig(ctx InstallContext, opts InstallOptions) (ConfigInstallRe
 		if skill.Branch != "" {
 			source.Branch = skill.Branch
 		}
+		source.Commit = locked
 
 		if skill.Tracked {
 			tracked = append(tracked, skill)
 		} else {
-			plain = append(plain, configSkillEntry{dto: skill, source: source})
+			plain = append(plain, configSkillEntry{dto: skill, source: source, relock: relock})
 		}
 	}
 
@@ -174,6 +216,7 @@ func InstallFromConfig(ctx InstallContext, opts InstallOptions) (ConfigInstallRe
 		}
 		source.Name = bareName
 		source.Branch = skill.Branch
+		source.Commit = opts.Lock.CommitFor(displayName, skill.Source)
 
 		installed := installTrackedFromConfig(source, sourcePath, displayName, groupDir, opts)
 		if installed.failed {
@@ -238,7 +281,7 @@ func InstallFromConfig(ctx InstallContext, opts InstallOptions) (ConfigInstallRe
 				}
 			}
 
-			_, err := InstallFromDiscovery(discovery, skill, destPath, opts)
+			_, err := InstallFromDiscovery(discovery, skill, destPath, e.optsFor(opts))
 			if err != nil {
 				if !opts.Quiet {
 					ui.StepFail(displayName, err.Error())
@@ -274,7 +317,7 @@ func InstallFromConfig(ctx InstallContext, opts InstallOptions) (ConfigInstallRe
 		displayName := e.dto.FullName()
 		destPath := filepath.Join(sourcePath, filepath.FromSlash(displayName))
 
-		ok := installPlainFromConfig(ctx, e.source, sourcePath, destPath, displayName, bareName, groupDir, opts)
+		ok := installPlainFromConfig(ctx, e.source, sourcePath, destPath, displayName, bareName, groupDir, e.optsFor(opts))
 		if !ok {
 			result.FailedSkills = append(result.FailedSkills, displayName)
 			continue

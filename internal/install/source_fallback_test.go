@@ -62,6 +62,8 @@ func TestCloneRepoForSource_RetriesNestedGitLabURL(t *testing.T) {
 	gitPath := filepath.Join(binDir, "git")
 	script := fmt.Sprintf(`#!/bin/bash
 set -eu
+# Only clones are under test; the commit lookup after a clone is not.
+[ "$1" = "clone" ] || exit 1
 args=("$@")
 url="${args[$(( $# - 2 ))]}"
 dest="${args[$(( $# - 1 ))]}"

@@ -96,6 +96,7 @@ func buildDiscoveredAgentSource(discovery *DiscoveryResult, agent AgentInfo) *So
 		Subdir:   agent.Path,
 		Name:     agent.Name,
 		Branch:   discovery.Source.Branch,
+		Commit:   discovery.Source.Commit,
 	}
 }
 
@@ -461,6 +462,7 @@ func writeDiscoveredSkillMetadata(discovery *DiscoveryResult, skill SkillInfo, d
 		Subdir:   fullSubdir,
 		Name:     skill.Name,
 		Branch:   discovery.Source.Branch,
+		Commit:   discovery.Source.Commit,
 	}
 	meta := NewMetaFromSource(source)
 	sourceRoot := discoverySourceRoot(discovery)
@@ -496,18 +498,25 @@ func installFromGitSubdir(source *Source, destPath string, result *InstallResult
 	var resolved string
 	var commitHash string
 
+	// The Contents API paths below download the default branch and ignore any
+	// branch, tag or commit, so they only run when none was asked for.
+	hasRef := source.ref() != ""
+
 	// Fast path 1: sparse checkout (preferred for speed if git is modern)
 	// Works for GitHub and non-GitHub hosts.
 	if gitSupportsSparseCheckout() {
 		resolved = source.Subdir
-		if err := sparseCloneSubdir(source.CloneURL, resolved, tempRepoPath, source.Branch, source.authEnv(), opts.OnProgress); err == nil {
+		if err := sparseCloneSubdir(source.CloneURL, resolved, tempRepoPath, source.ref(), source.authEnv(), opts.OnProgress); err == nil {
 			subdirPath = filepath.Join(tempRepoPath, resolved)
 			if info, statErr := os.Stat(subdirPath); statErr != nil || !info.IsDir() {
 				subdirPath = ""
 				result.Warnings = append(result.Warnings, "sparse checkout install fallback: subdirectory missing after checkout")
 				cleanupTempRepo(tempRepoPath)
-			} else if hash, hashErr := getGitCommit(tempRepoPath); hashErr == nil {
-				commitHash = hash
+			} else {
+				source.recordCommit(tempRepoPath)
+				if hash, hashErr := getGitCommit(tempRepoPath); hashErr == nil {
+					commitHash = hash
+				}
 			}
 		} else {
 			result.Warnings = append(result.Warnings, fmt.Sprintf("sparse checkout install fallback: %v", err))
@@ -518,7 +527,7 @@ func installFromGitSubdir(source *Source, destPath string, result *InstallResult
 
 	// Fast path 2: GitHub/GHE Contents API
 	// Fallback for when sparse checkout is unavailable or fails.
-	if subdirPath == "" && isGitHubAPISource(source) {
+	if subdirPath == "" && !hasRef && isGitHubAPISource(source) {
 		owner, repo := source.GitHubOwner(), source.GitHubRepo()
 		resolved = source.Subdir
 		subdirPath = filepath.Join(tempRepoPath, resolved)
@@ -533,7 +542,7 @@ func installFromGitSubdir(source *Source, destPath string, result *InstallResult
 	}
 
 	// Fast path 2b: CNB Contents API
-	if subdirPath == "" && isCNBAPISource(source) {
+	if subdirPath == "" && !hasRef && isCNBAPISource(source) {
 		repo := cnbRepoPath(source.CloneURL)
 		resolved = source.Subdir
 		subdirPath = filepath.Join(tempRepoPath, resolved)
@@ -548,7 +557,7 @@ func installFromGitSubdir(source *Source, destPath string, result *InstallResult
 	}
 
 	// Fast path 2b: Gitea Contents API
-	if subdirPath == "" && isGiteaAPISource(source) {
+	if subdirPath == "" && !hasRef && isGiteaAPISource(source) {
 		owner, repo := giteaOwnerRepo(source.CloneURL)
 		resolved = source.Subdir
 		subdirPath = filepath.Join(tempRepoPath, resolved)

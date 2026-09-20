@@ -43,6 +43,11 @@ func cmdUpdateProject(args []string, root string) (*updateResult, error) {
 	ui.Header(ui.WithModeLabel("Updating"))
 	ui.StepStart("Source", sourcePath)
 
+	// An update is what moves the lockfile forward.
+	if !opts.dryRun {
+		defer trackProjectLock(runtime)()
+	}
+
 	if opts.all {
 		uc := &updateContext{sourcePath: sourcePath, projectRoot: root, opts: opts, parseOpts: parseOptsFromProjectConfig(runtime.config)}
 		return updateAllProjectSkills(uc)

@@ -330,12 +330,16 @@ func discoverFromGitSubdirWithProgressImpl(source *Source, onProgress ProgressCa
 	var commitHash string
 	var subdirPath string
 
+	// The Contents API paths below ignore any branch, tag or commit.
+	hasRef := source.ref() != ""
+
 	// Fast path 1: sparse checkout (preferred for speed if git is modern)
 	// Works for GitHub and non-GitHub hosts.
 	if gitSupportsSparseCheckout() {
-		if err := sparseCloneSubdir(source.CloneURL, source.Subdir, repoPath, source.Branch, source.authEnv(), onProgress); err == nil {
+		if err := sparseCloneSubdir(source.CloneURL, source.Subdir, repoPath, source.ref(), source.authEnv(), onProgress); err == nil {
 			subdirPath = filepath.Join(repoPath, source.Subdir)
 			if info, statErr := os.Stat(subdirPath); statErr == nil && info.IsDir() {
+				source.recordCommit(repoPath)
 				if hash, hashErr := getGitCommit(repoPath); hashErr == nil {
 					commitHash = hash
 				}
@@ -367,7 +371,7 @@ func discoverFromGitSubdirWithProgressImpl(source *Source, onProgress ProgressCa
 
 	// Fast path 2: GitHub/GHE Contents API
 	// Fallback for when sparse checkout is unavailable or fails.
-	if subdirPath == "" && isGitHubAPISource(source) {
+	if subdirPath == "" && !hasRef && isGitHubAPISource(source) {
 		owner, repo := source.GitHubOwner(), source.GitHubRepo()
 		subdirPath = filepath.Join(repoPath, source.Subdir)
 		hash, dlErr := downloadGitHubDir(owner, repo, source.Subdir, subdirPath, source, onProgress)
@@ -394,7 +398,7 @@ func discoverFromGitSubdirWithProgressImpl(source *Source, onProgress ProgressCa
 	}
 
 	// Fast path 2b: CNB Contents API
-	if subdirPath == "" && isCNBAPISource(source) {
+	if subdirPath == "" && !hasRef && isCNBAPISource(source) {
 		repo := cnbRepoPath(source.CloneURL)
 		subdirPath = filepath.Join(repoPath, source.Subdir)
 		hash, dlErr := downloadCNBDir(repo, source.Subdir, subdirPath, source, onProgress)
@@ -422,7 +426,7 @@ func discoverFromGitSubdirWithProgressImpl(source *Source, onProgress ProgressCa
 	}
 
 	// Fast path 2b: Gitea Contents API
-	if subdirPath == "" && isGiteaAPISource(source) {
+	if subdirPath == "" && !hasRef && isGiteaAPISource(source) {
 		owner, repo := giteaOwnerRepo(source.CloneURL)
 		subdirPath = filepath.Join(repoPath, source.Subdir)
 		hash, dlErr := downloadGiteaDir(owner, repo, source.Subdir, subdirPath, source, onProgress)

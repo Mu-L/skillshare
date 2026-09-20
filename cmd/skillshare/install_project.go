@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"skillshare/internal/install"
+	"skillshare/internal/projectdir"
 	"skillshare/internal/ui"
 	appversion "skillshare/internal/version"
 )
@@ -57,6 +58,11 @@ func cmdInstallProjectParsed(parsed *installArgs, root string) (installLogSummar
 		return installFromProjectConfig(runtime, parsed.opts)
 	}
 
+	// A forced reinstall moves a skill that is already pinned.
+	if !parsed.opts.DryRun {
+		defer trackProjectLock(runtime)()
+	}
+
 	cfg := configFromProjectRuntime(runtime)
 	source, resolvedFromMeta, err := resolveInstallSource(parsed.sourceArg, parsed.opts, cfg)
 	if err == nil && parsed.opts.Branch != "" {
@@ -102,6 +108,12 @@ func installFromProjectConfig(runtime *projectRuntime, opts install.InstallOptio
 	}
 
 	ctx := &projectInstallContext{runtime: runtime}
+
+	lock, err := install.LoadLock(projectdir.Resolve(runtime.root))
+	if err != nil {
+		return summary, err
+	}
+	opts.Lock = lock
 
 	if len(ctx.ConfigSkills()) == 0 {
 		ui.Info("No remote skills defined in .skillshare/config.yaml")

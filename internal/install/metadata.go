@@ -48,6 +48,7 @@ type MetadataEntry struct {
 	Subdir      string            `json:"subdir,omitempty"`
 	Version     string            `json:"version,omitempty"`
 	TreeHash    string            `json:"tree_hash,omitempty"`
+	Commit      string            `json:"commit,omitempty"` // full SHA; the lockfile records it
 	FileHashes  map[string]string `json:"file_hashes,omitempty"`
 }
 
@@ -233,6 +234,7 @@ func WriteMetaToStore(sourceDir, destPath string, meta *SkillMeta) error {
 		TreeHash:    meta.TreeHash,
 		FileHashes:  meta.FileHashes,
 		Branch:      meta.Branch,
+		Commit:      meta.Commit,
 	})
 	return store.Save(sourceDir)
 }
@@ -335,6 +337,7 @@ func (s *MetadataStore) SetFromSource(name string, src *Source) *MetadataEntry {
 		Type:        src.MetaType(),
 		InstalledAt: time.Now(),
 		Branch:      src.Branch,
+		Commit:      src.Commit,
 	}
 	if src.IsGit() {
 		entry.RepoURL = src.CloneURL

@@ -50,7 +50,10 @@ func sparseCloneSubdir(url, subdir, destPath, branch string, extraEnv []string, 
 	}
 
 	cloneArgs := []string{"clone", "--filter=blob:none", "--no-checkout", "--depth", "1"}
-	if branch != "" {
+	// clone --branch rejects a commit SHA: clone the default branch and fetch
+	// the commit below instead.
+	sha := IsCommitSHA(branch)
+	if branch != "" && !sha {
 		cloneArgs = append(cloneArgs, "--branch", branch)
 	}
 	if onProgress != nil {
@@ -67,9 +70,13 @@ func sparseCloneSubdir(url, subdir, destPath, branch string, extraEnv []string, 
 		return err
 	}
 
-	if err := runGitCommandWithProgress([]string{"checkout"}, destPath, extraEnv, nil); err != nil {
-		return err
+	if sha {
+		// Servers only resolve a full SHA here; an abbreviated one fails and the
+		// caller falls back to a full clone.
+		if err := runGitCommandWithProgress([]string{"fetch", "--quiet", "--depth", "1", "--filter=blob:none", "origin", branch}, destPath, extraEnv, nil); err != nil {
+			return err
+		}
+		return runGitCommandWithProgress([]string{"checkout", "--quiet", "--detach", "FETCH_HEAD"}, destPath, extraEnv, nil)
 	}
-
-	return nil
+	return runGitCommandWithProgress([]string{"checkout"}, destPath, extraEnv, nil)
 }

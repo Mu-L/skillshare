@@ -55,7 +55,74 @@ func ReconcileProjectSkills(projectRoot string, projectCfg *ProjectConfig, store
 		}
 	}
 
+	if projectCfg != nil {
+		if err := WriteProjectLock(projectRoot, projectCfg, store, sourcePath); err != nil {
+			return fmt.Errorf("failed to write %s: %w", install.LockFileName, err)
+		}
+	}
+
 	return nil
+}
+
+// WriteProjectLock pins remote skills that have no pin yet and drops pins for
+// skills that left the config. It never moves an existing pin: a copy that is
+// merely behind (a teammate updated, this machine has not run `install -p`)
+// must not drag the lockfile back. Moving a pin is TrackProjectLock's job.
+// ponytail: skills only; agents get pinned once someone needs it.
+func WriteProjectLock(projectRoot string, cfg *ProjectConfig, store *install.MetadataStore, sourcePath string) error {
+	return writeProjectLock(projectRoot, cfg, store, sourcePath, nil)
+}
+
+// TrackProjectLock snapshots the commit of every remote skill and returns a
+// function to call once the command is done. Skills whose commit changed in
+// between were moved by this command (update, forced reinstall), so their pins
+// follow; every other pin stays as it is.
+func TrackProjectLock(projectRoot string, cfg *ProjectConfig, sourcePath string) func() error {
+	before := projectSkillCommits(cfg, install.LoadMetadataOrNew(sourcePath), sourcePath)
+	return func() error {
+		return writeProjectLock(projectRoot, cfg, install.LoadMetadataOrNew(sourcePath), sourcePath, before)
+	}
+}
+
+func projectSkillCommits(cfg *ProjectConfig, store *install.MetadataStore, sourcePath string) map[string]string {
+	commits := make(map[string]string, len(cfg.Skills))
+	for _, s := range cfg.Skills {
+		name := s.FullName()
+		commits[name] = install.InstalledCommit(filepath.Join(sourcePath, filepath.FromSlash(name)), store.GetByPath(name))
+	}
+	return commits
+}
+
+func writeProjectLock(projectRoot string, cfg *ProjectConfig, store *install.MetadataStore, sourcePath string, before map[string]string) error {
+	dir := projectdir.Resolve(projectRoot)
+	old, err := install.LoadLock(dir)
+	if err != nil {
+		return err
+	}
+	now := projectSkillCommits(cfg, store, sourcePath)
+	lock := &install.Lock{Skills: map[string]install.LockEntry{}}
+	for _, s := range cfg.Skills {
+		name := s.FullName()
+		commit := now[name]
+		prev, pinned := old.Skills[name]
+		pinned = pinned && prev.Source == s.Source
+		moved := before != nil && before[name] != commit
+		// Keep the pin unless this command moved the skill. An unknown commit
+		// (not installed here, or a source without one) never replaces a pin.
+		if pinned && (!moved || commit == "") {
+			lock.Skills[name] = prev
+			continue
+		}
+		if commit == "" {
+			continue
+		}
+		pin := install.LockEntry{Source: s.Source, Commit: commit}
+		if entry := store.GetByPath(name); entry != nil {
+			pin.TreeHash = entry.TreeHash
+		}
+		lock.Skills[name] = pin
+	}
+	return lock.Save(dir)
 }
 
 // reconcileProjectConfigSkills syncs MetadataStore entries into ProjectConfig.Skills

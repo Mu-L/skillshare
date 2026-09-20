@@ -73,6 +73,7 @@ func handleUpdate(source *Source, destPath string, result *InstallResult, opts I
 		if hash, err := getGitCommit(destPath); err == nil {
 			meta.Version = hash
 		}
+		meta.Commit, _ = getGitFullHash(destPath)
 		if meta.Subdir != "" {
 			meta.TreeHash = getSubdirTreeHash(destPath, meta.Subdir)
 		}
@@ -182,6 +183,7 @@ func readTempUpdateMeta(tempDir string) *SkillMeta {
 		TreeHash:    entry.TreeHash,
 		FileHashes:  entry.FileHashes,
 		Branch:      entry.Branch,
+		Commit:      entry.Commit,
 	}
 }
 
