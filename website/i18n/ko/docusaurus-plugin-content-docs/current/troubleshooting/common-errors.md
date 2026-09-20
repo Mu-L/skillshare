@@ -489,9 +489,9 @@ skillshare doctor
 
 ### Antigravity does not load synced skills {#antigravity-does-not-load-synced-skills}
 
-**Cause:** Antigravity의 skill scanner는 **실제 디렉터리**만 탐색합니다 — symlink는 건너뜁니다. skillshare의 기본 `merge` 모드는 skill마다 하나의 symlink를 생성하므로(Windows에서는 NTFS junction), 어느 것도 인식되지 않습니다. Windows에서는 `Incorrect function` 오류로 나타나며, macOS와 Linux에서는 skill이 조용히 사라진 것처럼 보입니다.
+**Cause:** Antigravity 앱의 skill scanner는 **실제 디렉터리**만 탐색합니다 — symlink는 건너뜁니다. skillshare의 기본 `merge` 모드는 skill마다 하나의 symlink를 생성하므로(Windows에서는 NTFS junction), 어느 것도 인식되지 않습니다. Windows에서는 `Incorrect function` 오류로 나타나며, macOS와 Linux에서는 skill이 조용히 사라진 것처럼 보입니다.
 
-이는 skillshare의 버그가 아니라 Antigravity 측의 제약입니다. 두 가지 우회 방법이 있습니다.
+이는 skillshare의 버그가 아니라 Antigravity 측의 제약입니다. `antigravity` target(앱, `~/.gemini/config/skills`)에만 해당하며, 독립 실행형 `agy` CLI는 `~/.gemini/antigravity-cli/skills`를 읽는 별도의 `antigravity-cli` target입니다. 두 가지 우회 방법이 있습니다.
 
 **Option 1 — Target을 `copy` 모드로 전환**
 

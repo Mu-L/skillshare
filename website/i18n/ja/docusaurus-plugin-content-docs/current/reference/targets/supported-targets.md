@@ -22,6 +22,7 @@ skillshare は **65以上の AI CLI ツール** に対応しています。`skil
   <a className="target-badge" href="#target-universal">Universal</a>
   <a className="target-badge" href="#target-amp">Amp</a>
   <a className="target-badge" href="#target-antigravity">Antigravity</a>
+  <a className="target-badge" href="#target-antigravity-cli">Antigravity CLI</a>
   <a className="target-badge" href="#target-aiderdesk">AiderDesk</a>
   <a className="target-badge" href="#target-astrbot">AstrBot</a>
   <a className="target-badge" href="#target-augment">Augment</a>
@@ -99,6 +100,7 @@ skillshare は **65以上の AI CLI ツール** に対応しています。`skil
 <tr id="target-universal"><td>universal</td><td><code>&#126;/.agents/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-amp"><td>amp</td><td><code>&#126;/.config/agents/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-antigravity"><td>antigravity</td><td><code>&#126;/.gemini/config/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-antigravity-cli"><td>antigravity-cli</td><td><code>&#126;/.gemini/antigravity-cli/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-aiderdesk"><td>aiderdesk</td><td><code>&#126;/.aider-desk/skills</code></td><td><code>.aider-desk/skills</code></td></tr>
 <tr id="target-astrbot"><td>astrbot</td><td><code>&#126;/.astrbot/data/skills</code></td><td><code>data/skills</code></td></tr>
 <tr id="target-augment"><td>augment</td><td><code>&#126;/.augment/skills</code></td><td><code>.augment/skills</code></td></tr>
@@ -193,7 +195,6 @@ skillshare は **65以上の AI CLI ツール** に対応しています。`skil
 | `factory` | `droid` | ブランド名 / Config ディレクトリ名 |
 | `forge-code` | `forgecode` | ハイフン区切りのバリエーション |
 | `gemini-cli` | `gemini` | CLI サフィックス付き |
-| `antigravity-cli` | `antigravity` | CLI バリエーション |
 | `github-copilot` | `copilot` | 正式な製品名 |
 | `iflow-cli` | `iflow` | CLI サフィックス付き |
 | `kilo` | `kilocode` | 短縮名 |

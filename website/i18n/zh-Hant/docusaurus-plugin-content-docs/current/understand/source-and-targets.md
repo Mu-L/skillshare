@@ -210,7 +210,8 @@ Targets 是 skillshare 會同步過去的 AI CLI skill 目錄。
 - `~/.claude/skills/` — Claude Code
 - `~/.cursor/skills/` — Cursor
 - `~/.agents/skills/` — OpenAI Codex CLI（共用的 `universal` 目錄）
-- `~/.gemini/config/skills/` — Antigravity
+- `~/.gemini/config/skills/` — Antigravity（app）
+- `~/.gemini/antigravity-cli/skills/` — Antigravity CLI
 - `~/.gemini/skills/` — Gemini CLI
 - 以及 [64+ 種其他工具](/docs/reference/targets/supported-targets)
 

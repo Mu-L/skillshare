@@ -21,6 +21,7 @@ skillshare는 **65개 이상의 AI CLI 도구**를 지원합니다. `skillshare 
   <a className="target-badge" href="#target-universal">Universal</a>
   <a className="target-badge" href="#target-amp">Amp</a>
   <a className="target-badge" href="#target-antigravity">Antigravity</a>
+  <a className="target-badge" href="#target-antigravity-cli">Antigravity CLI</a>
   <a className="target-badge" href="#target-aiderdesk">AiderDesk</a>
   <a className="target-badge" href="#target-astrbot">AstrBot</a>
   <a className="target-badge" href="#target-augment">Augment</a>
@@ -98,6 +99,7 @@ skillshare는 **65개 이상의 AI CLI 도구**를 지원합니다. `skillshare 
 <tr id="target-universal"><td>universal</td><td><code>&#126;/.agents/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-amp"><td>amp</td><td><code>&#126;/.config/agents/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-antigravity"><td>antigravity</td><td><code>&#126;/.gemini/config/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-antigravity-cli"><td>antigravity-cli</td><td><code>&#126;/.gemini/antigravity-cli/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-aiderdesk"><td>aiderdesk</td><td><code>&#126;/.aider-desk/skills</code></td><td><code>.aider-desk/skills</code></td></tr>
 <tr id="target-astrbot"><td>astrbot</td><td><code>&#126;/.astrbot/data/skills</code></td><td><code>data/skills</code></td></tr>
 <tr id="target-augment"><td>augment</td><td><code>&#126;/.augment/skills</code></td><td><code>.augment/skills</code></td></tr>
@@ -187,7 +189,6 @@ skillshare는 **65개 이상의 AI CLI 도구**를 지원합니다. `skillshare 
 | `factory` | `droid` | 브랜드 / config 디렉터리 이름 |
 | `forge-code` | `forgecode` | 하이픈 변형 |
 | `gemini-cli` | `gemini` | CLI 접미사가 붙은 형태 |
-| `antigravity-cli` | `antigravity` | CLI 변형 |
 | `github-copilot` | `copilot` | 전체 제품명 |
 | `iflow-cli` | `iflow` | CLI 접미사가 붙은 형태 |
 | `kilo` | `kilocode` | 짧은 이름 |

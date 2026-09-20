@@ -21,6 +21,7 @@ skillshare 支援 **65+ 個 AI CLI 工具**。當你執行 `skillshare init` 時
   <a className="target-badge" href="#target-universal">Universal</a>
   <a className="target-badge" href="#target-amp">Amp</a>
   <a className="target-badge" href="#target-antigravity">Antigravity</a>
+  <a className="target-badge" href="#target-antigravity-cli">Antigravity CLI</a>
   <a className="target-badge" href="#target-aiderdesk">AiderDesk</a>
   <a className="target-badge" href="#target-astrbot">AstrBot</a>
   <a className="target-badge" href="#target-augment">Augment</a>
@@ -98,6 +99,7 @@ skillshare 支援 **65+ 個 AI CLI 工具**。當你執行 `skillshare init` 時
 <tr id="target-universal"><td>universal</td><td><code>&#126;/.agents/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-amp"><td>amp</td><td><code>&#126;/.config/agents/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-antigravity"><td>antigravity</td><td><code>&#126;/.gemini/config/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-antigravity-cli"><td>antigravity-cli</td><td><code>&#126;/.gemini/antigravity-cli/skills</code></td><td><code>.agents/skills</code></td></tr>
 <tr id="target-aiderdesk"><td>aiderdesk</td><td><code>&#126;/.aider-desk/skills</code></td><td><code>.aider-desk/skills</code></td></tr>
 <tr id="target-astrbot"><td>astrbot</td><td><code>&#126;/.astrbot/data/skills</code></td><td><code>data/skills</code></td></tr>
 <tr id="target-augment"><td>augment</td><td><code>&#126;/.augment/skills</code></td><td><code>.augment/skills</code></td></tr>
@@ -187,7 +189,6 @@ skillshare 支援 **65+ 個 AI CLI 工具**。當你執行 `skillshare init` 時
 | `factory` | `droid` | 品牌／設定目錄名稱 |
 | `forge-code` | `forgecode` | 帶連字號的變體 |
 | `gemini-cli` | `gemini` | 帶 CLI 後綴 |
-| `antigravity-cli` | `antigravity` | CLI 變體 |
 | `github-copilot` | `copilot` | 完整產品名稱 |
 | `iflow-cli` | `iflow` | 帶 CLI 後綴 |
 | `kilo` | `kilocode` | 簡短名稱 |

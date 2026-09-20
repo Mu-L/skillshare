@@ -530,13 +530,13 @@ skillshare doctor
 
 ### Antigravity が Sync された Skill を読み込まない {#antigravity-does-not-load-synced-skills}
 
-**原因:** Antigravity の Skill スキャナーは **実際のディレクトリ** のみを検出します —
+**原因:** Antigravity アプリの Skill スキャナーは **実際のディレクトリ** のみを検出します —
 シンボリックリンクはスキップされます。skillshare のデフォルトの `merge` モードは Skill ごとに
 1つのシンボリックリンク（Windows では NTFS ジャンクション）を作成するため、そのどれも検出されません。
 Windows ではこれが `Incorrect function` エラーとして表面化し、macOS と Linux では Skill が
 黙って表示されません。
 
-これは Antigravity 側の制限であり、skillshare のバグではありません。回避策は2つあります。
+これは Antigravity 側の制限であり、skillshare のバグではありません。対象は `antigravity` ターゲット（アプリ、`~/.gemini/config/skills`）のみで、スタンドアロンの `agy` CLI は `~/.gemini/antigravity-cli/skills` を読む別の `antigravity-cli` ターゲットです。回避策は2つあります。
 
 **オプション1 — Target を `copy` モードに切り替える**
 

@@ -210,7 +210,8 @@ Target은 skillshare가 sync하는 AI CLI skill 디렉터리입니다.
 - `~/.claude/skills/` — Claude Code
 - `~/.cursor/skills/` — Cursor
 - `~/.agents/skills/` — OpenAI Codex CLI (공유 `universal` 디렉터리)
-- `~/.gemini/config/skills/` — Antigravity
+- `~/.gemini/config/skills/` — Antigravity (앱)
+- `~/.gemini/antigravity-cli/skills/` — Antigravity CLI
 - `~/.gemini/skills/` — Gemini CLI
 - 그 외 [64개 이상](/docs/reference/targets/supported-targets)
 

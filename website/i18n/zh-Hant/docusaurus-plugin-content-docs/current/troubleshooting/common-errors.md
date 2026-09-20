@@ -489,9 +489,9 @@ skillshare doctor
 
 ### Antigravity 無法載入已同步的 Skill {#antigravity-does-not-load-synced-skills}
 
-**原因：** Antigravity 的 Skill 掃描器只會偵測**真實目錄** — 它會跳過 symlink。skillshare 預設的 `merge` 模式會為每個 Skill 建立一個 symlink（在 Windows 上是 NTFS junction），因此沒有任何一個會被偵測到。在 Windows 上，這會出現 `Incorrect function` 錯誤；在 macOS 與 Linux 上，Skill 則會靜默地消失不見。
+**原因：** Antigravity app 的 Skill 掃描器只會偵測**真實目錄** — 它會跳過 symlink。skillshare 預設的 `merge` 模式會為每個 Skill 建立一個 symlink（在 Windows 上是 NTFS junction），因此沒有任何一個會被偵測到。在 Windows 上，這會出現 `Incorrect function` 錯誤；在 macOS 與 Linux 上，Skill 則會靜默地消失不見。
 
-這是 Antigravity 端的限制，而非 skillshare 的臭蟲。有兩種解決方法：
+這是 Antigravity 端的限制，而非 skillshare 的臭蟲。此限制只影響 `antigravity` target（app，`~/.gemini/config/skills`）；獨立的 `agy` CLI 是另一個 `antigravity-cli` target，讀取 `~/.gemini/antigravity-cli/skills`。有兩種解決方法：
 
 **選項 1 — 將 Target 切換為 `copy` 模式**
 

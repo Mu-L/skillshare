@@ -258,7 +258,8 @@ skillshare 在 `init` 期间会自动检测以下工具：
 | OpenCode | `~/.opencode/skills` |
 | Windsurf | `~/.windsurf/skills` |
 | Codex | `~/.openai-codex/skills` |
-| Antigravity | `~/.gemini/config/skills` |
+| Antigravity（app） | `~/.gemini/config/skills` |
+| Antigravity CLI | `~/.gemini/antigravity-cli/skills` |
 | Gemini CLI | `~/.gemini/skills` |
 | Amp | `~/.amp/skills` |
 | ... and 45+ more | See [supported targets](/docs/reference/targets/supported-targets) |

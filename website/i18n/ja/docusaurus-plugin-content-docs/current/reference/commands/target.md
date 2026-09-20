@@ -255,7 +255,8 @@ skillshare は `init` の際に以下を自動検出します。
 | OpenCode | `~/.opencode/skills` |
 | Windsurf | `~/.windsurf/skills` |
 | Codex | `~/.openai-codex/skills` |
-| Antigravity | `~/.gemini/config/skills` |
+| Antigravity（アプリ） | `~/.gemini/config/skills` |
+| Antigravity CLI | `~/.gemini/antigravity-cli/skills` |
 | Gemini CLI | `~/.gemini/skills` |
 | Amp | `~/.amp/skills` |
 | ... その他 45 種類以上 | [supported targets](/docs/reference/targets/supported-targets) を参照 |
