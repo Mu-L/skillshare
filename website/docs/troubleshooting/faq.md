@@ -188,7 +188,7 @@ Both approaches can be combined — config filters are applied first, then the s
 
 ## Targets
 
-### Using universal alongside npx skills
+### Using universal alongside npx skills {#using-universal-alongside-npx-skills}
 
 The `universal` target points to `~/.agents/skills`, the same directory used by the [npx skills CLI](https://github.com/vercel-labs/skills). Both tools can manage this directory simultaneously with some caveats:
 

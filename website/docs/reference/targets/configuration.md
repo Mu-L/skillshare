@@ -208,7 +208,7 @@ targets:
     path: ~/my-app/skills
 ```
 
-### `include` / `exclude` (target filters)
+### `include` / `exclude` (target filters) {#include--exclude-target-filters}
 
 Use per-target filters to control which skills are synced in **merge and copy modes**.
 

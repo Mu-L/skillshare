@@ -52,7 +52,7 @@ A skill must pass **all** layers to reach a target:
 
 📖 [File structure reference](/docs/reference/appendix/file-structure#skillignore-optional)
 
-## SKILL.md targets field
+## SKILL.md targets field {#skillmd-targets-field}
 
 **Format:** Top-level or nested under `metadata`:
 
@@ -73,7 +73,7 @@ targets: [claude, cursor]
 
 **Agents** support the same whitelist via a top-level `targets` list in the agent's frontmatter. Agents without the field sync to every agent-capable target. See [Agents — Agent File Format](/docs/understand/agents#agent-file-format).
 
-## Target include/exclude filters
+## Target include/exclude filters {#target-includeexclude-filters}
 
 **Set via CLI:**
 

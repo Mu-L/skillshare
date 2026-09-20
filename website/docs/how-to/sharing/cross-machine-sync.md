@@ -311,7 +311,7 @@ skillshare pull 2>/dev/null
 
 ---
 
-## Alternative: Install from Config
+## Alternative: Install from Config {#alternative-install-from-config}
 
 If you don't want to set up a git remote, `config.yaml` doubles as a portable skill manifest. Every `install` / `uninstall` auto-updates the `skills:` section, and `skillshare install` (no args) reinstalls everything listed:
 

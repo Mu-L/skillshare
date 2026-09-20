@@ -487,7 +487,7 @@ skillshare doctor
 # 3. Restart AI CLI
 ```
 
-### Antigravity does not load synced skills
+### Antigravity does not load synced skills {#antigravity-does-not-load-synced-skills}
 
 **Cause:** Antigravity's skill scanner only discovers **real directories** — it skips symlinks. skillshare's default `merge` mode creates one symlink per skill (an NTFS junction on Windows), so none of them are picked up. On Windows this surfaces as an `Incorrect function` error; on macOS and Linux the skills are silently absent.
 

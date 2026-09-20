@@ -195,7 +195,7 @@ Instructions for the AI...
 
 See [Skill Format](/docs/understand/skill-format) for details.
 
-### .skillignore (Optional)
+### .skillignore (Optional) {#skillignore-optional}
 
 Excludes skills from discovery. Supports two locations:
 
@@ -227,7 +227,7 @@ Uses [gitignore syntax](https://git-scm.com/docs/gitignore) — one pattern per 
 `.skillignore` is one of three filtering layers. See [Filtering Skills](/docs/how-to/daily-tasks/filtering-skills) for all scenarios including per-target filters and SKILL.md `targets`.
 :::
 
-### .skillignore.local (Optional)
+### .skillignore.local (Optional) {#skillignorelocal-optional}
 
 A local-only override file that works alongside `.skillignore`. Place it in the same directory as a `.skillignore` (source root or tracked repo root). Patterns from `.skillignore.local` are appended after `.skillignore`, so negation patterns (`!pattern`) can override the base file:
 

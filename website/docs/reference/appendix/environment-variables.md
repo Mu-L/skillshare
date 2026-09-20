@@ -208,7 +208,7 @@ skillshare search "react patterns"
 
 ---
 
-## Git Authentication
+## Git Authentication {#git-authentication}
 
 These variables enable HTTPS authentication for private repositories. When set, skillshare automatically injects the token during `install` and `update` — no URL modification needed.
 
@@ -356,7 +356,7 @@ $env:SKILLSHARE_GIT_TOKEN = "your_token"
 
 ---
 
-## Git SSL / TLS
+## Git SSL / TLS {#git-ssl--tls}
 
 These standard Git environment variables are passed through to all git operations. They are useful for self-hosted Git servers (GitLab, Gitea, etc.) with self-signed certificates or internal CAs.
 
