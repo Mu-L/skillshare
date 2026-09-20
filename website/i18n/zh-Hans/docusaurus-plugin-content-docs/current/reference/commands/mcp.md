@@ -460,14 +460,16 @@ mcp:
 
 ### 仪表盘中的项目 {#projects-in-the-dashboard}
 
-在 global mode 下，MCP 页面在 **服务器** 旁边有一个 **项目** 标签页。
+在 global mode 下，仪表盘中有一个 **项目** 页面。它会列出
+[`projects`](/docs/reference/targets/configuration#projects) 和 `mcp.projects` 下的每个文件夹，
+每个项目都有一个 **MCP** 标签页。
 
-- **添加项目** 需要填写文件夹、它的 targets（沿用 global 的，或自行选择），以及
-  当其中包含 Pi 时它的 `directTools`。
-- 项目的页面会列出每个 global server，并各带一个开关。关闭其中一个，会为
+- **添加项目** 需要填写文件夹和它的 targets。勾选 **MCP** 可以让该文件夹同时列在
+  `mcp.projects` 下。
+- **MCP** 标签页列出每个 global server，并各带一个开关。关闭其中一个，会为
   支持按项目开关的 Agent 保存一条 `disabled` 条目；重新打开则会
   移除该条目。其下方是只存在于该项目中的 server。
-- **默认值** 位于 **服务器** 标签页底部，用于编辑 `mcp.targets` 和
+- **默认值** 位于 **MCP** 标签页底部，用于编辑 `mcp.targets` 和
   `mcp.directTools`。
 
 保存只会重写你修改过的那个项目。其他项目的 YAML 保持原样，

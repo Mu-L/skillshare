@@ -460,14 +460,16 @@ anchor는 `mcp.projects` 안에 두세요. `mcp.servers`에 있는 anchor를 가
 
 ### Projects in the dashboard {#projects-in-the-dashboard}
 
-Global mode에서는 MCP 페이지의 **서버** 옆에 **프로젝트** 탭이 있습니다.
+Global mode에서는 대시보드에 **프로젝트** 페이지가 있습니다. 이 페이지는
+[`projects`](/docs/reference/targets/configuration#projects)와 `mcp.projects` 아래의 모든 폴더를 나열하며, 각
+프로젝트에는 **MCP** 탭이 있습니다.
 
-- **프로젝트 추가**는 폴더와 그 target(global target 또는 직접 고른 것)을 받으며,
-  그중에 Pi가 있으면 `directTools`도 받습니다.
-- 프로젝트 페이지는 모든 global 서버를 스위치와 함께 나열합니다. 하나를 끄면
+- **프로젝트 추가**는 폴더와 그 target을 받습니다. **MCP**를 체크하면 해당 폴더가
+  `mcp.projects` 아래에도 나열됩니다.
+- **MCP** 탭은 모든 global 서버를 스위치와 함께 나열합니다. 하나를 끄면
   프로젝트별 스위치가 있는 Agent에 대해 `disabled` 항목이 저장되고, 다시 켜면 그
   항목이 제거됩니다. 그 아래에는 해당 프로젝트에만 존재하는 서버가 있습니다.
-- **서버** 탭 하단의 **기본값**은 `mcp.targets`와 `mcp.directTools`를 편집합니다.
+- MCP 페이지 하단의 **기본값**은 `mcp.targets`와 `mcp.directTools`를 편집합니다.
 
 저장하면 변경한 프로젝트만 다시 씁니다. 다른 프로젝트는 anchor와 alias를 포함해
 YAML이 작성된 그대로 유지되며, `~/work/app`으로 작성된 폴더는 `~`를 그대로

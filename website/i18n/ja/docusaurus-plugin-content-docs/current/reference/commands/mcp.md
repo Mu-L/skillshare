@@ -368,14 +368,15 @@ mcp:
 
 ### ダッシュボードでの project {#projects-in-the-dashboard}
 
-global mode では、MCP ページの **サーバー** の隣に **プロジェクト** タブがあります。
+global mode では、ダッシュボードに **プロジェクト** ページがあります。[`projects`](/docs/reference/targets/configuration#projects) と
+`mcp.projects` の下にあるすべてのフォルダーが一覧され、各 project には **MCP** タブがあります。
 
-- **プロジェクトを追加** では、フォルダー、その target（global のもの、または独自に選んだもの）、そして
-  Pi が含まれている場合はその `directTools` を指定します。
-- project のページには、すべての global サーバーがスイッチ付きで一覧表示されます。オフにすると、project ごとの
+- **プロジェクトを追加** では、フォルダーとその target を指定します。**MCP** にチェックを入れると、そのフォルダーは
+  `mcp.projects` にも一覧されます。
+- **MCP** タブには、すべての global サーバーがスイッチ付きで一覧表示されます。オフにすると、project ごとの
   スイッチを持つ Agent に対して `disabled` エントリが保存され、オンに戻すとそのエントリは削除されます。
   その下には、その project にのみ存在するサーバーが並びます。
-- **サーバー** タブの一番下にある **デフォルト** では、`mcp.targets` と `mcp.directTools` を編集します。
+- MCP ページの一番下にある **デフォルト** では、`mcp.targets` と `mcp.directTools` を編集します。
 
 保存時に書き換えられるのは、変更した project だけです。他の project は、アンカーやエイリアスも含めて
 YAML が書かれたまま保持され、`~/work/app` と書かれたフォルダーは `~` のまま残ります。このページの他の箇所と同様に、

@@ -429,14 +429,16 @@ mcp:
 
 ### Projects in the dashboard {#projects-in-the-dashboard}
 
-在 global mode 下，MCP 頁面的 **伺服器** 旁邊會有一個 **專案** 分頁。
+在 global mode 下，dashboard 有一個 **專案** 頁面。它會列出
+[`projects`](/docs/reference/targets/configuration#projects) 與 `mcp.projects`
+底下的每個資料夾，每個 project 都有一個 **MCP** 分頁。
 
-- **新增專案** 會要求填入資料夾、它的 targets（沿用 global 的，或自行挑選），以及
-  當 Pi 是其中之一時的 `directTools`。
-- project 的頁面會列出每個 global server，並各附一個開關。關閉其中一個會為
+- **新增專案** 會要求填入資料夾與它的 targets。勾選 **MCP** 可以讓該資料夾
+  同時列在 `mcp.projects` 底下。
+- **MCP** 分頁會列出每個 global server，並各附一個開關。關閉其中一個會為
   支援個別 project 開關的 Agents 儲存一筆 `disabled` 項目；重新開啟則會移除
   該項目。下方則是只存在於該 project 的 servers。
-- **預設值** 位於 **伺服器** 分頁底部，用來編輯 `mcp.targets` 與
+- **預設值** 位於 MCP 頁面底部，用來編輯 `mcp.targets` 與
   `mcp.directTools`。
 
 儲存時只會改寫你變更的那個 project。其他 project 的 YAML 會維持原樣，包含

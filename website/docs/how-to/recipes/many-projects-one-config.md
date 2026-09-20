@@ -8,39 +8,53 @@ sidebar_position: 8
 
 ## Scenario
 
-You work in many project folders and want each to get its own subset of skills and MCP servers. [Project mode](/docs/how-to/recipes/skill-per-project-workflow) does this with a `.skillshare/config.yaml` in every project, and you sync from inside each folder. That is the right choice when the project's setup should be committed and shared with teammates.
+Global targets such as `~/.claude/skills` are read in every project, so every project sees the same skills. If that is what you want, you do not need this recipe.
 
-If the projects are yours alone, you can skip the per-project config. A target is just a name and a path, and the path can point inside a project. Everything then lives in the global config, and one `skillshare sync` from any folder updates every project.
+This recipe is for when projects should get **different** things:
+
+- You have many skills installed, and a frontend project only needs `frontend-*`. Fewer skills in a session means less context spent on descriptions and fewer wrong picks.
+- One project must not load an MCP server that is fine everywhere else, such as a client's repository.
+- A project should hold real copies of its skills so they can be committed, without committing any Skillshare config.
+- A tool you use only reads a folder inside the project.
+
+[Project mode](/docs/how-to/recipes/skill-per-project-workflow) also gives each project its own set. It keeps a `.skillshare/config.yaml` in every project, and you sync from inside each folder. `projects` in the global config gives the same result from one file on your machine:
+
+| | Global targets | Global `projects` | Project mode |
+|---|---|---|---|
+| **Who gets the skills** | Every project, the same set | The folders you list, a set each | That one project |
+| **Where the setup lives** | Your machine | Your machine | The project's repo |
+| **Teammates get it** | No | No | Yes, by cloning |
+| **Files added to the project** | None | Only the synced skills and agents | `.skillshare/` plus the synced files |
+| **Sync** | One `sync` from anywhere | One `sync` from anywhere | `sync` inside each project |
+
+Choose project mode when the setup should travel with the repo. Choose `projects` for your own projects, for client or open-source repos where you cannot add a `.skillshare/`, and when you want one `sync` to update them all.
 
 ## Solution
 
-### Skills: a target per project
-
-```bash
-skillshare target add project01 ~/work/project01/.agents/skills
-skillshare target project01 --mode copy
-skillshare target project01 --add-include "myskill-*"
-skillshare sync
-```
-
-- The target name is yours to choose. It does not have to be an Agent's name.
-- `copy` writes real files, so the project can commit them. Leave the default `merge` if symlinks are fine.
-- `--add-include` limits the project to the skills it needs. See [Filtering skills](/docs/how-to/daily-tasks/filtering-skills).
-
-The global config now holds:
+### Skills and agents: `projects`
 
 ```yaml
 # ~/.config/skillshare/config.yaml
-targets:
-  project01:
+projects:
+  ~/work/project01:
+    targets: [claude, codex]
     skills:
-      path: ~/work/project01/.agents/skills
       mode: copy
       include:
         - myskill-*
+    agents: {}
 ```
 
-Add more projects with more `target add` commands, or by copying the block.
+```bash
+skillshare sync --dry-run   # preview
+skillshare sync
+```
+
+- `targets` names the tools you use in that project. Skillshare writes to each tool's project path, here `.claude/skills` and `.agents/skills`, so there is no path to type.
+- `skills` and `agents` switch that part on. Left empty, they sync everything; `include` and `exclude` narrow it down. See [Filtering skills](/docs/how-to/daily-tasks/filtering-skills).
+- `copy` writes real files, so the project can commit them. Leave the default `merge` if symlinks are fine.
+
+In the dashboard, the **Projects** page does the same: **Add project**, pick the targets, and choose what to sync. See [`projects`](/docs/reference/targets/configuration#projects) for every field.
 
 ### MCP servers: `mcp.projects`
 
@@ -71,15 +85,16 @@ See [`mcp`: manage several projects](/docs/reference/commands/mcp#manage-several
 
 ## Verification
 
-- `skillshare sync` reports the project target, for example `project01: copied (1 new, ...)`
-- `~/work/project01/.agents/skills/` contains only the skills matched by `include`
+- `skillshare sync` reports the project's targets, for example `project01@claude: copied (1 new, ...)`
+- `~/work/project01/.claude/skills/` contains only the skills matched by `include`
 - `skillshare sync mcp --dry-run` lists one line per project file
 - A second `skillshare sync mcp` reports every entry as `unchanged`
 
 ## Variations
 
+- **A folder outside the tool paths**: a target is just a name and a path, so `skillshare target add project01 ~/work/project01/some/folder` still works for a folder no tool's project path covers. When such a target does point at a tool's project path, the dashboard's **Projects** page offers to convert it.
 - **Commit or ignore**: in `copy` mode Skillshare also writes `.skillshare-manifest.json` into the target folder to track what it copied. Commit it with the skills, or add it to `.gitignore`.
-- **Path overlap warning**: if a project path is the same folder another target already uses, `sync` prints a path overlap warning. Run `skillshare doctor` to see which targets share it.
+- **Path overlap warning**: if a project folder is one another target already uses, `sync` prints a path overlap warning. Run `skillshare doctor` to see which targets share it.
 - **Same server in several projects**: define it once under one project with a YAML anchor (`docs: &docs`) and reuse it in the others (`docs: *docs`). See the [`mcp` reference](/docs/reference/commands/mcp#manage-several-projects-from-the-global-config).
 - **Shared projects**: teammates who clone the project do not get your global config. When the setup must travel with the repo, use [project mode](/docs/how-to/recipes/skill-per-project-workflow).
 

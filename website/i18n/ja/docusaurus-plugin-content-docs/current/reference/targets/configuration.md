@@ -438,6 +438,53 @@ agents_source: ~/my-agents
 Agent ファイルフォーマット、Sync の挙動、対応する Target の詳細は [Agents](/docs/understand/agents)
 を参照してください。
 
+### `projects` {#projects}
+
+この global config から Skill と Agent を受け取る project フォルダー。フォルダー自身に `.skillshare/` は不要で、どこからでも `skillshare sync` を 1 回実行するだけですべてに書き込まれます。
+
+project ごとに異なる Skill を持たせたい場合に使います。global Target はすでに同じセットをすべての project に届けており、[project mode](/docs/understand/project-skills) はチームメイトのために project のリポジトリ内にセットアップを保持します。[多数の Project を 1 つの Config で](/docs/how-to/recipes/many-projects-one-config#scenario)ではこの 3 つを比較しています。
+
+```yaml
+projects:
+  <folder>:                  # 絶対パス、または ~ で始まるパス
+    name: <name>             # オプション、デフォルトはフォルダー名
+    targets: [<target>, ...] # この project で使うツール
+    skills:                  # 存在すれば Skill を sync、空なら全部
+      mode: <mode>
+      target_naming: <flat|standard>
+      include: [<glob>, ...]
+      exclude: [<glob>, ...]
+    agents:                  # 存在すれば Agent を sync、空なら全部
+      mode: <mode>
+      include: [<glob>, ...]
+      exclude: [<glob>, ...]
+```
+
+**例:**
+```yaml
+projects:
+  ~/work/shop-web:
+    targets: [claude, cursor, codex]
+    skills:
+      mode: copy
+      include: ["frontend-*"]
+    agents: {}
+  ~/work/api-server:
+    targets: [claude]
+    skills: {}
+```
+
+`targets` の各エントリは[対応する Target](./supported-targets.md) 名です。Skillshare はそのフォルダー内にあるツールの project パスに書き込むため（`claude` なら `.claude/skills` と `.claude/agents` など）、`path` を設定する必要はありません。
+
+- **共有フォルダーへの書き込みは1回だけ。** 複数のツールが同じ project フォルダーを読む場合（`cursor` と `codex` はどちらも `.agents/skills` を読む）、それらは1つの sync Target にまとまります。
+- **出力での名前表記。** `sync`、`status`、`diff`、`doctor`、`backup` は project の Target を `<name>@<target>`（例: `shop-web@claude`）の形で表示します。`name` に `@`、`/`、`\` は使えず、2つの project で同じ名前は共有できません。
+- **Agent** は project 用の Agent フォルダーを持つツールにのみ書き込まれます。`agents` があり `skills` がない project は Agent だけを sync します。
+- **見つからないフォルダーはスキップされます。** `sync` は `project <folder>: folder not found, skipped` と表示し、移動または削除した project を再作成することはありません。
+- **`target` と `collect` は project に触れません。** `skillshare target` は `targets` セクションのみを一覧・編集し、`collect` は project 自身の Skill を Source に取り込みません。編集は `config.yaml` を直接、またはダッシュボードの **プロジェクト** ページから行ってください。
+- `targets` フロントマターフィールドを持つ Skill はツールと照合されるため、`targets: [claude]` は `shop-web@claude` に届きます。
+
+同じフォルダーの MCP サーバーは、同じフォルダーをキーとして [`mcp.projects`](/docs/reference/commands/mcp#manage-several-projects-from-the-global-config) に一覧されます。手順は[多数の Project を 1 つの Config で](/docs/how-to/recipes/many-projects-one-config)を参照してください。
+
 ### `extras` {#extras}
 
 任意のディレクトリに Sync する非 Skill リソース（rules、commands、prompts など）。

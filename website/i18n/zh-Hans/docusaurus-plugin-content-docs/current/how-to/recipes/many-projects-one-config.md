@@ -8,39 +8,53 @@ sidebar_position: 8
 
 ## Scenario
 
-你在许多项目文件夹中工作，并希望每个项目都拿到自己那一部分 Skill 和 MCP server。[Project mode](/docs/how-to/recipes/skill-per-project-workflow) 的做法是在每个项目中放一个 `.skillshare/config.yaml`，然后在各个文件夹内分别 sync。当项目的设置需要提交到仓库并与队友共享时，这是正确的选择。
+全局 Target 例如 `~/.claude/skills` 会被每个项目读取，因此所有项目看到的都是同一套 Skill。如果这正是你想要的效果，就不需要这份 recipe。
 
-如果这些项目只属于你一个人，就可以省掉每个项目各自的配置。Target 只是一个名称加一个路径，而这个路径可以指向项目内部。这样所有内容都放在 global 配置中，在任意文件夹运行一次 `skillshare sync` 就能更新每个项目。
+这份 recipe 适用于项目需要拿到**不同**内容的情况：
+
+- 你安装了很多 Skill，而某个前端项目只需要 `frontend-*`。会话中 Skill 越少，花在描述上的上下文就越少，选错的概率也越低。
+- 某个项目不能加载在其他地方都没问题的 MCP server，比如客户的仓库。
+- 某个项目需要保留 Skill 的真实副本以便提交，但不想提交任何 Skillshare 配置。
+- 你使用的某个工具只读取项目内部的某个文件夹。
+
+[Project mode](/docs/how-to/recipes/skill-per-project-workflow) 同样能让每个项目拥有自己的一套内容：它会在每个项目中保留一份 `.skillshare/config.yaml`，需要在各个文件夹内部分别 sync。global 配置中的 `projects` 能在你机器上的一份文件里做到同样的效果：
+
+| | 全局 Target | 全局 `projects` | Project mode |
+|---|---|---|---|
+| **谁会拿到 Skill** | 每个项目，相同的一套 | 你列出的文件夹，各自一套 | 仅这一个项目 |
+| **配置保存在哪里** | 你的机器 | 你的机器 | 项目的仓库 |
+| **队友能不能拿到** | 否 | 否 | 是，通过 clone 获得 |
+| **会给项目添加哪些文件** | 无 | 只有被 sync 的 Skill 和 Agent | `.skillshare/` 加上被 sync 的文件 |
+| **Sync** | 在任意位置运行一次 `sync` | 在任意位置运行一次 `sync` | 在每个项目内部运行 `sync` |
+
+当配置需要随仓库一起流转时，选择 project mode。当项目只属于你自己、面对无法添加 `.skillshare/` 的客户仓库或开源仓库，或者你想用一次 `sync` 更新所有项目时，选择 `projects`。
 
 ## Solution
 
-### Skill：每个项目一个 Target
-
-```bash
-skillshare target add project01 ~/work/project01/.agents/skills
-skillshare target project01 --mode copy
-skillshare target project01 --add-include "myskill-*"
-skillshare sync
-```
-
-- Target 名称由你自行决定，不必是某个 Agent 的名称。
-- `copy` 会写入真实文件，因此项目可以将它们提交。如果 symlink 就够用，保留默认的 `merge` 即可。
-- `--add-include` 将项目限制为只包含它需要的 Skill。参见 [Filtering skills](/docs/how-to/daily-tasks/filtering-skills)。
-
-此时 global 配置中包含：
+### Skill 与 Agent：`projects`
 
 ```yaml
 # ~/.config/skillshare/config.yaml
-targets:
-  project01:
+projects:
+  ~/work/project01:
+    targets: [claude, codex]
     skills:
-      path: ~/work/project01/.agents/skills
       mode: copy
       include:
         - myskill-*
+    agents: {}
 ```
 
-要添加更多项目，可以继续运行 `target add` 命令，或直接复制这个配置块。
+```bash
+skillshare sync --dry-run   # 预览
+skillshare sync
+```
+
+- `targets` 指定该项目使用的工具。Skillshare 会写入每个工具的 project 路径，这里是 `.claude/skills` 和 `.agents/skills`，因此不需要输入路径。
+- `skills` 和 `agents` 用来开启对应部分的 sync。留空时会同步全部内容；用 `include` 和 `exclude` 缩小范围。参见 [Filtering skills](/docs/how-to/daily-tasks/filtering-skills)。
+- `copy` 会写入真实文件，因此项目可以将它们提交。如果 symlink 就够用，保留默认的 `merge` 即可。
+
+在仪表盘中，**Projects** 页面做的是同一件事：**Add project**，选择 Target，再选择要 sync 的内容。完整字段参见 [`projects`](/docs/reference/targets/configuration#projects)。
 
 ### MCP server：`mcp.projects`
 
@@ -71,15 +85,16 @@ skillshare sync mcp
 
 ## Verification
 
-- `skillshare sync` 会报告该项目 Target，例如 `project01: copied (1 new, ...)`
-- `~/work/project01/.agents/skills/` 中只包含 `include` 匹配到的 Skill
+- `skillshare sync` 会报告该项目的 Target，例如 `project01@claude: copied (1 new, ...)`
+- `~/work/project01/.claude/skills/` 中只包含 `include` 匹配到的 Skill
 - `skillshare sync mcp --dry-run` 为每个项目文件列出一行
 - 再次运行 `skillshare sync mcp` 会将每个条目报告为 `unchanged`
 
 ## Variations
 
+- **未被工具路径覆盖的文件夹**：Target 只是一个名称加一个路径，所以对于没有任何工具的 project 路径覆盖到的文件夹，`skillshare target add project01 ~/work/project01/some/folder` 仍然有效。当这样的 Target 恰好指向某个工具的 project 路径时，仪表盘的 **Projects** 页面会提示将它转换。
 - **提交或忽略**：在 `copy` 模式下，Skillshare 还会在 Target 文件夹中写入 `.skillshare-manifest.json`，用于跟踪它复制了哪些内容。可以将它与 Skill 一起提交，或将它加入 `.gitignore`。
-- **路径重叠警告**：如果某个项目路径与另一个 Target 已在使用的文件夹相同，`sync` 会打印路径重叠警告。运行 `skillshare doctor` 查看哪些 Target 共用了该路径。
+- **路径重叠警告**：如果某个项目文件夹与另一个 Target 已在使用的文件夹相同，`sync` 会打印路径重叠警告。运行 `skillshare doctor` 查看哪些 Target 共用了该路径。
 - **多个项目使用同一个 server**：在其中一个项目下用 YAML anchor（`docs: &docs`）定义一次，然后在其他项目中复用（`docs: *docs`）。参见 [`mcp` reference](/docs/reference/commands/mcp#manage-several-projects-from-the-global-config)。
 - **共享的项目**：clone 该项目的队友不会得到你的 global 配置。当设置必须随仓库一起传递时，请使用 [project mode](/docs/how-to/recipes/skill-per-project-workflow)。
 

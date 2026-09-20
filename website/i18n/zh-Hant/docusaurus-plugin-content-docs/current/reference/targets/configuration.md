@@ -414,6 +414,53 @@ Project mode 一律使用 `.skillshare/agents/`，不支援 `agents_source`。
 
 Agent 檔案格式、同步行為與支援的 Target 詳情，請參閱 [Agents](/docs/understand/agents)。
 
+### `projects` {#projects}
+
+從這份 global config 取得 skills 與 agents 的 project 資料夾。這些資料夾不需要各自擁有 `.skillshare/`，在任何地方執行一次 `skillshare sync` 就會全部寫入。
+
+當 projects 應該拿到不同的 skills 時使用它。Global targets 已經會用同一組觸及每個 project，而 [project mode](/docs/understand/project-skills) 則會把設定保留在 project 的 repo 中給隊友使用。[多個 Projects，一份 Config](/docs/how-to/recipes/many-projects-one-config#scenario) 比較了這三種方式。
+
+```yaml
+projects:
+  <folder>:                  # 絕對路徑，或以 ~ 開頭
+    name: <name>             # 選用，預設為資料夾名稱
+    targets: [<target>, ...] # 這個 project 使用的工具
+    skills:                  # 存在則同步 skills；留空代表全部同步
+      mode: <mode>
+      target_naming: <flat|standard>
+      include: [<glob>, ...]
+      exclude: [<glob>, ...]
+    agents:                  # 存在則同步 agents；留空代表全部同步
+      mode: <mode>
+      include: [<glob>, ...]
+      exclude: [<glob>, ...]
+```
+
+**範例：**
+```yaml
+projects:
+  ~/work/shop-web:
+    targets: [claude, cursor, codex]
+    skills:
+      mode: copy
+      include: ["frontend-*"]
+    agents: {}
+  ~/work/api-server:
+    targets: [claude]
+    skills: {}
+```
+
+`targets` 中的每一項都是一個[支援的 Target](./supported-targets.md)名稱。Skillshare 會寫入該工具在此資料夾內的 project 路徑，例如 `claude` 的 `.claude/skills` 與 `.claude/agents`。不需要設定 `path`。
+
+- **共用的資料夾只會寫入一次。** 若多個工具讀取同一個 project 資料夾（`cursor` 與 `codex` 都讀取 `.agents/skills`），它們會被合併成同一個同步目標。
+- **輸出中的名稱。** `sync`、`status`、`diff`、`doctor` 與 `backup` 會以 `<name>@<target>` 的形式顯示一個 project 的 targets，例如 `shop-web@claude`。`name` 不能包含 `@`、`/` 或 `\`，且兩個 project 不能共用同一個名稱。
+- **Agents** 只會寫入擁有 project agents 目錄的工具。只設定 `agents` 而不設定 `skills` 的 project，只會同步 agents。
+- **找不到的資料夾會被跳過。** `sync` 會印出 `project <folder>: folder not found, skipped`，且不會重新建立你已經搬移或刪除的 project。
+- **`target` 與 `collect` 不會動到 projects。** `skillshare target` 只會列出並編輯 `targets` 區塊，`collect` 也不會把 project 自己的 skills 拉回 source。請在 `config.yaml` 中編輯 `projects`，或在 dashboard 的 **Projects** 頁面編輯。
+- 帶有 `targets` frontmatter 欄位的 skill 會依工具比對，因此 `targets: [claude]` 會涵蓋 `shop-web@claude`。
+
+同樣這些資料夾的 MCP servers 列在 [`mcp.projects`](/docs/reference/commands/mcp#manage-several-projects-from-the-global-config) 底下，以相同的資料夾為 key。逐步設定教學請參見[多個 Projects，一份 Config](/docs/how-to/recipes/many-projects-one-config)。
+
 ### `extras` {#extras}
 
 非 Skill 資源（規則、指令、Prompt 等），要同步到任意目錄。

@@ -414,6 +414,53 @@ Project mode 始终使用 `.skillshare/agents/`，不支持 `agents_source`。
 
 关于 Agent 文件格式、Sync 行为和支持的 Target 的详情，参见 [Agents](/docs/understand/agents)。
 
+### `projects` {#projects}
+
+从这份 global 配置获取 Skill 和 Agent 的项目文件夹。这些文件夹不需要自己的 `.skillshare/`，在任意目录下运行一次 `skillshare sync` 就能写入所有项目。
+
+当项目需要拿到不同的 Skill 时使用它。全局 Target 已经能让每个项目看到相同的一套内容，而 [Project mode](/docs/understand/project-skills) 把设置保留在项目仓库中，方便队友使用。[Many Projects, One Config](/docs/how-to/recipes/many-projects-one-config#scenario) 比较了这三种方式。
+
+```yaml
+projects:
+  <folder>:                  # 绝对路径，或以 ~ 开头
+    name: <name>             # 可选，默认为文件夹名
+    targets: [<target>, ...] # 该项目所用的工具
+    skills:                  # 存在即 sync Skill；留空则同步全部
+      mode: <mode>
+      target_naming: <flat|standard>
+      include: [<glob>, ...]
+      exclude: [<glob>, ...]
+    agents:                  # 存在即 sync Agent；留空则同步全部
+      mode: <mode>
+      include: [<glob>, ...]
+      exclude: [<glob>, ...]
+```
+
+**示例：**
+```yaml
+projects:
+  ~/work/shop-web:
+    targets: [claude, cursor, codex]
+    skills:
+      mode: copy
+      include: ["frontend-*"]
+    agents: {}
+  ~/work/api-server:
+    targets: [claude]
+    skills: {}
+```
+
+`targets` 中的每一项都是一个[受支持的 Target](./supported-targets.md)名称。Skillshare 会写入该工具在这个文件夹内的 project 路径，例如 `claude` 对应 `.claude/skills` 和 `.claude/agents`。不需要设置 `path`。
+
+- **共享的文件夹只会被写入一次。** 多个工具会读取同一个 project 文件夹（`cursor` 和 `codex` 都读取 `.agents/skills`），它们会合并成同一个 Sync Target。
+- **输出中的名称。** `sync`、`status`、`diff`、`doctor` 和 `backup` 会把一个项目的 targets 显示为 `<name>@<target>`，例如 `shop-web@claude`。`name` 不能包含 `@`、`/` 或 `\`，且两个项目不能共用同一个名称。
+- **Agent** 只会写入拥有 project Agent 目录的工具。只设置了 `agents`、没有设置 `skills` 的项目只会 sync Agent。
+- **缺失的文件夹会被跳过。** `sync` 会打印 `project <folder>: folder not found, skipped`，且不会重新创建你已经移动或删除的项目。
+- **`target` 和 `collect` 不会改动 projects。** `skillshare target` 只列出并编辑 `targets` 部分，`collect` 也不会把项目自己的 Skill 拉回 Source。请在 `config.yaml` 中编辑 `projects`，或在仪表盘的 **Projects** 页面编辑。
+- 带有 `targets` frontmatter 字段的 Skill 会与工具进行匹配，因此 `targets: [claude]` 能到达 `shop-web@claude`。
+
+同样，这些文件夹下的 MCP server 列在 [`mcp.projects`](/docs/reference/commands/mcp#manage-several-projects-from-the-global-config) 中，以相同的文件夹作为 key。完整的分步设置参见 [Many Projects, One Config](/docs/how-to/recipes/many-projects-one-config)。
+
 ### `extras` {#extras}
 
 将非 Skill 资源（rules、commands、prompts 等）sync 到任意目录。

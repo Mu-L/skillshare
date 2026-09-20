@@ -414,6 +414,53 @@ Project mode always uses `.skillshare/agents/` and does not support `agents_sour
 
 See [Agents](/docs/understand/agents) for details on agent file format, sync behavior, and supported targets.
 
+### `projects` {#projects}
+
+Project folders that get skills and agents from this global config. The folders need no `.skillshare/` of their own, and one `skillshare sync` from anywhere writes them all.
+
+Use it when projects should get different skills. Global targets already reach every project with the same set, and [project mode](/docs/understand/project-skills) keeps the setup in the project's repo for teammates. [Many Projects, One Config](/docs/how-to/recipes/many-projects-one-config#scenario) compares the three.
+
+```yaml
+projects:
+  <folder>:                  # absolute, or starting with ~
+    name: <name>             # optional, defaults to the folder name
+    targets: [<target>, ...] # the tools used in this project
+    skills:                  # present = sync skills; empty = all of them
+      mode: <mode>
+      target_naming: <flat|standard>
+      include: [<glob>, ...]
+      exclude: [<glob>, ...]
+    agents:                  # present = sync agents; empty = all of them
+      mode: <mode>
+      include: [<glob>, ...]
+      exclude: [<glob>, ...]
+```
+
+**Example:**
+```yaml
+projects:
+  ~/work/shop-web:
+    targets: [claude, cursor, codex]
+    skills:
+      mode: copy
+      include: ["frontend-*"]
+    agents: {}
+  ~/work/api-server:
+    targets: [claude]
+    skills: {}
+```
+
+Each entry in `targets` is a [supported target](./supported-targets.md) name. Skillshare writes to that tool's project paths inside the folder, for example `.claude/skills` and `.claude/agents` for `claude`. There is no `path` to set.
+
+- **Shared folders are written once.** Several tools read the same project folder (`cursor` and `codex` both read `.agents/skills`). They become one sync target.
+- **Names in output.** `sync`, `status`, `diff`, `doctor` and `backup` show a project's targets as `<name>@<target>`, for example `shop-web@claude`. `name` cannot contain `@`, `/` or `\`, and two projects cannot share one.
+- **Agents** are written only for tools that have a project agents folder. A project with `agents` and no `skills` syncs agents alone.
+- **A missing folder is skipped.** `sync` prints `project <folder>: folder not found, skipped` and never recreates a project you moved or deleted.
+- **`target` and `collect` leave projects alone.** `skillshare target` lists and edits the `targets` section only, and `collect` does not pull a project's own skills into the source. Edit `projects` in `config.yaml`, or on the dashboard's **Projects** page.
+- Skills with a `targets` frontmatter field are matched against the tool, so `targets: [claude]` reaches `shop-web@claude`.
+
+MCP servers for the same folders are listed under [`mcp.projects`](/docs/reference/commands/mcp#manage-several-projects-from-the-global-config), keyed by the same folder. For a step-by-step setup see [Many Projects, One Config](/docs/how-to/recipes/many-projects-one-config).
+
 ### `extras` {#extras}
 
 Non-skill resources (rules, commands, prompts, etc.) to sync to arbitrary directories.

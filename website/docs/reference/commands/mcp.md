@@ -464,14 +464,16 @@ follows later edits to the global server.
 
 ### Projects in the dashboard {#projects-in-the-dashboard}
 
-In global mode the MCP page has a **Projects** tab beside **Servers**.
+In global mode the dashboard has a **Projects** page. It lists every folder under
+[`projects`](/docs/reference/targets/configuration#projects) and `mcp.projects`, and each
+project has an **MCP** tab.
 
-- **Add project** takes the folder, its targets (the global ones, or its own pick) and,
-  when Pi is among them, its `directTools`.
-- A project's page lists every global server with a switch. Turning one off saves a
+- **Add project** takes the folder and its targets. Tick **MCP** to list the folder under
+  `mcp.projects` as well.
+- The **MCP** tab lists every global server with a switch. Turning one off saves a
   `disabled` entry for the Agents that have a per-project switch; turning it back on
   removes the entry. Below it are the servers that exist in that project only.
-- **Defaults**, at the bottom of the **Servers** tab, edits `mcp.targets` and
+- **Defaults**, at the bottom of the MCP page, edits `mcp.targets` and
   `mcp.directTools`.
 
 Saving rewrites only the project you changed. Other projects keep their YAML as written,
