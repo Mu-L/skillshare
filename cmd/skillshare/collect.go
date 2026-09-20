@@ -85,7 +85,7 @@ func cmdCollect(args []string) error {
 			summary, err = cmdCollectProject(opts, cwd, start)
 		}
 	default:
-		cfg, loadErr := config.Load()
+		cfg, loadErr := config.LoadWithoutProjects()
 		if loadErr != nil {
 			err = collectCommandError(loadErr, opts.jsonOutput)
 			logCollectOp(cfgPath, start, err, summary)

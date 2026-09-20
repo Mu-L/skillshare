@@ -308,6 +308,9 @@ func cmdSync(args []string) error {
 		if dryRun {
 			ui.Warning("Dry run mode - no changes will be made")
 		}
+		for _, root := range cfg.MissingProjects() {
+			ui.Warning("project %s: folder not found, skipped", root)
+		}
 	}
 
 	var entries []syncTargetEntry

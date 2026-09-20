@@ -77,6 +77,18 @@
         }
       ]
     },
+    "projects": {
+      "type": "object",
+      "description": "Project folders to sync skills and agents into from this global config. Keys are absolute paths or start with ~. Each target's project path is used (for example .claude/skills), so the folder needs no .skillshare/. MCP servers for the same folder go under mcp.projects.",
+      "additionalProperties": {
+        "$ref": "#/$defs/managedProject"
+      },
+      "examples": [
+        {
+          "~/work/app": { "targets": ["claude", "codex"], "skills": { "mode": "copy", "include": ["team-*"] }, "agents": {} }
+        }
+      ]
+    },
     "ignore": {
       "type": "array",
       "description": "Glob patterns for files to skip during sync.",
@@ -139,6 +151,45 @@
     }
   },
   "$defs": {
+    "managedProject": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Label for this project's targets, shown as <name>@<target>. Defaults to the folder name. Must be unique and cannot contain @, / or \\.",
+          "pattern": "^[^@/\\\\]+$"
+        },
+        "targets": {
+          "type": "array",
+          "description": "Tools used in this project. Tools that share a skills folder, such as .agents/skills, are written once.",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "examples": [["claude", "codex"]]
+        },
+        "skills": {
+          "type": "object",
+          "description": "Send skills into this project. An empty value sends all of them.",
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "type": "string", "enum": ["merge", "symlink", "copy"] },
+            "target_naming": { "type": "string", "enum": ["flat", "standard"] },
+            "include": { "type": "array", "items": { "type": "string" } },
+            "exclude": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "agents": {
+          "type": "object",
+          "description": "Send agents into this project. An empty value sends all of them.",
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "type": "string", "enum": ["merge", "symlink", "copy"] },
+            "include": { "type": "array", "items": { "type": "string" } },
+            "exclude": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
     "targetConfig": {
       "type": "object",
       "description": "Configuration for a single sync target. Supports both legacy flat format (path/mode/include/exclude) and new resource sub-keys (skills/agents). Legacy flat fields are auto-migrated to skills: on load.",

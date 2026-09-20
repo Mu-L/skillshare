@@ -195,7 +195,7 @@ func buildTargetTUIItems(isProject bool, cwd string) ([]targetTUIItem, error) {
 			})
 		}
 	} else {
-		cfg, err := config.Load()
+		cfg, err := config.LoadWithoutProjects()
 		if err != nil {
 			return nil, err
 		}
@@ -531,7 +531,7 @@ func (m targetListTUIModel) doSetTargetMode(name, scope, newMode string) (string
 			return "", err
 		}
 	} else {
-		cfg, err := config.Load()
+		cfg, err := config.LoadWithoutProjects()
 		if err != nil {
 			return "", err
 		}
@@ -606,7 +606,7 @@ func (m targetListTUIModel) doSetTargetNaming(name, newNaming string) (string, e
 			return "", err
 		}
 	} else {
-		cfg, err := config.Load()
+		cfg, err := config.LoadWithoutProjects()
 		if err != nil {
 			return "", err
 		}
@@ -733,7 +733,7 @@ func (m targetListTUIModel) doAddPattern(name, scope, filterType, pattern string
 			return "", err
 		}
 	} else {
-		cfg, err := config.Load()
+		cfg, err := config.LoadWithoutProjects()
 		if err != nil {
 			return "", err
 		}
@@ -783,7 +783,7 @@ func (m targetListTUIModel) doRemovePattern(name, scope, filterType, pattern str
 			return "", err
 		}
 	} else {
-		cfg, err := config.Load()
+		cfg, err := config.LoadWithoutProjects()
 		if err != nil {
 			return "", err
 		}
@@ -1190,7 +1190,7 @@ func runTargetListTUI(mode runMode, cwd string) (string, string, error) {
 		projCfg = pc
 	} else {
 		modeLabel = "global"
-		c, err := config.Load()
+		c, err := config.LoadWithoutProjects()
 		if err != nil {
 			return "", "", err
 		}

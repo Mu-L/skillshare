@@ -31,6 +31,8 @@ const LogPage = lazy(() => import('./pages/LogPage'));
 const ConfigPage = lazy(() => import('./pages/ConfigPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const TargetDetailPage = lazy(() => import('./pages/TargetDetailPage'));
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
+const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'));
 const NewSkillPage = lazy(() => import('./pages/NewSkillPage'));
 const DoctorPage = lazy(() => import('./pages/DoctorPage'));
 
@@ -81,6 +83,8 @@ function AppRoutes() {
             <Route path="targets/:name/filters" element={<LegacyTargetRedirect />} />
             <Route path="extras" element={<Lazy><ExtrasPage /></Lazy>} />
             <Route path="plugins" element={<Lazy><PluginsPage /></Lazy>} />
+            <Route path="projects" element={<Lazy><ProjectsPage /></Lazy>} />
+            <Route path="projects/:root" element={<Lazy><ProjectDetailPage /></Lazy>} />
             <Route path="mcp" element={<Lazy><MCPPage /></Lazy>} />
             <Route path="sync" element={<Lazy><SyncPage /></Lazy>} />
             <Route path="collect" element={<LegacyTargetRedirect />} />

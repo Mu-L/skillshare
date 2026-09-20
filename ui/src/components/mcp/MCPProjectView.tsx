@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { AlertCircle, Pencil, Plug, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plug, Plus, Trash2 } from 'lucide-react';
 import { mcpApi, mcpOffTargets, mcpTargets, type MCPMutation, type MCPServer } from '../../api/mcp';
 import Button from '../Button';
 import ConfirmDialog from '../ConfirmDialog';
-import PageHeader from '../PageHeader';
 import { RailLayout } from '../StatusRail';
 import { SkillContextMenu, type ContextMenuItem } from '../TargetMenu';
 import { useToast } from '../Toast';
@@ -26,13 +25,12 @@ interface Props {
   data: MCPList;
   root: string;
   offered: readonly string[];
-  onBack: () => void;
   onChanged: () => void;
   onRemoved: () => void;
 }
 
 /** One root under mcp.projects: its defaults, the global servers it turns off, and servers of its own. */
-export default function MCPProjectView({ data, root, offered, onBack, onChanged, onRemoved }: Props) {
+export default function MCPProjectView({ data, root, offered, onChanged, onRemoved }: Props) {
   const t = useT();
   const { toast } = useToast();
   const directLabel = useDirectToolsLabel();
@@ -107,20 +105,10 @@ export default function MCPProjectView({ data, root, offered, onBack, onChanged,
   const shown = mcpTargets.filter((x) => offered.includes(x) || ownRows.some((row) => targetsOf(row.name).includes(x)));
 
   return (
-    <div className="animate-fade-in">
-      <PageHeader
-        mono
-        title={name}
-        subtitle={t('mcp.projects.subtitle')}
-        crumbs={[{ label: 'MCP', onClick: onBack }, { label: t('mcp.tab.projects'), onClick: onBack }, { label: name }]}
-        actions={<Button variant="danger" onClick={() => setDropping(true)}><Trash2 size={15} />{t('mcp.projects.remove')}</Button>}
-      />
+    <div>
       <RailLayout rail={data.plan && <MCPSyncBox changes={changes} roots={roots} />}>
-        {data.projectConfigs.includes(root) && <div className="ss-note warn"><AlertCircle size={16} /><span className="flex-1">{t('mcp.projects.ownConfig')}</span></div>}
         <div className="ss-box flex flex-col gap-3.5">
           <dl className="ss-kv !grid-cols-[110px_minmax(0,1fr)] items-center">
-            <dt>{t('mcp.projects.path')}</dt>
-            <dd className="truncate font-mono" title={root}>{root}</dd>
             <dt>{t('mcp.targets')}</dt>
             <dd><TargetPill selected={targets} text={project.targets ? `${targets.length}/${offered.length}` : t('mcp.projects.inherit')} expanded={pickTargets} label={t('mcp.chooseAgents', { name })} onClick={() => setPickTargets(!pickTargets)} /></dd>
             {/* Only pi-mcp-adapter reads it, so it is offered once Pi is one of the project's targets. */}
@@ -171,6 +159,7 @@ export default function MCPProjectView({ data, root, offered, onBack, onChanged,
             ? <MCPServerList rows={ownRows} targets={shown} targetsOf={targetsOf} offTargets={offTargets} onToggle={toggleOwn} onMenu={openMenu} />
             : <p className="text-[13px] text-ink-3">{t('mcp.projects.noOnlyHere')}</p>}
         </section>
+        <Button className="mt-6 self-start" size="sm" variant="ghost" onClick={() => setDropping(true)}><Trash2 size={14} />{t('projects.mcp.stop')}</Button>
       </RailLayout>
 
       {editing !== null && (
@@ -186,7 +175,7 @@ export default function MCPProjectView({ data, root, offered, onBack, onChanged,
         />
       )}
       {removing && <MCPRemoveDialog name={removing} project={root} inScope={(path) => projectOf(roots, path) === root} onClose={() => setRemoving('')} onSaved={() => { const n = removing; setRemoving(''); onChanged(); toast(t('mcp.toast.removed', { name: n }), 'success'); }} />}
-      <ConfirmDialog open={dropping} variant="danger" loading={busy} title={t('mcp.projects.removeTitle', { name })} message={t('mcp.projects.removeDesc')} confirmText={t('mcp.projects.remove')} onCancel={() => setDropping(false)} onConfirm={() => void drop()} />
+      <ConfirmDialog open={dropping} variant="danger" loading={busy} title={t('projects.mcp.stopTitle', { name })} message={t('projects.mcp.stopMessage')} confirmText={t('projects.mcp.stop')} onCancel={() => setDropping(false)} onConfirm={() => void drop()} />
       <SkillContextMenu open={!!menu} anchorPoint={menu ?? undefined} items={menu?.items ?? []} onClose={() => setMenu(null)} />
     </div>
   );

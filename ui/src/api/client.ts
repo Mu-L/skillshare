@@ -277,7 +277,12 @@ export const api = {
     }),
 
   // Targets
-  listTargets: () => apiFetch<{ targets: Target[]; sourceSkillCount: number }>('/targets'),
+  /** Own targets by default. 'projects' lists the targets of projects alone, 'all' what a sync writes. */
+  listTargets: (scope?: 'projects' | 'all') => apiFetch<{ targets: Target[]; sourceSkillCount: number }>(`/targets${scope ? `?scope=${scope}` : ''}`),
+  listProjects: () => apiFetch<ProjectList>('/projects'),
+  saveProject: (project: ProjectInput) => apiFetch<{ success: boolean; root: string }>('/projects', { method: 'PUT', body: JSON.stringify(project) }),
+  removeProject: (root: string) => apiFetch<{ success: boolean }>(`/projects?root=${encodeURIComponent(root)}`, { method: 'DELETE' }),
+  convertProject: (root: string) => apiFetch<{ success: boolean; root: string }>('/projects/convert', { method: 'POST', body: JSON.stringify({ root }) }),
   addTarget: (name: string, path: string, agentPath?: string) =>
     apiFetch<{ success: boolean }>('/targets', {
       method: 'POST',
@@ -816,8 +821,44 @@ export interface CreateSkillResponse {
   createdFiles: string[];
 }
 
+/** One resource kind of a project; null means the project does not take it. */
+export interface ProjectResource {
+  mode: string;
+  targetNaming?: string;
+  include: string[];
+  exclude: string[];
+}
+
+export interface Project {
+  /** The key in config.yaml, as written */
+  root: string;
+  /** Absolute folder */
+  path: string;
+  name: string;
+  customName?: string;
+  targets: string[];
+  skills: ProjectResource | null;
+  agents: ProjectResource | null;
+  /** Tools that share a skills folder are one group, written once */
+  groups: { target: string; tools: string[]; skillsPath: string; agentsPath: string }[];
+  missing: boolean;
+  hasOwnConfig: boolean;
+}
+
+export type ProjectInput = Pick<Project, 'root' | 'targets' | 'skills' | 'agents'> & { name?: string; create?: boolean };
+
+export interface ProjectList {
+  projects: Project[];
+  /** Ordinary targets whose folders are one project's tool paths */
+  convertible: { root: string; targets: string[]; tools: string[]; agents: boolean }[];
+  /** Every tool with a project skills path, relative to the project folder */
+  tools: { name: string; skillsPath: string; agentsPath: string }[];
+}
+
 export interface Target {
   name: string;
+  /** Root of the project this target belongs to */
+  project?: string;
   path: string;
   mode: string;
   targetNaming: string;

@@ -43,7 +43,7 @@ func (s *Server) handleCollectScan(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
 	source := s.cfg.EffectiveSkillsSource()
 	globalMode := s.cfg.Mode
-	targets := s.cloneTargets()
+	targets := s.cfg.OwnTargets() // a project's own skills stay in the project
 	agentsSource := s.agentsSource()
 	s.mu.RUnlock()
 

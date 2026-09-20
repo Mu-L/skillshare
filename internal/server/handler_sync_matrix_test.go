@@ -338,3 +338,21 @@ func TestHandleSyncMatrixPreview_InvalidAgentPattern(t *testing.T) {
 		t.Errorf("expected 400 for invalid agent pattern, got %d", rr.Code)
 	}
 }
+
+func TestHandleSyncMatrixPreview_ProjectDraftGetsAgents(t *testing.T) {
+	home := filepath.Join(t.TempDir(), "home")
+	os.MkdirAll(home, 0755)
+	t.Setenv("HOME", home)
+
+	s, _ := newTestServerWithTargets(t, map[string]string{"claude": filepath.Join(t.TempDir(), "claude-skills")})
+	addAgentFile(t, s.cfg.EffectiveAgentsSource(), "code-reviewer.md")
+
+	// No target is called shop@claude yet: the project page previews before it saves.
+	body := `{"target":"shop@claude","include":[],"exclude":[]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/sync-matrix/preview", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+	s.handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"kind":"agent"`) {
+		t.Fatalf("status %d, body %s", rr.Code, rr.Body.String())
+	}
+}

@@ -13,8 +13,13 @@ interface SelectProps {
   label?: string;
   /** Names the control when it has no visible label. */
   ariaLabel?: string;
-  value: string;
-  onChange: (value: string) => void;
+  value?: string;
+  onChange?: (value: string) => void;
+  /** Multi-select: the chosen values. A click toggles one and the menu stays open. */
+  values?: string[];
+  onChangeValues?: (values: string[]) => void;
+  /** Multi-select: shown in the trigger while nothing is chosen. */
+  placeholder?: string;
   options: SelectOption[];
   className?: string;
   size?: 'sm' | 'md';
@@ -36,7 +41,7 @@ interface DropdownPos {
   bottom?: number;
 }
 
-export function Select({ label, ariaLabel, value, onChange, options, className = '', size = 'md', disabled = false, prefix }: SelectProps) {
+export function Select({ label, ariaLabel, value = '', onChange, values, onChangeValues, placeholder, options, className = '', size = 'md', disabled = false, prefix }: SelectProps) {
   const labelId = useId();
   const [open, setOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(-1);
@@ -44,9 +49,9 @@ export function Select({ label, ariaLabel, value, onChange, options, className =
   const triggerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const selected = options.find((o) => o.value === value);
-  const selectedLabel = selected?.label ?? value;
-  const selectedIcon = selected?.icon;
+  const isOn = (v: string) => (values ? values.includes(v) : v === value);
+  const chosen = options.filter((o) => isOn(o.value));
+  const selectedLabel = values ? chosen.map((o) => o.label).join(', ') : chosen[0]?.label ?? value;
   // Options with descriptions need room to read; widen the popup to ~15rem
   // (matching the dropdownWidth estimate below) so descriptions wrap nicely.
   const hasDescriptions = options.some((o) => o.description);
@@ -128,9 +133,14 @@ export function Select({ label, ariaLabel, value, onChange, options, className =
   }, [open, focusIdx]);
 
   const select = useCallback((val: string) => {
-    onChange(val);
+    if (values) {
+      // Option order, so the saved list does not depend on the click order.
+      onChangeValues?.(options.map((o) => o.value).filter((v) => (v === val ? !values.includes(v) : values.includes(v))));
+      return;
+    }
+    onChange?.(val);
     setOpen(false);
-  }, [onChange]);
+  }, [onChange, onChangeValues, values, options]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     switch (e.key) {
@@ -156,14 +166,17 @@ export function Select({ label, ariaLabel, value, onChange, options, className =
           select(options[focusIdx].value);
         } else {
           openMenu();
-          setFocusIdx(Math.max(0, options.findIndex((o) => o.value === value)));
+          setFocusIdx(Math.max(0, options.findIndex((o) => isOn(o.value))));
         }
         break;
       case 'Escape':
+        // An open menu takes the key; the dialog around it stays.
+        if (open) e.stopPropagation();
         setOpen(false);
         break;
     }
-  }, [open, focusIdx, options, value, select, openMenu]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- isOn reads value and values
+  }, [open, focusIdx, options, value, values, select, openMenu]);
 
   return (
     <div ref={triggerRef} className={`relative ${className}`}>
@@ -178,7 +191,7 @@ export function Select({ label, ariaLabel, value, onChange, options, className =
         onClick={() => {
           if (disabled) return;
           if (open) { setOpen(false); }
-          else { openMenu(); setFocusIdx(options.findIndex((o) => o.value === value)); }
+          else { openMenu(); setFocusIdx(options.findIndex((o) => isOn(o.value))); }
         }}
         onKeyDown={handleKeyDown}
         className={`ss-inp w-full justify-between text-left outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${selectTriggerSizes[size]} ${open ? 'border-accent' : ''}`}
@@ -190,8 +203,12 @@ export function Select({ label, ariaLabel, value, onChange, options, className =
       >
         <span className="flex items-center gap-1.5 min-w-0">
           {prefix && <span className="text-ink-3 shrink-0">{prefix}</span>}
-          {selectedIcon && <span className="flex shrink-0 items-center">{selectedIcon}</span>}
-          <span className="truncate">{selectedLabel}</span>
+          {chosen.some((o) => o.icon) && (
+            <span className={values ? 'ss-stack shrink-0' : 'flex shrink-0 items-center'}>
+              {chosen.slice(0, 6).map((o) => (values ? <span key={o.value} className="ss-at">{o.icon}</span> : o.icon))}
+            </span>
+          )}
+          <span className={`truncate ${chosen.length === 0 && placeholder ? 'text-ink-3' : ''}`}>{chosen.length === 0 && placeholder ? placeholder : selectedLabel}</span>
         </span>
         <ChevronDown
           size={size === 'sm' ? 13 : 15}
@@ -203,6 +220,7 @@ export function Select({ label, ariaLabel, value, onChange, options, className =
         <ul
           ref={listRef}
           role="listbox"
+          aria-multiselectable={values ? true : undefined}
           className={`ss-menu fixed z-[9999] !w-auto overflow-auto animate-dropdown-in ${size === 'sm' ? 'text-xs' : 'text-[13px]'}`}
           style={{
             left: pos.left,
@@ -217,7 +235,7 @@ export function Select({ label, ariaLabel, value, onChange, options, className =
           }}
         >
           {options.map((opt, i) => {
-            const isSelected = opt.value === value;
+            const isSelected = isOn(opt.value);
             const isFocused = i === focusIdx;
             return (
               <li

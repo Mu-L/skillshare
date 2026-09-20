@@ -398,6 +398,12 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("PATCH /api/targets/{name}", s.handleUpdateTarget)
 	s.mux.HandleFunc("DELETE /api/targets/{name}", s.handleRemoveTarget)
 
+	// Projects (global config only)
+	s.mux.HandleFunc("GET /api/projects", s.requireGlobalProjects(s.handleListProjects))
+	s.mux.HandleFunc("PUT /api/projects", s.requireGlobalProjects(s.handleSaveProject))
+	s.mux.HandleFunc("DELETE /api/projects", s.requireGlobalProjects(s.handleRemoveProject))
+	s.mux.HandleFunc("POST /api/projects/convert", s.requireGlobalProjects(s.handleConvertProject))
+
 	// Sync matrix
 	s.mux.HandleFunc("GET /api/sync-matrix", s.handleSyncMatrix)
 	s.mux.HandleFunc("POST /api/sync-matrix/preview", s.handleSyncMatrixPreview)

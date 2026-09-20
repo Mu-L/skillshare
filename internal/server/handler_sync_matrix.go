@@ -188,7 +188,8 @@ func (s *Server) handleSyncMatrixPreview(w http.ResponseWriter, r *http.Request)
 
 	// Agents — resolve path from config or builtin defaults
 	target, ok := targets[body.Target]
-	if ok && agentsSource != "" {
+	_, projectTool, isProject := config.SplitProjectTarget(body.Target)
+	if (ok || isProject) && agentsSource != "" {
 		ac := target.AgentsConfig()
 		agentPath := ac.Path
 		if agentPath == "" {
@@ -199,6 +200,10 @@ func (s *Server) handleSyncMatrixPreview(w http.ResponseWriter, r *http.Request)
 				previewBuiltin = config.DefaultAgentTargets()
 			}
 			if builtin, found := previewBuiltin[body.Target]; found {
+				agentPath = builtin.Path
+			}
+			// A project's draft can turn agents on before the project is saved.
+			if builtin, found := config.LookupProjectAgentTarget(projectTool); isProject && found {
 				agentPath = builtin.Path
 			}
 		}

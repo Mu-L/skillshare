@@ -10,7 +10,11 @@ export const queryKeys = {
   targets: {
     all: ['targets'] as const,
     available: ['targets', 'available'] as const,
+    /** Own and project targets together */
+    synced: ['targets', 'all'] as const,
+    projects: ['targets', 'projects'] as const,
   },
+  projects: ['projects'] as const,
 
   diff: (target?: string) => ['diff', target ?? '__all'] as const,
   collectScan: (target?: string) => ['collect-scan', target ?? '__all'] as const,

@@ -189,7 +189,7 @@ func targetAdd(args []string) error {
 		}
 	}
 
-	cfg, err := config.Load()
+	cfg, err := config.LoadWithoutProjects()
 	if err != nil {
 		return err
 	}
@@ -320,7 +320,7 @@ func targetRemove(args []string) error {
 		return err
 	}
 
-	cfg, err := config.Load()
+	cfg, err := config.LoadWithoutProjects()
 	if err != nil {
 		return err
 	}
@@ -460,7 +460,7 @@ type targetListJSONItem struct {
 }
 
 func targetList(jsonOutput bool) error {
-	cfg, err := config.Load()
+	cfg, err := config.LoadWithoutProjects()
 	if err != nil {
 		return err
 	}
@@ -507,7 +507,7 @@ func targetInfo(name string, args []string) error {
 		return err
 	}
 
-	cfg, err := config.Load()
+	cfg, err := config.LoadWithoutProjects()
 	if err != nil {
 		return err
 	}

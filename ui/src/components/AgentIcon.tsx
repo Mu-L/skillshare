@@ -95,6 +95,8 @@ const mono: Record<string, string> = {
 };
 
 export default function AgentIcon({ target, size = 16 }: { target: string; size?: number }) {
+  // A project's target is `<project>@<tool>`; the logo is the tool's.
+  target = target.slice(target.lastIndexOf('@') + 1);
   // universal is the cross-client ~/.agents/skills convention: the Agent Skills hexagon in a
   // multi-color gradient so the shared path stands apart from single-vendor marks.
   if (target === 'universal') {

@@ -8,6 +8,7 @@ import {
   Puzzle,
   Bot,
   FolderPlus,
+  Folders,
   Plug,
   Package,
   Target,
@@ -61,7 +62,10 @@ const navGroups: { labelKey?: string; items: NavItem[] }[] = [
   },
   {
     labelKey: 'layout.group.destinations',
-    items: [{ to: '/targets', icon: Target, labelKey: 'layout.nav.targets', also: ['/collect'] }],
+    items: [
+      { to: '/targets', icon: Target, labelKey: 'layout.nav.targets', also: ['/collect'] },
+      { to: '/projects', icon: Folders, labelKey: 'projects.title', hideInProject: true },
+    ],
   },
   {
     labelKey: 'layout.group.maintain',
@@ -166,7 +170,7 @@ const live = { refetchInterval: 15_000, refetchOnWindowFocus: true } as const;
 
 /** Sidebar badges: pending sync changes, git work to share, and skills a cached audit scan blocks. */
 function useNavCounts(isProjectMode: boolean): Record<string, number> {
-  const targets = useQuery({ queryKey: queryKeys.targets.all, queryFn: () => api.listTargets(), staleTime: staleTimes.targets, ...live });
+  const targets = useQuery({ queryKey: queryKeys.targets.synced, queryFn: () => api.listTargets('all'), staleTime: staleTimes.targets, ...live });
   const diff = useQuery({ queryKey: queryKeys.diff(), queryFn: () => api.diff(), staleTime: staleTimes.diff, ...live });
   const extras = useQuery({ queryKey: queryKeys.extrasDiff(), queryFn: () => api.diffExtras(), staleTime: staleTimes.extras, ...live });
   const mcp = useQuery({ queryKey: queryKeys.mcp, queryFn: () => mcpApi.list(), staleTime: staleTimes.extras, ...live });

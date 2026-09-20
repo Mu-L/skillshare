@@ -330,6 +330,13 @@ func MatchesTargetName(skillTarget, configTarget string) bool {
 	if skillTarget == configTarget {
 		return true
 	}
+	// A skill for claude also belongs in a project's claude target.
+	if _, tool, ok := SplitProjectTarget(configTarget); ok {
+		configTarget = tool
+		if skillTarget == tool {
+			return true
+		}
+	}
 
 	specs, err := loadTargetSpecs()
 	if err != nil {

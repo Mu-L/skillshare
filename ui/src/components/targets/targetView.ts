@@ -54,7 +54,7 @@ export function togglePatterns(entry: SyncMatrixEntry, include: string[], exclud
 
 /** Everything that shows a target's config or its effect. */
 export function refreshTargets(queryClient: QueryClient) {
-  for (const key of [queryKeys.targets.all, queryKeys.targets.available, queryKeys.config, queryKeys.overview, queryKeys.diff(), queryKeys.syncMatrix()]) {
+  for (const key of [queryKeys.targets.all, queryKeys.projects, queryKeys.config, queryKeys.overview, queryKeys.diff(), queryKeys.syncMatrix()]) {
     void queryClient.invalidateQueries({ queryKey: key });
   }
 }

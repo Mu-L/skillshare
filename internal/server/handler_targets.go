@@ -17,6 +17,7 @@ import (
 
 type targetItem struct {
 	Name               string   `json:"name"`
+	Project            string   `json:"project,omitempty"` // root of the project this target belongs to
 	Path               string   `json:"path"`
 	Mode               string   `json:"mode"`
 	TargetNaming       string   `json:"targetNaming"`
@@ -82,7 +83,13 @@ func (s *Server) handleListTargets(w http.ResponseWriter, r *http.Request) {
 	items := make([]targetItem, 0, len(targets))
 	discovered, discoveredErr := ssync.DiscoverSourceSkills(source)
 
+	// Project targets are edited under projects, so they are listed only on request:
+	// scope=projects for them alone, scope=all for what a sync writes.
+	scope := r.URL.Query().Get("scope")
 	for name, target := range targets {
+		if scope != "all" && (target.ProjectRoot() != "") != (scope == "projects") {
+			continue
+		}
 		sc := target.SkillsConfig()
 		mode := sc.Mode
 		if mode == "" {
@@ -91,6 +98,7 @@ func (s *Server) handleListTargets(w http.ResponseWriter, r *http.Request) {
 
 		item := targetItem{
 			Name:         name,
+			Project:      target.ProjectRoot(),
 			Path:         sc.Path,
 			Mode:         mode,
 			TargetNaming: config.EffectiveTargetNaming(sc.TargetNaming),
@@ -264,29 +272,12 @@ func (s *Server) handleRemoveTarget(w http.ResponseWriter, r *http.Request) {
 
 	sc := target.SkillsConfig()
 
-	// Clean up symlinks/manifest from the target before deleting from config
-	info, err := os.Lstat(sc.Path)
-	if err == nil {
-		if info.Mode()&os.ModeSymlink != 0 {
-			// Symlink mode: entire directory is a symlink
-			if err := removeTargetPath(sc.Path); err != nil {
-				writeError(w, http.StatusInternalServerError, "failed to remove target symlink: "+err.Error())
-				return
-			}
-		} else if info.IsDir() {
-			// Remove manifest if present (merge/copy mode)
-			if err := ssync.RemoveManifest(sc.Path); err != nil {
-				writeError(w, http.StatusInternalServerError, "failed to remove target manifest: "+err.Error())
-				return
-			}
-			// Merge mode: remove individual skill symlinks pointing to source
-			if err := s.unlinkMergeSymlinks(sc.Path); err != nil {
-				writeError(w, http.StatusInternalServerError, "failed to clean target symlinks: "+err.Error())
-				return
-			}
-		}
-	} else if !os.IsNotExist(err) {
-		writeError(w, http.StatusInternalServerError, "failed to inspect target: "+err.Error())
+	if target.ProjectRoot() != "" {
+		writeError(w, http.StatusBadRequest, name+" belongs to a project; remove the project instead")
+		return
+	}
+	if status, err := s.detachSkillsTarget(sc.Path); err != nil {
+		writeError(w, status, err.Error())
 		return
 	}
 
@@ -328,6 +319,10 @@ func (s *Server) handleUpdateTarget(w http.ResponseWriter, r *http.Request) {
 	target, exists := s.cfg.Targets[name]
 	if !exists {
 		writeError(w, http.StatusNotFound, "target not found: "+name)
+		return
+	}
+	if target.ProjectRoot() != "" {
+		writeError(w, http.StatusBadRequest, name+" belongs to a project; edit the project instead")
 		return
 	}
 
@@ -459,6 +454,35 @@ func (s *Server) handleUpdateTarget(w http.ResponseWriter, r *http.Request) {
 	}, "")
 
 	writeJSON(w, map[string]any{"success": true})
+}
+
+// detachSkillsTarget removes what sync owns in a skills folder before its target leaves
+// the config: the folder symlink, or the manifest and the symlinks into the source.
+// Copies and local skills stay.
+func (s *Server) detachSkillsTarget(path string) (int, error) {
+	info, err := os.Lstat(path)
+	if os.IsNotExist(err) {
+		return 0, nil
+	}
+	if err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("failed to inspect target: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		// Symlink mode: entire directory is a symlink
+		if err := removeTargetPath(path); err != nil {
+			return http.StatusInternalServerError, fmt.Errorf("failed to remove target symlink: %w", err)
+		}
+	} else if info.IsDir() {
+		// Remove manifest if present (merge/copy mode)
+		if err := ssync.RemoveManifest(path); err != nil {
+			return http.StatusInternalServerError, fmt.Errorf("failed to remove target manifest: %w", err)
+		}
+		// Merge mode: remove individual skill symlinks pointing to source
+		if err := s.unlinkMergeSymlinks(path); err != nil {
+			return http.StatusInternalServerError, fmt.Errorf("failed to clean target symlinks: %w", err)
+		}
+	}
+	return 0, nil
 }
 
 // unlinkMergeSymlinks removes symlinks in targetPath that point under the
