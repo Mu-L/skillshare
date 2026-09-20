@@ -198,6 +198,9 @@ func parseInstallArgs(args []string) (*installArgs, bool, error) {
 		return nil, false, fmt.Errorf("--all/--yes cannot be used with --track")
 	}
 
+	if result.opts.Track && install.IsCommitSHA(result.opts.Branch) {
+		return nil, false, fmt.Errorf("--track cannot pin a commit SHA; tracked repos follow a branch")
+	}
 	if result.opts.Branch != "" && result.sourceArg != "" {
 		source, parseErr := install.ParseSource(result.sourceArg)
 		if parseErr == nil && !source.IsGit() {
@@ -597,7 +600,7 @@ Options:
   --into <dir>        Install into subdirectory (e.g. "frontend" or "frontend/react")
   --force, -f         Overwrite existing skill; also continue if audit would block
   --update, -u        Update existing (git pull if possible, else reinstall)
-  --branch, -b <name> Git branch to clone from (default: remote default)
+  --branch, -b <ref>  Git branch, tag, or commit SHA to install from (default: remote default)
   --track, -t         Install as tracked repo (preserves .git for updates)
   --agent, -a <names> Select specific agents from a multi-agent repo (comma-separated)
   --skill, -s <names> Select specific skills from multi-skill repo (comma-separated;

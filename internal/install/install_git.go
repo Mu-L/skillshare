@@ -8,9 +8,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
+
+var commitSHAPattern = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
+
+// IsCommitSHA reports whether ref looks like an abbreviated or full commit hash
+// rather than a branch or tag name.
+func IsCommitSHA(ref string) bool {
+	return commitSHAPattern.MatchString(ref)
+}
 
 func isGitInstalled() bool {
 	_, err := exec.LookPath("git")
@@ -143,6 +152,14 @@ func cloneRepo(url, destPath, branch string, shallow bool, onProgress ProgressCa
 }
 
 func cloneRepoWithEnv(url, destPath, branch string, shallow bool, extraEnv []string, onProgress ProgressCallback) error {
+	// git clone --branch accepts branches and tags but not commit SHAs:
+	// clone the default branch, then detach HEAD at the pinned commit.
+	if IsCommitSHA(branch) {
+		if err := cloneRepoWithEnv(url, destPath, "", shallow, extraEnv, onProgress); err != nil {
+			return err
+		}
+		return checkoutCommit(destPath, branch, shallow, extraEnv, onProgress)
+	}
 	args := []string{"clone"}
 	if onProgress != nil {
 		args = append(args, "--progress")
@@ -157,6 +174,27 @@ func cloneRepoWithEnv(url, destPath, branch string, shallow bool, extraEnv []str
 	}
 	args = append(args, url, destPath)
 	return runGitCommandWithProgress(args, "", extraEnv, onProgress)
+}
+
+// checkoutCommit detaches HEAD at sha. A targeted fetch works for full SHAs on
+// GitHub/GitLab; when the server refuses or the SHA is abbreviated, it deepens
+// the clone and resolves the commit locally.
+func checkoutCommit(repoPath, sha string, shallow bool, extraEnv []string, onProgress ProgressCallback) error {
+	fetch := []string{"fetch", "--quiet", "origin", sha}
+	if shallow {
+		fetch = []string{"fetch", "--quiet", "--depth", "1", "origin", sha}
+	}
+	if err := runGitCommandWithProgress(fetch, repoPath, extraEnv, onProgress); err == nil {
+		return runGitCommandWithProgress([]string{"checkout", "--quiet", "--detach", "FETCH_HEAD"}, repoPath, extraEnv, nil)
+	}
+	full := []string{"fetch", "--quiet", "origin"}
+	if shallow {
+		full = []string{"fetch", "--quiet", "--unshallow", "origin"}
+	}
+	if err := runGitCommandWithProgress(full, repoPath, extraEnv, onProgress); err != nil {
+		return fmt.Errorf("resolve commit %s: %w", sha, err)
+	}
+	return runGitCommandWithProgress([]string{"checkout", "--quiet", "--detach", sha}, repoPath, extraEnv, nil)
 }
 
 func cloneRepoForSource(source *Source, destPath, branch string, shallow bool, onProgress ProgressCallback) error {

@@ -781,14 +781,20 @@ func GetRemoteRefHashWithAuth(repoURL, branch string) (string, error) {
 	return GetRemoteRefHashWithEnv(repoURL, branch, install.AuthEnvForURL(repoURL))
 }
 
-// GetRemoteRefHashWithEnv returns the hash of a specific ref on a remote repo.
+// GetRemoteRefHashWithEnv returns the hash of a specific ref (branch, tag, or
+// commit SHA) on a remote repo. A pinned SHA never moves, so it is returned
+// directly without a network round-trip.
 func GetRemoteRefHashWithEnv(repoURL, branch string, extraEnv []string) (string, error) {
-	ref := "HEAD"
+	if install.IsCommitSHA(branch) {
+		return shortHash(branch), nil
+	}
+	args := []string{repoURL, "HEAD"}
 	if branch != "" {
-		ref = "refs/heads/" + branch
+		// refs/tags/<name>^{} is the peeled commit of an annotated tag.
+		args = []string{repoURL, "refs/heads/" + branch, "refs/tags/" + branch, "refs/tags/" + branch + "^{}"}
 	}
 
-	out, err := runRemoteLsRemote([]string{repoURL, ref}, extraEnv)
+	out, err := runRemoteLsRemote(args, extraEnv)
 	if err != nil {
 		return "", err
 	}
@@ -822,19 +828,40 @@ func runRemoteLsRemote(args []string, extraEnv []string) (string, error) {
 	return string(out), nil
 }
 
+// parseRemoteHash picks the commit from ls-remote output: a branch wins over a
+// same-named tag, and an annotated tag's peeled commit wins over the tag object.
 func parseRemoteHash(out, branch string) (string, error) {
-	parts := strings.Fields(strings.TrimSpace(out))
-	if len(parts) == 0 {
+	var hash string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		ref := ""
+		if len(fields) > 1 {
+			ref = fields[1]
+		}
+		switch {
+		case strings.HasPrefix(ref, "refs/heads/"):
+			return shortHash(fields[0]), nil
+		case strings.HasSuffix(ref, "^{}"), hash == "":
+			hash = fields[0]
+		}
+	}
+	if hash == "" {
 		if branch != "" {
-			return "", fmt.Errorf("remote branch %q not found", branch)
+			return "", fmt.Errorf("remote ref %q not found", branch)
 		}
 		return "", fmt.Errorf("no HEAD ref found")
 	}
-	hash := parts[0]
+	return shortHash(hash), nil
+}
+
+func shortHash(hash string) string {
 	if len(hash) > 7 {
-		hash = hash[:7]
+		return hash[:7]
 	}
-	return hash, nil
+	return hash
 }
 
 // ForcePull fetches and resets to origin (handles force push)
