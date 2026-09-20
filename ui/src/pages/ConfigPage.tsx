@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Save, FileCode, Info, RefreshCw, FileCog, FolderOpen, Download } from 'lucide-react';
+import { Save, FileCode, Info, RefreshCw, FileCog, FolderOpen, Download, WandSparkles } from 'lucide-react';
 import { useT } from '../i18n';
 import CodeMirror from '@uiw/react-codemirror';
 import { yaml } from '@codemirror/lang-yaml';
@@ -84,6 +84,24 @@ export default function ConfigPage() {
     const changed = value !== (configData?.raw ?? '');
     setDirty(changed);
     if (changed) setShowSyncBanner(false);
+  };
+
+  // Run the same normalizer save applies, but leave the result in the editor so
+  // the user sees it before committing.
+  const handleBeautify = () => {
+    try {
+      const formatted = formatYaml(raw);
+      if (formatted === raw) {
+        toast(t('config.beautify.noChange'), 'info');
+        return;
+      }
+      handleConfigChange(formatted);
+      toast(t('config.beautify.done'), 'success');
+    } catch (e: unknown) {
+      // The parser appends a multi-line caret excerpt; the side panel already
+      // lists every error in full, so the toast keeps just the headline.
+      toast(t('config.beautify.invalid', { error: (e as Error).message.split('\n')[0] }), 'error');
+    }
   };
 
   const handleConfigSave = async () => {
@@ -381,6 +399,11 @@ export default function ConfigPage() {
               <div className="flex items-center justify-between gap-4">
                 <span className="text-[13px] text-ink-3">{editor.hint}</span>
                 <span className="flex items-center gap-2.5">
+                  {tab === 'config' && (
+                    <Button variant="ghost" size="sm" onClick={handleBeautify} disabled={activeSaving} title={t('config.beautify.hint')}>
+                      <WandSparkles size={15} />{t('config.beautify')}
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" onClick={() => setShowRevertDialog(true)} disabled={!activeDirty || activeSaving}>{t('config.revert')}</Button>
                   <Button variant="primary" size="sm" onClick={handleSave} disabled={activeSaving || !activeDirty}>
                     <Save size={15} />{activeSaving ? t('config.saving') : t('config.save')}
