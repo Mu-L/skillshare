@@ -187,14 +187,30 @@ func checkoutCommit(repoPath, sha string, shallow bool, extraEnv []string, onPro
 	if err := runGitCommandWithProgress(fetch, repoPath, extraEnv, onProgress); err == nil {
 		return runGitCommandWithProgress([]string{"checkout", "--quiet", "--detach", "FETCH_HEAD"}, repoPath, extraEnv, nil)
 	}
-	full := []string{"fetch", "--quiet", "origin"}
-	if shallow {
-		full = []string{"fetch", "--quiet", "--unshallow", "origin"}
+	// clone --depth 1 implies --single-branch, so fetch every branch and tag
+	// explicitly: the pinned commit may live off the default branch.
+	full := []string{"fetch", "--quiet", "--tags", "origin", "+refs/heads/*:refs/remotes/origin/*"}
+	if isShallowRepo(repoPath) {
+		full = append(full[:2], append([]string{"--unshallow"}, full[2:]...)...)
 	}
 	if err := runGitCommandWithProgress(full, repoPath, extraEnv, onProgress); err != nil {
 		return fmt.Errorf("resolve commit %s: %w", sha, err)
 	}
 	return runGitCommandWithProgress([]string{"checkout", "--quiet", "--detach", sha}, repoPath, extraEnv, nil)
+}
+
+func isShallowRepo(repoPath string) bool {
+	cmd := exec.Command("git", "rev-parse", "--is-shallow-repository")
+	cmd.Dir = repoPath
+	out, err := cmd.Output()
+	return err == nil && strings.TrimSpace(string(out)) == "true"
+}
+
+// isDetachedHead reports whether HEAD points at a commit rather than a branch.
+func isDetachedHead(repoPath string) bool {
+	cmd := exec.Command("git", "symbolic-ref", "-q", "HEAD")
+	cmd.Dir = repoPath
+	return cmd.Run() != nil
 }
 
 func cloneRepoForSource(source *Source, destPath, branch string, shallow bool, onProgress ProgressCallback) error {

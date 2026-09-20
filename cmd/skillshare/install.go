@@ -198,9 +198,6 @@ func parseInstallArgs(args []string) (*installArgs, bool, error) {
 		return nil, false, fmt.Errorf("--all/--yes cannot be used with --track")
 	}
 
-	if result.opts.Track && install.IsCommitSHA(result.opts.Branch) {
-		return nil, false, fmt.Errorf("--track cannot pin a commit SHA; tracked repos follow a branch")
-	}
 	if result.opts.Branch != "" && result.sourceArg != "" {
 		source, parseErr := install.ParseSource(result.sourceArg)
 		if parseErr == nil && !source.IsGit() {

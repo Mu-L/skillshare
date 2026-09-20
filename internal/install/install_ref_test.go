@@ -25,9 +25,10 @@ func TestIsCommitSHA(t *testing.T) {
 	}
 }
 
-// setupPinRemote creates a bare file:// remote with two commits on main and an
-// annotated tag v1 on the first commit. Returns the URL and the first commit SHA.
-func setupPinRemote(t *testing.T) (url, firstSHA string) {
+// setupPinRemote creates a bare file:// remote with two commits on main, an
+// annotated tag v1 on the first commit, and a feature branch with its own commit.
+// Returns the URL, the first main commit SHA, and the feature commit SHA.
+func setupPinRemote(t *testing.T) (url, firstSHA, featureSHA string) {
 	t.Helper()
 	base := t.TempDir()
 	bare := filepath.Join(base, "remote.git")
@@ -45,32 +46,41 @@ func setupPinRemote(t *testing.T) (url, firstSHA string) {
 	runGit(t, seed, "commit", "-m", "c2")
 	runGit(t, seed, "push", "origin", "HEAD:main", "--tags")
 	runGit(t, bare, "symbolic-ref", "HEAD", "refs/heads/main")
+	runGit(t, seed, "checkout", "-q", "-b", "feature")
+	os.WriteFile(filepath.Join(seed, "SKILL.md"), []byte("# feature"), 0644)
+	runGit(t, seed, "add", ".")
+	runGit(t, seed, "commit", "-m", "feature")
+	runGit(t, seed, "push", "origin", "feature")
 
-	out, err := exec.Command("git", "-C", seed, "rev-parse", "HEAD~1").Output()
-	if err != nil {
-		t.Fatal(err)
+	revParse := func(rev string) string {
+		out, err := exec.Command("git", "-C", seed, "rev-parse", rev).Output()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.TrimSpace(string(out))
 	}
-	return "file://" + bare, strings.TrimSpace(string(out))
+	return "file://" + bare, revParse("origin/main~1"), revParse("feature")
 }
 
 func TestCloneRepo_PinnedRef(t *testing.T) {
-	url, sha := setupPinRemote(t)
-	for name, ref := range map[string]string{
-		"full sha":  sha,
-		"short sha": sha[:7],
-		"tag":       "v1",
+	url, sha, featureSHA := setupPinRemote(t)
+	for name, tc := range map[string]struct{ ref, want string }{
+		"full sha":                     {sha, sha},
+		"short sha":                    {sha[:7], sha},
+		"tag":                          {"v1", sha},
+		"short sha off default branch": {featureSHA[:7], featureSHA},
 	} {
 		t.Run(name, func(t *testing.T) {
 			dest := filepath.Join(t.TempDir(), "repo")
-			if err := cloneRepo(url, dest, ref, true, nil); err != nil {
-				t.Fatalf("cloneRepo(%q): %v", ref, err)
+			if err := cloneRepo(url, dest, tc.ref, true, nil); err != nil {
+				t.Fatalf("cloneRepo(%q): %v", tc.ref, err)
 			}
 			got, err := getGitFullHash(dest)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got != sha {
-				t.Errorf("HEAD = %s, want %s", got, sha)
+			if got != tc.want {
+				t.Errorf("HEAD = %s, want %s", got, tc.want)
 			}
 		})
 	}

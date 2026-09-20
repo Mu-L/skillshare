@@ -782,11 +782,12 @@ func GetRemoteRefHashWithAuth(repoURL, branch string) (string, error) {
 }
 
 // GetRemoteRefHashWithEnv returns the hash of a specific ref (branch, tag, or
-// commit SHA) on a remote repo. A pinned SHA never moves, so it is returned
-// directly without a network round-trip.
+// commit SHA) on a remote repo. A pinned SHA never moves, so a full SHA is
+// returned without a network round-trip; an abbreviated hex ref is looked up
+// first, since it may also be a branch or tag name.
 func GetRemoteRefHashWithEnv(repoURL, branch string, extraEnv []string) (string, error) {
-	if install.IsCommitSHA(branch) {
-		return shortHash(branch), nil
+	if len(branch) == 40 && install.IsCommitSHA(branch) {
+		return abbrevHash(branch), nil
 	}
 	args := []string{repoURL, "HEAD"}
 	if branch != "" {
@@ -799,7 +800,11 @@ func GetRemoteRefHashWithEnv(repoURL, branch string, extraEnv []string) (string,
 		return "", err
 	}
 
-	return parseRemoteHash(out, branch)
+	hash, err := parseRemoteHash(out, branch)
+	if err != nil && install.IsCommitSHA(branch) {
+		return abbrevHash(branch), nil
+	}
+	return hash, err
 }
 
 func runRemoteLsRemote(args []string, extraEnv []string) (string, error) {
@@ -843,7 +848,7 @@ func parseRemoteHash(out, branch string) (string, error) {
 		}
 		switch {
 		case strings.HasPrefix(ref, "refs/heads/"):
-			return shortHash(fields[0]), nil
+			return abbrevHash(fields[0]), nil
 		case strings.HasSuffix(ref, "^{}"), hash == "":
 			hash = fields[0]
 		}
@@ -854,10 +859,10 @@ func parseRemoteHash(out, branch string) (string, error) {
 		}
 		return "", fmt.Errorf("no HEAD ref found")
 	}
-	return shortHash(hash), nil
+	return abbrevHash(hash), nil
 }
 
-func shortHash(hash string) string {
+func abbrevHash(hash string) string {
 	if len(hash) > 7 {
 		return hash[:7]
 	}

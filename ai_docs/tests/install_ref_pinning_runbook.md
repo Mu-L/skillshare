@@ -10,7 +10,7 @@ Validates that `--branch` accepts a tag or commit SHA (issue #281), installs exa
 - `ss install <repo> --branch <sha>` installs that commit (shallow clone + targeted fetch)
 - Abbreviated SHA (7+ hex) also resolves (falls back to full fetch)
 - `ss check` reports a SHA-pinned skill as up to date without network
-- `--track` combined with a SHA is rejected with a clear error
+- `--track` combined with a SHA or tag is rejected with a clear error (CLI and Web UI share the guard)
 
 ## Environment
 

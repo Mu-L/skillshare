@@ -272,7 +272,7 @@ skillshare install github.com/team/skills --branch v1.2.0 --all
 skillshare install github.com/team/skills --branch 8f14e45 --all
 ```
 
-A commit SHA cannot be combined with `--track`: a tracked repo pulls from a branch, and a detached commit has nothing to pull. Pin tags or SHAs with regular installs instead.
+Tags and commit SHAs cannot be combined with `--track`: a tracked repo pulls from a branch, and a detached checkout has nothing to pull. Pin tags or SHAs with regular installs instead.
 
 ---
 

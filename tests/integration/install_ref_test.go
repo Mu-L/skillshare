@@ -32,6 +32,11 @@ func TestInstallBranch_PinnedSHA(t *testing.T) {
 	}
 	writeSkill("v1")
 	gitAddCommit(t, workDir, "v1")
+	tag := exec.Command("git", "tag", "v1")
+	tag.Dir = workDir
+	if out, err := tag.CombinedOutput(); err != nil {
+		t.Fatalf("git tag: %s %v", out, err)
+	}
 	rev := exec.Command("git", "rev-parse", "HEAD")
 	rev.Dir = workDir
 	out, err := rev.Output()
@@ -42,6 +47,18 @@ func TestInstallBranch_PinnedSHA(t *testing.T) {
 	writeSkill("v2")
 	gitAddCommit(t, workDir, "v2")
 	gitPush(t, workDir)
+	pushTags := exec.Command("git", "push", "origin", "--tags")
+	pushTags.Dir = workDir
+	if out, err := pushTags.CombinedOutput(); err != nil {
+		t.Fatalf("git push --tags: %s %v", out, err)
+	}
+
+	// Tracked repos must stay on a branch to pull; a pinned tag or SHA is rejected.
+	for _, ref := range []string{sha, "v1"} {
+		tracked := sb.RunCLI("install", "file://"+remoteRepo, "--track", "--branch", ref, "--name", "tracked-"+ref[:2], "--skip-audit")
+		tracked.AssertFailure(t)
+		tracked.AssertAnyOutputContains(t, "must follow a branch")
+	}
 
 	result := sb.RunCLI("install", "file://"+remoteRepo, "--branch", sha, "--name", "pinned", "--skip-audit")
 	result.AssertSuccess(t)

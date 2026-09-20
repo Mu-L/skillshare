@@ -84,8 +84,17 @@ func installTrackedRepoImpl(source *Source, sourceDir string, opts InstallOption
 	if cloneBranch == "" {
 		cloneBranch = source.Branch
 	}
+	// A tag or commit SHA has no branch for `git pull` to follow. A SHA fails
+	// at clone (--branch rejects it); a tag clones but leaves HEAD detached.
 	if err := cloneTrackedRepoForSource(source, destPath, cloneBranch, opts.OnProgress); err != nil {
+		if IsCommitSHA(cloneBranch) {
+			return nil, errTrackedNeedsBranch(cloneBranch)
+		}
 		return nil, fmt.Errorf("failed to clone repository: %w", err)
+	}
+	if isDetachedHead(destPath) {
+		_ = os.RemoveAll(destPath)
+		return nil, errTrackedNeedsBranch(cloneBranch)
 	}
 
 	// Discover skills in the cloned repo. Include root SKILL.md so the count
@@ -129,6 +138,10 @@ func installTrackedRepoImpl(source *Source, sourceDir string, opts InstallOption
 
 	result.Action = "cloned"
 	return result, nil
+}
+
+func errTrackedNeedsBranch(ref string) error {
+	return fmt.Errorf("tracked repos must follow a branch; %q is a tag or commit — install without --track to pin it", ref)
 }
 
 // updateTrackedRepo performs git pull on an existing tracked repo
