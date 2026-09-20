@@ -1,0 +1,246 @@
+---
+sidebar_position: 2
+---
+
+# 対応する Target
+
+skillshare が標準で対応している AI CLI の完全なリストです。
+
+## 概要
+
+skillshare は **65以上の AI CLI ツール** に対応しています。`skillshare init` を実行すると、
+インストール済みのツールを自動的に検出し設定します。
+
+---
+
+## 組み込みの Target
+
+これらは `skillshare init` 実行時に自動検出されます。
+
+<div className="target-grid">
+  <a className="target-badge" href="#target-adal">AdaL</a>
+  <a className="target-badge" href="#target-universal">Universal</a>
+  <a className="target-badge" href="#target-amp">Amp</a>
+  <a className="target-badge" href="#target-antigravity">Antigravity</a>
+  <a className="target-badge" href="#target-aiderdesk">AiderDesk</a>
+  <a className="target-badge" href="#target-astrbot">AstrBot</a>
+  <a className="target-badge" href="#target-augment">Augment</a>
+  <a className="target-badge" href="#target-bob">Bob</a>
+  <a className="target-badge" href="#target-claude">Claude</a>
+  <a className="target-badge" href="#target-codearts">CodeArts</a>
+  <a className="target-badge" href="#target-cline">Cline</a>
+  <a className="target-badge" href="#target-codebuddy">CodeBuddy</a>
+  <a className="target-badge" href="#target-codestudio">Code Studio</a>
+  <a className="target-badge" href="#target-comate">COMATE</a>
+  <a className="target-badge" href="#target-codex">Codex</a>
+  <a className="target-badge" href="#target-commandcode">Cmd Code</a>
+  <a className="target-badge" href="#target-continue">Continue</a>
+  <a className="target-badge" href="#target-copilot">Copilot</a>
+  <a className="target-badge" href="#target-cortex">Cortex</a>
+  <a className="target-badge" href="#target-crush">Crush</a>
+  <a className="target-badge" href="#target-cursor">Cursor</a>
+  <a className="target-badge" href="#target-deepagents">Deep Agents</a>
+  <a className="target-badge" href="#target-devin">Devin</a>
+  <a className="target-badge" href="#target-dexto">Dexto</a>
+  <a className="target-badge" href="#target-droid">Droid</a>
+  <a className="target-badge" href="#target-firebender">Firebender</a>
+  <a className="target-badge" href="#target-forgecode">ForgeCode</a>
+  <a className="target-badge" href="#target-gemini">Gemini CLI</a>
+  <a className="target-badge" href="#target-goose">Goose</a>
+  <a className="target-badge" href="#target-grok">Grok</a>
+  <a className="target-badge" href="#target-hermes">Hermes</a>
+  <a className="target-badge" href="#target-iflow">iFlow</a>
+  <a className="target-badge" href="#target-junie">Junie</a>
+  <a className="target-badge" href="#target-kilocode">Kilocode</a>
+  <a className="target-badge" href="#target-kimi">Kimi</a>
+  <a className="target-badge" href="#target-kiro">Kiro</a>
+  <a className="target-badge" href="#target-kode">Kode</a>
+  <a className="target-badge" href="#target-letta">Letta</a>
+  <a className="target-badge" href="#target-lingma">Lingma</a>
+  <a className="target-badge" href="#target-mcpjam">MCPJam</a>
+  <a className="target-badge" href="#target-mux">Mux</a>
+  <a className="target-badge" href="#target-neovate">Neovate</a>
+  <a className="target-badge" href="#target-omp">oh-my-pi</a>
+  <a className="target-badge" href="#target-openclaw">OpenClaw</a>
+  <a className="target-badge" href="#target-opencode">OpenCode</a>
+  <a className="target-badge" href="#target-openhands">OpenHands</a>
+  <a className="target-badge" href="#target-pi">Pi</a>
+  <a className="target-badge" href="#target-pochi">Pochi</a>
+  <a className="target-badge" href="#target-purecode">Purecode AI</a>
+  <a className="target-badge" href="#target-qoder">Qoder</a>
+  <a className="target-badge" href="#target-qwen">Qwen</a>
+  <a className="target-badge" href="#target-replit">Replit</a>
+  <a className="target-badge" href="#target-roo">Roo</a>
+  <a className="target-badge" href="#target-rovodev">Rovo Dev</a>
+  <a className="target-badge" href="#target-tabnine">Tabnine</a>
+  <a className="target-badge" href="#target-trae">Trae</a>
+  <a className="target-badge" href="#target-trae-cn">Trae CN</a>
+  <a className="target-badge" href="#target-vibe">Vibe</a>
+  <a className="target-badge" href="#target-verdent">Verdent</a>
+  <a className="target-badge" href="#target-warp">Warp</a>
+  <a className="target-badge" href="#target-windsurf">Windsurf</a>
+  <a className="target-badge" href="#target-witsy">Witsy</a>
+  <a className="target-badge" href="#target-xcode-claude">Xcode Claude</a>
+  <a className="target-badge" href="#target-xcode-codex">Xcode Codex</a>
+  <a className="target-badge" href="#target-zed">Zed</a>
+  <a className="target-badge" href="#target-zencoder">Zencoder</a>
+</div>
+
+---
+
+## Target のパス
+
+<table>
+<thead>
+<tr><th>Target</th><th>グローバルパス</th><th>プロジェクトパス</th></tr>
+</thead>
+<tbody>
+<tr id="target-adal"><td>adal</td><td><code>&#126;/.adal/skills</code></td><td><code>.adal/skills</code></td></tr>
+<tr id="target-universal"><td>universal</td><td><code>&#126;/.agents/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-amp"><td>amp</td><td><code>&#126;/.config/agents/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-antigravity"><td>antigravity</td><td><code>&#126;/.gemini/config/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-aiderdesk"><td>aiderdesk</td><td><code>&#126;/.aider-desk/skills</code></td><td><code>.aider-desk/skills</code></td></tr>
+<tr id="target-astrbot"><td>astrbot</td><td><code>&#126;/.astrbot/data/skills</code></td><td><code>data/skills</code></td></tr>
+<tr id="target-augment"><td>augment</td><td><code>&#126;/.augment/skills</code></td><td><code>.augment/skills</code></td></tr>
+<tr id="target-bob"><td>bob</td><td><code>&#126;/.bob/skills</code></td><td><code>.bob/skills</code></td></tr>
+<tr id="target-claude"><td>claude</td><td><code>&#126;/.claude/skills</code></td><td><code>.claude/skills</code></td></tr>
+<tr id="target-codearts"><td>codearts</td><td><code>&#126;/.codeartsdoer/skills</code></td><td><code>.codeartsdoer/skills</code></td></tr>
+<tr id="target-cline"><td>cline</td><td><code>&#126;/.cline/skills</code></td><td><code>.cline/skills</code></td></tr>
+<tr id="target-codebuddy"><td>codebuddy</td><td><code>&#126;/.codebuddy/skills</code></td><td><code>.codebuddy/skills</code></td></tr>
+<tr id="target-codestudio"><td>codestudio</td><td><code>&#126;/.codestudio/skills</code></td><td><code>.codestudio/skills</code></td></tr>
+<tr id="target-comate"><td>comate</td><td><code>&#126;/.comate/skills</code></td><td><code>.comate/skills</code></td></tr>
+<tr id="target-codex"><td>codex</td><td><code>&#126;/.codex/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-commandcode"><td>commandcode</td><td><code>&#126;/.commandcode/skills</code></td><td><code>.commandcode/skills</code></td></tr>
+<tr id="target-continue"><td>continue</td><td><code>&#126;/.continue/skills</code></td><td><code>.continue/skills</code></td></tr>
+<tr id="target-cortex"><td>cortex</td><td><code>&#126;/.snowflake/cortex/skills</code></td><td><code>.cortex/skills</code></td></tr>
+<tr id="target-copilot"><td>copilot</td><td><code>&#126;/.copilot/skills</code></td><td><code>.github/skills</code></td></tr>
+<tr id="target-crush"><td>crush</td><td><code>&#126;/.config/crush/skills</code></td><td><code>.crush/skills</code></td></tr>
+<tr id="target-cursor"><td>cursor</td><td><code>&#126;/.cursor/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-deepagents"><td>deepagents</td><td><code>&#126;/.deepagents/agent/skills</code></td><td><code>.deepagents/skills</code></td></tr>
+<tr id="target-devin"><td>devin</td><td><code>&#126;/.config/devin/skills</code></td><td><code>.devin/skills</code></td></tr>
+<tr id="target-dexto"><td>dexto</td><td><code>&#126;/.agents/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-droid"><td>droid</td><td><code>&#126;/.factory/skills</code></td><td><code>.factory/skills</code></td></tr>
+<tr id="target-firebender"><td>firebender</td><td><code>&#126;/.firebender/skills</code></td><td><code>.firebender/skills</code></td></tr>
+<tr id="target-forgecode"><td>forgecode</td><td><code>&#126;/forge/skills</code></td><td><code>.forge/skills</code></td></tr>
+
+<tr id="target-gemini"><td>gemini</td><td><code>&#126;/.gemini/skills</code></td><td><code>.gemini/skills</code></td></tr>
+<tr id="target-goose"><td>goose</td><td><code>&#126;/.config/goose/skills</code></td><td><code>.goose/skills</code></td></tr>
+<tr id="target-grok"><td>grok</td><td><code>&#126;/.grok/skills</code></td><td><code>.grok/skills</code></td></tr>
+<tr id="target-hermes"><td>hermes</td><td><code>&#126;/.hermes/skills</code></td><td><code>.hermes/skills</code></td></tr>
+<tr id="target-iflow"><td>iflow</td><td><code>&#126;/.iflow/skills</code></td><td><code>.iflow/skills</code></td></tr>
+<tr id="target-junie"><td>junie</td><td><code>&#126;/.junie/skills</code></td><td><code>.junie/skills</code></td></tr>
+<tr id="target-kilocode"><td>kilocode</td><td><code>&#126;/.kilo/skills</code></td><td><code>.kilo/skills</code></td></tr>
+<tr id="target-kimi"><td>kimi</td><td><code>&#126;/.config/agents/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-kiro"><td>kiro</td><td><code>&#126;/.kiro/skills</code></td><td><code>.kiro/skills</code></td></tr>
+<tr id="target-kode"><td>kode</td><td><code>&#126;/.kode/skills</code></td><td><code>.kode/skills</code></td></tr>
+<tr id="target-letta"><td>letta</td><td><code>&#126;/.letta/skills</code></td><td><code>.skills</code></td></tr>
+<tr id="target-lingma"><td>lingma</td><td><code>&#126;/.lingma/skills</code></td><td><code>.lingma/skills</code></td></tr>
+<tr id="target-mcpjam"><td>mcpjam</td><td><code>&#126;/.mcpjam/skills</code></td><td><code>.mcpjam/skills</code></td></tr>
+<tr id="target-mux"><td>mux</td><td><code>&#126;/.mux/skills</code></td><td><code>.mux/skills</code></td></tr>
+<tr id="target-neovate"><td>neovate</td><td><code>&#126;/.neovate/skills</code></td><td><code>.neovate/skills</code></td></tr>
+<tr id="target-omp"><td>omp</td><td><code>&#126;/.omp/agent/skills</code></td><td><code>.omp/skills</code></td></tr>
+<tr id="target-openclaw"><td>openclaw</td><td><code>&#126;/.openclaw/skills</code></td><td><code>skills</code></td></tr>
+<tr id="target-opencode"><td>opencode</td><td><code>&#126;/.config/opencode/skills</code></td><td><code>.opencode/skills</code></td></tr>
+<tr id="target-openhands"><td>openhands</td><td><code>&#126;/.openhands/skills</code></td><td><code>.openhands/skills</code></td></tr>
+<tr id="target-pi"><td>pi</td><td><code>&#126;/.pi/agent/skills</code></td><td><code>.pi/skills</code></td></tr>
+<tr id="target-pochi"><td>pochi</td><td><code>&#126;/.pochi/skills</code></td><td><code>.pochi/skills</code></td></tr>
+<tr id="target-purecode"><td>purecode</td><td><code>&#126;/.purecode/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-qoder"><td>qoder</td><td><code>&#126;/.qoder/skills</code></td><td><code>.qoder/skills</code></td></tr>
+<tr id="target-qwen"><td>qwen</td><td><code>&#126;/.qwen/skills</code></td><td><code>.qwen/skills</code></td></tr>
+<tr id="target-replit"><td>replit</td><td><code>&#126;/.config/agents/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-roo"><td>roo</td><td><code>&#126;/.roo/skills</code></td><td><code>.roo/skills</code></td></tr>
+<tr id="target-rovodev"><td>rovodev</td><td><code>&#126;/.rovodev/skills</code></td><td><code>.rovodev/skills</code></td></tr>
+<tr id="target-tabnine"><td>tabnine</td><td><code>&#126;/.tabnine/agent/skills</code></td><td><code>.tabnine/agent/skills</code></td></tr>
+<tr id="target-trae"><td>trae</td><td><code>&#126;/.trae/skills</code></td><td><code>.trae/skills</code></td></tr>
+<tr id="target-trae-cn"><td>trae-cn</td><td><code>&#126;/.trae-cn/skills</code></td><td><code>.trae/skills</code></td></tr>
+<tr id="target-vibe"><td>vibe</td><td><code>&#126;/.vibe/skills</code></td><td><code>.vibe/skills</code></td></tr>
+<tr id="target-verdent"><td>verdent</td><td><code>&#126;/.verdent/skills</code></td><td><code>.verdent/skills</code></td></tr>
+<tr id="target-warp"><td>warp</td><td><code>&#126;/.agents/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-windsurf"><td>windsurf</td><td><code>&#126;/.codeium/windsurf/skills</code></td><td><code>.windsurf/skills</code></td></tr>
+<tr id="target-witsy"><td>witsy</td><td><code>&#126;/.agents/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-xcode-claude"><td>xcode-claude</td><td><code>&#126;/Library/Developer/Xcode/CodingAssistant/ClaudeAgentConfig/skills</code></td><td><code>.claude/skills</code></td></tr>
+<tr id="target-xcode-codex"><td>xcode-codex</td><td><code>&#126;/Library/Developer/Xcode/CodingAssistant/codex/skills</code></td><td><code>.codex/skills</code></td></tr>
+<tr id="target-zed"><td>zed</td><td><code>&#126;/.agents/skills</code></td><td><code>.agents/skills</code></td></tr>
+<tr id="target-zencoder"><td>zencoder</td><td><code>&#126;/.zencoder/skills</code></td><td><code>.zencoder/skills</code></td></tr>
+</tbody>
+</table>
+
+:::info Universal target
+**universal** target（`&#126;/.agents/skills`）は、複数の AI CLI が読み取れる共有 Agent
+ディレクトリです。他の Agent が見つかった場合、`skillshare init` 実行時に自動検出されます。
+プロジェクトモードでは、`amp`、`codex`、`cursor`、`dexto`、`kimi`、`purecode`、`replit`、`warp`、
+`witsy`、`zed` は同じ `.agents/skills` パスを共有し、自動的に `universal` としてグループ化されます。
+
+これは [npx skills CLI](https://github.com/vercel-labs/skills) が使用するのと同じパスです。
+共存の詳細は [FAQ: npx skills と universal を併用する](/docs/troubleshooting/faq#using-universal-alongside-npx-skills)
+を参照してください。
+:::
+
+## エイリアス
+
+一部の Target には、後方互換性や利便性のための別名があります。
+
+| エイリアス | 解決先 | 備考 |
+|-------|-------------|-------|
+| `agents` | `universal` | レガシー名 |
+| `claude-code` | `claude` | レガシー名 |
+| `aider-desk` | `aiderdesk` | ハイフン区切りのバリエーション |
+| `codearts-agent` | `codearts` | agent サフィックス付き |
+| `code-studio` | `codestudio` | ハイフン区切りのバリエーション |
+| `command-code` | `commandcode` | ハイフン区切りのバリエーション |
+| `devin-terminal` | `devin` | terminal サフィックス付き |
+| `deep-agents` | `deepagents` | ハイフン区切りのバリエーション |
+| `factory` | `droid` | ブランド名 / Config ディレクトリ名 |
+| `forge-code` | `forgecode` | ハイフン区切りのバリエーション |
+| `gemini-cli` | `gemini` | CLI サフィックス付き |
+| `antigravity-cli` | `antigravity` | CLI バリエーション |
+| `github-copilot` | `copilot` | 正式な製品名 |
+| `iflow-cli` | `iflow` | CLI サフィックス付き |
+| `kilo` | `kilocode` | 短縮名 |
+| `kimi-cli` | `kimi` | CLI サフィックス付き |
+| `kiro-cli` | `kiro` | CLI サフィックス付き |
+| `mistral-vibe` | `vibe` | 正式な製品名 |
+| `oh-my-pi` | `omp` | 正式な製品名 |
+| `purecode-ai` | `purecode` | ハイフン区切りのバリエーション |
+| `qwen-code` | `qwen` | code サフィックス付き |
+| `rovo-dev` | `rovodev` | ハイフン区切りのバリエーション |
+| `tabnine-cli` | `tabnine` | CLI サフィックス付き |
+
+すべてのコマンドで、エイリアスまたは正式名称のどちらでも使用できます。
+
+```bash
+skillshare target add claude           # 正式名称
+skillshare target add claude-code      # エイリアス — 結果は同じ
+```
+
+エイリアスは自動的に解決されます。Config ファイルとステータス出力では正式名称が使用されます。
+
+---
+
+## Target のパスを確認する
+
+任意の Target について、次を実行してください。
+
+```bash
+skillshare target <name>
+```
+
+---
+
+## カスタム Target
+
+あなたの AI CLI が見当たりませんか？手動で追加してください。
+
+```bash
+skillshare target add myapp ~/.myapp/skills
+```
+
+詳細は [カスタム Target の追加](./adding-custom-targets.md) を参照してください。
+
+---
+
+## 関連項目
+
+- [カスタム Target の追加](./adding-custom-targets.md) — 対応していないツールを追加する
+- [Configuration](./configuration.md) — Config ファイルリファレンス
+- [Commands: target](/docs/reference/commands/target) — target コマンド

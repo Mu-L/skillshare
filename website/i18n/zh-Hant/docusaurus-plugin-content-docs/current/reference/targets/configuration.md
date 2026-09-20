@@ -1,0 +1,942 @@
+---
+sidebar_position: 4
+---
+
+# 設定
+
+skillshare 的設定檔參考文件。
+
+## 總覽
+
+```text
+~/.config/skillshare/
+├── config.yaml          ← 設定檔
+├── skills/              ← Source 目錄（你的 Skill）
+│   ├── .metadata.json   ← Skill 中繼資料（自動管理）
+│   ├── my-skill/
+│   ├── another/
+│   └── _team-repo/      ← Tracked 儲存庫
+├── extras/              ← Extras Source 根目錄
+│   └── rules/           ← 額外資源（例如規則）
+
+~/.local/share/skillshare/
+└── backups/             ← 自動備份
+    └── 2026-01-20.../
+```
+
+---
+
+## IDE 支援（JSON Schema） {#ide-support}
+
+設定檔包含 YAML Language Server 指示詞，可在支援的編輯器中啟用**自動完成**、**驗證**與**懸停說明文件**。
+
+由 `skillshare init` 建立的新設定檔會自動包含這個功能：
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runkids/skillshare/main/schemas/config.schema.json
+source: ~/.config/skillshare/skills
+targets:
+  claude:
+    path: ~/.claude/skills
+```
+
+### 新增到既有設定檔
+
+如果你的設定檔是在這個功能推出之前建立的，把這個註解加到**第一行**：
+
+**Global 設定**（`~/.config/skillshare/config.yaml`）：
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runkids/skillshare/main/schemas/config.schema.json
+```
+
+**Project 設定**（`.skillshare/config.yaml`）：
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runkids/skillshare/main/schemas/project-config.schema.json
+```
+
+或者直接重新執行 `skillshare init --force`（Global）或 `skillshare init -p --force`（Project），重新產生帶有 schema 註解的設定檔。
+
+### 支援的編輯器
+
+| 編輯器 | 需要的擴充套件 |
+|--------|-------------------|
+| VS Code | Red Hat 出品的 [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) |
+| JetBrains IDE | 內建 YAML 支援 |
+| Neovim | 透過 LSP 使用 [yaml-language-server](https://github.com/redhat-developer/yaml-language-server) |
+
+---
+
+## 設定檔
+
+**位置：** `~/.config/skillshare/config.yaml`
+
+### 完整範例
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runkids/skillshare/main/schemas/config.schema.json
+# Source 目錄（你編輯 Skill 的地方）
+source: ~/.config/skillshare/skills
+
+# 新 Target 的預設 Sync 模式
+mode: merge
+
+# 預設 Target 命名方式（flat 或 standard）
+# target_naming: flat
+
+# Targets（AI CLI Skill 目錄）
+targets:
+  claude:
+    path: ~/.claude/skills
+    # mode: merge（繼承自預設值）
+
+  codex:
+    path: ~/.codex/skills
+    mode: symlink  # 覆寫預設模式
+    include: [codex-*] # 僅適用於 merge/copy 模式
+
+  cursor:
+    path: ~/.cursor/skills
+    mode: copy  # Cursor 使用真實檔案
+    exclude: [experimental-*] # 僅適用於 merge/copy 模式
+
+  # 自訂 Target
+  myapp:
+    path: ~/apps/myapp/skills
+
+# 遠端 Skill — 由 install/uninstall 自動管理
+skills:
+  - name: pdf
+    source: anthropics/skills/skills/pdf
+  - name: _team-skills
+    source: github.com/team/skills
+    tracked: true
+
+# 儲存時把 $HOME 摺疊回 ~（適合 dotfiles）
+# preserve_tilde_on_save: true
+
+# commit/push/pull 使用的目錄（預設 skills，還有 agents、extras、root）
+# git_root: skills
+
+# 自訂 Agent Source（選用，覆寫預設位置）
+agents_source: ~/my-agents
+
+# 自訂 Extras Source（選用，覆寫預設位置）
+extras_source: ~/my-extras
+
+# 要同步的非 Skill 資源
+extras:
+  - name: rules
+    source: ~/company-shared/rules   # 選用的個別 Extra 覆寫
+    targets:
+      - path: ~/.claude/rules
+      - path: ~/.cursor/rules
+        mode: copy
+
+# Sync 時要忽略的檔案
+ignore:
+  - "**/.DS_Store"
+  - "**/.git/**"
+  - "**/node_modules/**"
+  - "**/*.log"
+```
+
+---
+
+## 欄位
+
+### `source`
+
+你的 Skill 目錄路徑（單一真實來源）。
+
+```yaml
+source: ~/.config/skillshare/skills
+```
+
+**預設值：** `~/.config/skillshare/skills`
+
+### `mode`
+
+所有 Target 的預設 Sync 模式。
+
+```yaml
+mode: merge
+```
+
+| 值 | 行為 |
+|-------|----------|
+| `merge` | 每個 Skill 各自 symlink。本地 Skill 會被保留。**（預設）** |
+| `copy` | 每個 Skill 複製為真實檔案。適用於無法遵循 symlink 的 AI CLI。 |
+| `symlink` | 整個 Target 目錄是一個 symlink。 |
+
+### `target_naming`
+
+merge/copy 同步的預設 Target 命名策略。
+
+```yaml
+target_naming: flat
+```
+
+| 值 | 行為 |
+|-------|----------|
+| `flat` | 巢狀 Skill 用 `__` 分隔攤平（例如 `frontend__dev`）。**（預設）** |
+| `standard` | 直接使用 SKILL.md 的 `name` 欄位（例如 `dev`）。遵循 [Agent Skills 規範](https://agentskills.io/specification)。 |
+
+### `targets`
+
+要同步的 AI CLI Skill 目錄。
+
+```yaml
+targets:
+  <name>:
+    path: <path>
+    mode: <mode>  # 選用，覆寫預設值
+    include: [<glob>, ...]  # 選用，僅適用於 merge/copy 模式
+    exclude: [<glob>, ...]  # 選用，僅適用於 merge/copy 模式
+```
+
+**範例：**
+```yaml
+targets:
+  claude:
+    path: ~/.claude/skills
+
+  codex:
+    path: ~/.codex/skills
+    mode: symlink
+
+  custom:
+    path: ~/my-app/skills
+```
+
+### `include` / `exclude`（Target 篩選條件） {#include--exclude-target-filters}
+
+使用每個 Target 各自的篩選條件，控制在 **merge 與 copy 模式**下要同步哪些 Skill。
+
+```yaml
+targets:
+  codex:
+    path: ~/.codex/skills
+    include: [codex-*]
+  claude:
+    path: ~/.claude/skills
+    exclude: [codex-*]
+```
+
+規則：
+- 比對的對象是 Target 的 flat 名稱（例如 `team__frontend__ui`）
+- `include` 會先套用
+- `exclude` 會在 include 之後套用
+- 樣式語法使用 Go 的 `filepath.Match`（`*`、`?`、`[...]`）
+- 在 `symlink` 模式下，include/exclude 會被忽略
+- 如果先前已同步的 Source 連結被排除了，`sync` 會移除該 Target 項目
+- Target 中既有的本地非 symlink 資料夾會被保留
+
+#### 樣式速查表
+
+| 樣式 | 比對對象 | 典型用途 |
+|---------|---------|-------------|
+| `codex-*` | `codex-agent`、`codex-rag` | 以前綴分組 |
+| `team__*` | `team__frontend__ui` | 儲存庫／群組命名空間 |
+| `*-experimental` | `rag-experimental` | 以後綴清理 |
+| `core-?` | `core-a`、`core-1` | 單一字元變體 |
+| `[ab]-tool` | `a-tool`、`b-tool` | 小型的明確集合 |
+
+#### 情境 A：只有 include
+
+當某個 Target 只該接收一個聚焦的子集時，使用 `include`。
+
+```yaml
+targets:
+  codex:
+    path: ~/.codex/skills
+    include: [codex-*, shared-*]
+```
+
+使用案例：
+- 讓 Codex 只專注在程式碼相關的工作流程
+- 避免把只用於寫作／研究的 Skill 送到這個 Target
+
+#### 情境 B：只有 exclude
+
+當某個 Target 該接收幾乎所有東西，只排除一個已知的子集時，使用 `exclude`。
+
+```yaml
+targets:
+  claude:
+    path: ~/.claude/skills
+    exclude: [*-experimental, codex-*]
+```
+
+使用案例：
+- 讓一個主要 Target 保持廣泛涵蓋
+- 隱藏不穩定或特定 Target 專用的 Skill
+
+#### 情境 C：include + exclude
+
+當你想先設定一個廣泛的 include，再從中排除少數例外時，兩者並用。
+
+```yaml
+targets:
+  cursor:
+    path: ~/.cursor/skills
+    include: [core-*, team__*]
+    exclude: [*-deprecated, team__legacy__*]
+```
+
+評估順序：
+1. 只保留符合 `include` 的名稱
+2. 從中移除符合 `exclude` 的項目
+
+假設 Source 中有以下 Skill：
+- `core-auth`
+- `core-deprecated`
+- `team__frontend__ui`
+- `team__legacy__docs`
+- `misc-tool`
+
+`cursor` 的結果：
+- 會同步：`core-auth`、`team__frontend__ui`
+- 不會同步：`core-deprecated`、`team__legacy__docs`、`misc-tool`
+
+#### 透過 CLI 管理篩選條件
+
+除了手動編輯 YAML，也可以使用 `target` 指令：
+
+```bash
+# Skills
+skillshare target claude --add-include "team-*"
+skillshare target claude --add-exclude "_legacy*"
+skillshare target claude --remove-include "team-*"
+
+# Agents（僅適用於有 Agent 路徑的 Target）
+skillshare target claude --add-agent-include "team-*"
+skillshare target claude --add-agent-exclude "draft-*"
+skillshare target claude --remove-agent-include "team-*"
+
+skillshare sync  # 套用變更
+```
+
+重複的樣式會被靜默忽略。無效的 glob 樣式會回傳錯誤。Agent 篩選條件使用與 Skill 篩選條件相同的 glob 語法，但只在 `merge` 與 `copy` 模式下運作。在 `symlink` 模式下，Agent 篩選條件會被忽略，因為整個 Agent 目錄是以單一單位連結的。
+
+完整參考請參閱 [target 指令](/docs/reference/commands/target#target-filters-includeexclude)。
+
+#### Skill 層級的 targets {#skill-level-targets}
+
+Skill 可以在 SKILL.md 中使用 `metadata.targets` 宣告它們相容的 Target。頂層的 `targets` 欄位仍受支援，做為舊版 Skill 的備援方式，但當兩者都存在時，`metadata.targets` 優先：
+
+```yaml
+---
+name: claude-prompts
+metadata:
+  targets: [claude]
+---
+```
+
+這是**第二層**篩選機制，與設定層級的 include/exclude 一起運作：
+
+```
+Source Skills
+  │
+  ├─ 設定的 include/exclude    ← 每個 Target 各自設定，由使用端決定
+  │
+  └─ Skill 的 targets 欄位     ← 每個 Skill 各自設定，由作者決定
+      │
+      ▼
+  同步到 Target 的 Skill
+```
+
+**評估順序：**
+1. `include` — 只保留符合的名稱
+2. `exclude` — 移除符合的名稱
+3. `targets` 欄位 — 移除 targets 清單中不包含此 Target 的 Skill
+
+兩層都必須通過（AND 關係）。設定層級的篩選條件永遠優先 — 即使某個 Skill 宣告了 `targets: [claude]`，設定中的 `exclude: [claude-*]` 仍然會排除它。
+
+**跨模式比對：**`targets: [claude]` 會同時比對 Global Target `claude` 與 Project Target `claude`，因為它們指的是同一個 AI CLI。詳見[支援的 Targets](/docs/reference/targets/supported-targets)。
+
+:::tip
+當**使用端**想要控制哪些東西送去哪裡時，使用設定端的篩選條件（`include`/`exclude`）。當**作者**知道某個 Skill 只適用於特定 AI CLI 時，使用 Skill 層級的 `targets`。
+:::
+
+#### 篩選條件變更時，既有的 Target 項目會怎樣
+
+當你新增或變更篩選條件，然後執行 `skillshare sync` 時：
+
+| Target 中的既有項目 | 會發生什麼事 |
+|-------------------------|--------------|
+| 現在被篩選掉的 Source 連結 symlink/junction | 移除（解除連結） |
+| 現在被篩選掉的受管理副本（copy 模式） | 移除 |
+| Target 中建立的本地非 symlink 目錄 | 保留 |
+| 無關的本地內容 | 保留 |
+
+### `skills`
+
+追蹤遠端安裝的 Skill。由 `skillshare install` 與 `skillshare uninstall` 自動管理。
+
+```yaml
+skills:
+  - name: pdf
+    source: anthropics/skills/skills/pdf
+  - name: _team-skills
+    source: github.com/team/skills
+    tracked: true
+```
+
+| 欄位 | 必要 | 說明 |
+|-------|----------|--------------|
+| `name` | 是 | Skill 目錄名稱 |
+| `source` | 是 | GitHub URL 或本地路徑 |
+| `tracked` | 否 | 若以 `--track` 安裝則為 `true`（預設：`false`） |
+
+當你在沒有任何參數的情況下執行 `skillshare install`，所有已列出但尚未存在的 Skill 都會被安裝。這讓 `config.yaml` 成為一個可攜的 Skill 清單 — 把它複製到另一台機器，執行 `skillshare install && skillshare sync` 即可。
+
+`skills:` 清單會在每次 `install` 與 `uninstall` 操作後自動更新。你不需要手動編輯它。
+
+:::note 已遷移至 .metadata.json
+從 v0.16.2 開始，已安裝 Skill 的項目從 `config.yaml` 遷移到一個獨立的檔案。在目前版本中，所有安裝中繼資料都集中儲存在 `skills/` 目錄下的 `.metadata.json` 中。從舊格式（`registry.yaml`、各 Skill 各自的 `.skillshare-meta.json`）遷移會在第一次執行時自動進行。
+:::
+
+### `agents_source` {#agents-source}
+
+Agent 的自訂 Source 目錄。覆寫預設的 `~/.config/skillshare/agents/`。
+
+```yaml
+agents_source: ~/my-agents
+```
+
+設定後，所有 Agent 都會從這個目錄讀取，而非預設位置。支援 `~` 展開。
+
+預設值：`~/.config/skillshare/agents/`（自動偵測，除非你想要自訂位置，否則不需要明確設定）。
+
+:::note 僅限 Global mode
+Project mode 一律使用 `.skillshare/agents/`，不支援 `agents_source`。
+:::
+
+Agent 檔案格式、同步行為與支援的 Target 詳情，請參閱 [Agents](/docs/understand/agents)。
+
+### `extras` {#extras}
+
+非 Skill 資源（規則、指令、Prompt 等），要同步到任意目錄。
+
+```yaml
+extras_source: ~/my-extras            # 選用的 Global 預設 Source
+extras:
+  - name: rules
+    source: ~/company-shared/rules    # 選用的個別 Extra 覆寫
+    targets:
+      - path: ~/.claude/rules
+      - path: ~/.cursor/rules
+        mode: copy
+  - name: agents
+    targets:
+      - path: ~/.claude/agents
+        flatten: true                 # 把子目錄檔案同步成攤平結構
+  - name: commands
+    targets:
+      - path: ~/.claude/commands
+```
+
+| 欄位 | 必要 | 說明 |
+|-------|----------|--------------|
+| `name` | 是 | Extra 識別碼 |
+| `source` | 否 | 此 Extra 的自訂 Source 目錄（覆寫 `extras_source` 與預設值） |
+| `targets` | 是 | Target 路徑清單 |
+| `targets[].path` | 是 | 目的地目錄 |
+| `targets[].mode` | 否 | `merge`（預設）、`copy` 或 `symlink` |
+| `targets[].flatten` | 否 | 為 `true` 時，把子目錄檔案直接同步到 Target 根目錄（不能與 `symlink` 併用） |
+
+`extras_source` 會在執行 `skillshare init` 或第一次 `extras init` 時，自動填入預設路徑（`~/.config/skillshare/extras/`）。可覆寫它，讓所有 Extras 使用自訂位置。
+
+**Source 解析順序**（三層優先序）：
+1. 個別 Extra 的 `source` → 確切路徑（例如 `~/company-shared/rules`）
+2. `extras_source` → `<extras_source>/<name>/`（例如 `~/my-extras/rules/`）
+3. 預設值 → `~/.config/skillshare/extras/<name>/`
+
+**Sync 模式：**
+- `merge`（預設）— 逐檔 symlink
+- `copy` — 逐檔複製
+- `symlink` — 整個目錄 symlink
+
+執行 `skillshare sync extras` 進行同步，或執行 `skillshare sync --all` 同時同步 Skill + Extras。
+
+:::info 兩種模式都支援
+Extras 在 Global 與 Project mode 下都能運作。在 Project mode 下，Source 是 `.skillshare/extras/<name>/`。
+:::
+
+使用細節請參閱 [sync extras](/docs/reference/commands/sync#sync-extras)。
+
+### `ignore`
+
+同步期間要跳過的檔案 glob 樣式。
+
+```yaml
+ignore:
+  - "**/.DS_Store"
+  - "**/.git/**"
+  - "**/node_modules/**"
+```
+
+**預設樣式：**
+- `**/.DS_Store`
+- `**/.git/**`
+
+### `gitlab_hosts`
+
+使用巢狀子群組的自架 GitLab 實例主機名稱。名稱中包含 `gitlab` 或 `jihulab` 的主機會自動偵測 — 此欄位只在其他自訂網域時才需要。
+
+```yaml
+gitlab_hosts:
+  - git.company.com
+  - code.internal.io
+```
+
+當某個主機名稱列在這裡時，`skillshare install` 會把完整的 URL 路徑當成儲存庫處理（支援最多 20 層的巢狀子群組），而非假設標準的 `owner/repo` 兩段式結構。
+
+**沒有 `gitlab_hosts` 時：**
+```bash
+# git.company.com/team/frontend/ui → clone「team/frontend」，子目錄「ui」
+skillshare install git.company.com/team/frontend/ui
+```
+
+**有 `gitlab_hosts: [git.company.com]` 時：**
+```bash
+# git.company.com/team/frontend/ui → clone「team/frontend/ui」（完整路徑）
+skillshare install git.company.com/team/frontend/ui
+```
+
+**不用設定的變通做法：** 在路徑結尾加上 `.git`，標示儲存庫路徑的結束位置：
+```bash
+skillshare install git.company.com/team/frontend/ui.git
+```
+
+項目必須是不含 scheme、路徑或連接埠的裸主機名稱。它們會被正規化為小寫。
+
+#### 環境變數
+
+對於沒有設定檔的 CI/CD pipeline，使用 `SKILLSHARE_GITLAB_HOSTS`（以逗號分隔）：
+
+```bash
+SKILLSHARE_GITLAB_HOSTS=git.company.com,code.internal.io skillshare install git.company.com/team/frontend/ui
+```
+
+當設定檔與環境變數都有設定時，它們的值會被**合併**（去除重複）。環境變數中的無效項目會被靜默略過。
+
+### `azure_hosts`
+
+自架的 Azure DevOps Server 實例主機名稱。針對 `dev.azure.com` 與 `*.visualstudio.com` 的內建樣式一律有效 — 此欄位只在使用自訂網域的地端部署 Azure DevOps Server 時才需要。
+
+```yaml
+azure_hosts:
+  - azuredevops.mycompany.com
+```
+
+當某個主機名稱列在這裡時，包含 `/_git/` 的 URL 會透過 Azure DevOps 的解析邏輯處理，正確擷取出 org、project 和 repo，且不會在 clone URL 後面附加 `.git`。
+
+**沒有 `azure_hosts` 時：**
+
+```bash
+# 會落到通用的 HTTPS 解析邏輯 — clone URL 會變成
+# https://azuredevops.mycompany.com/Org/Project.git（錯誤）
+skillshare install https://azuredevops.mycompany.com/Org/Project/_git/Repo
+```
+
+**有 `azure_hosts: [azuredevops.mycompany.com]` 時：**
+
+```bash
+# 正確解析 — clone URL 為
+# https://azuredevops.mycompany.com/Org/Project/_git/Repo
+skillshare install https://azuredevops.mycompany.com/Org/Project/_git/Repo
+```
+
+項目必須是不含 scheme、路徑或連接埠的裸主機名稱。它們會被正規化為小寫。
+
+#### 環境變數
+
+對於 CI/CD pipeline，使用 `SKILLSHARE_AZURE_HOSTS`（以逗號分隔）：
+
+```bash
+SKILLSHARE_AZURE_HOSTS=azuredevops.mycompany.com skillshare install \
+  https://azuredevops.mycompany.com/Org/Project/_git/Repo
+```
+
+### `gitea_hosts`
+
+自架的 Gitea 實例主機名稱。名稱中包含 `gitea` 的主機，例如 `gitea.com` 或 `gitea.company.com`，會自動被偵測。此欄位只在其他自訂網域時才需要。
+
+```yaml
+gitea_hosts:
+  - git.company.com
+```
+
+當某個主機名稱列在這裡時：
+
+- `install` 與 `update` 會針對該主機使用 [`GITEA_TOKEN`](/docs/reference/appendix/environment-variables#gitea_token) 進行 HTTPS 身分驗證
+- 當無法使用 sparse checkout 或失敗時，`install` 會透過 Gitea Contents API 下載子目錄，而不是 clone 整個儲存庫。如果該 API 呼叫也失敗，則會回退為完整 clone。
+
+項目必須是不含 scheme、路徑或連接埠的裸主機名稱。它們會被正規化為小寫。
+
+#### 環境變數
+
+對於 CI/CD pipeline，使用 `SKILLSHARE_GITEA_HOSTS`（以逗號分隔）：
+
+```bash
+SKILLSHARE_GITEA_HOSTS=git.company.com skillshare install https://git.company.com/team/skills/review
+```
+
+當設定檔與環境變數都有設定時，它們的值會被**合併**（去除重複）。
+
+### `cnb_hosts`
+
+自架的 [CNB](https://cnb.cool) 實例主機名稱。`cnb.cool` 會自動被偵測。此欄位只在私有部署使用其他網域時才需要。
+
+```yaml
+cnb_hosts:
+  - cnb.company.com
+```
+
+列出的主機會使用 [`CNB_TOKEN`](/docs/reference/appendix/environment-variables#cnb_token) 進行 HTTPS 身分驗證，子目錄安裝也可以透過 CNB contents API 處理，並有相同的完整 clone 回退機制。
+
+項目必須是不含 scheme、路徑或連接埠的裸主機名稱。它們會被正規化為小寫。
+
+#### 環境變數
+
+```bash
+SKILLSHARE_CNB_HOSTS=cnb.company.com skillshare install https://cnb.company.com/team/skills/review
+```
+
+### `audit`
+
+安全稽核設定。
+
+```yaml
+audit:
+  block_threshold: CRITICAL
+  profile: default
+  dedupe_mode: global
+  enabled_analyzers: [static, dataflow, tier, integrity]
+```
+
+| 欄位 | 值 | 預設值 | 說明 |
+|-------|--------|---------|--------------|
+| `block_threshold` | `CRITICAL`、`HIGH`、`MEDIUM`、`LOW`、`INFO` | `CRITICAL` | 阻擋 `skillshare install` 的最低嚴重程度 |
+| `profile` | `default`、`strict`、`permissive` | `default` | 稽核設定檔預設值（設定 threshold 與 dedupe 的預設值） |
+| `dedupe_mode` | `legacy`、`global` | `global` | 發現項目的去重複模式 |
+| `enabled_analyzers` | Analyzer ID 陣列 | *（全部）* | 要執行的 Analyzer 允許清單（省略代表全部） |
+
+**Profile** 會設定合理的預設值，可被明確的欄位值覆寫：
+
+| Profile | Threshold | Dedupe | 說明 |
+|---------|-----------|--------|--------------|
+| `default` | `CRITICAL` | `global` | 與目前行為相同 |
+| `strict` | `HIGH` | `global` | 對重視安全的團隊更嚴格的阻擋 |
+| `permissive` | `CRITICAL` | `legacy` | 僅供參考，最小程度的阻擋 |
+
+**Analyzer ID：** `static`、`dataflow`、`tier`、`integrity`、`structure`、`cross-skill`
+
+**優先順序：** CLI 旗標 → Project 設定 → Global 設定 → Profile 預設值。
+
+- `block_threshold` 只控制安裝**何時被阻擋** — 掃描一律都會執行
+- 使用 `--skip-audit` 可讓單次安裝略過掃描
+- 使用 `--force` 可覆寫阻擋（發現項目仍會顯示）
+
+### `context_budget`
+
+Token 預算警告門檻。當 Token 數超過預算時，`sync` 與 `analyze` 之後會出現警告。
+
+```yaml
+context_budget:
+  warn_always_loaded_tokens: 10000
+  warn_on_demand_tokens: 100000
+```
+
+| 欄位 | 型別 | 預設值 | 說明 |
+|-------|------|---------|--------------|
+| `warn_always_loaded_tokens` | 整數 | `10000` | 當一律載入的 Token 數超過此值時發出警告。`0` 代表停用 |
+| `warn_on_demand_tokens` | 整數 | `100000` | 當按需載入的 Token 數超過此值時發出警告。`0` 代表停用 |
+
+省略時套用預設值（10K / 100K）。使用 `skillshare sync --quiet` 可抑制警告。輸出格式請參閱 [sync — Context 成本](/docs/reference/commands/sync#context-cost)。
+
+### `preserve_tilde_on_save`
+
+為 `true` 時，會在寫入 `config.yaml` 前，把 `$HOME` 前綴摺疊回 `~`。這能讓磁碟上的設定檔跨機器保持可攜性 — 適用於透過 dotfiles（stow、chezmoi、yadm、bare git repo）共享設定的情境。
+
+```yaml
+preserve_tilde_on_save: true
+```
+
+**預設值：** `false`（既有行為不變 — 路徑會以絕對路徑儲存）。
+
+若沒有這個旗標，每次儲存都會把 `~/...` 路徑重寫成 `/home/alice/...`（展開後的形式）。當設定檔受版本控制並跨機器共享時，這會造成雜亂的 diff 並破壞可攜性。
+
+啟用此旗標後，序列化的 YAML 會為任何位於 `$HOME` 之下的路徑使用 `~`：
+
+```yaml
+# 之前（預設）：絕對路徑，機器特定
+source: /home/alice/.config/skillshare/skills
+targets:
+  claude:
+    skills:
+      path: /home/alice/.claude/skills
+
+# 之後（preserve_tilde_on_save: true）：可攜
+source: ~/.config/skillshare/skills
+targets:
+  claude:
+    skills:
+      path: ~/.claude/skills
+```
+
+記憶體中的設定不受影響 — `Load()` 仍然會照常展開 `~`。非 home 目錄下的絕對路徑（例如 `/opt/shared/skills`）則會原封不動地傳遞。
+
+:::note 僅限 Global mode
+此選項只適用於 Global 的 `config.yaml`。Project 設定（`.skillshare/config.yaml`）通常使用相對路徑，不需要摺疊 tilde。
+:::
+
+### `git_root` {#git-root}
+
+選擇 `skillshare commit`、`push` 和 `pull` 操作的目錄。
+
+```yaml
+git_root: skills
+```
+
+| 值 | 受版本控制的目錄 |
+|-------|---------------------|
+| `skills`（預設） | Skill Source（`~/.config/skillshare/skills/`） |
+| `agents` | Agent Source（`~/.config/skillshare/agents/`） |
+| `extras` | Extras Source（`~/.config/skillshare/extras/`） |
+| `root` | 設定根目錄（`~/.config/skillshare/`）— Skill + Agent + Extras 合併在同一個儲存庫中；`config.yaml` 會自動被忽略 |
+
+**預設值：** `skills`
+
+可在 init 時透過 `skillshare init --git-root <scope>` 設定，或在 init 精靈中互動式設定。
+
+#### init 之後變更 scope
+
+在已經初始化完成的環境上，以非互動方式切換 scope：
+
+```bash
+skillshare init --git-root <scope>   # Global mode；如果你的 cwd 是一個專案，加上 -g
+```
+
+這會在新的 scope 目錄上初始化一個 git 儲存庫（如果那裡已經有一個則重複使用），把 `git_root` 寫入設定，且不會提示或要求 `--remote`。不過，它**不會**搬移既有的儲存庫 — 切換 scope 的意思是「開始為另一個目錄建立版本控制」，而不是「搬移歷史紀錄」：
+
+- **全新歷史紀錄** — `skillshare init --git-root <scope>` 會在新的 scope 目錄上初始化一個空的儲存庫。
+- **保留歷史紀錄** — 先執行 `mv <old-scope>/.git <new-scope>/.git`，再執行 `skillshare init --git-root <scope>` 來記錄這個 scope。
+
+你也可以直接編輯 `config.yaml` 中的 `git_root`。如果 `git_root` 指向一個沒有儲存庫的目錄，而另一個 scope 目錄卻有，`commit`/`push`/`pull` 會印出「Git root mismatch」錯誤，並附上確切的 `skillshare init` / `mv` 指令來解決問題。
+
+:::note 僅限 Global mode
+`git_root` 只適用於 Global mode。Project mode 使用 `.skillshare/` 目錄，不支援此欄位。
+:::
+
+---
+
+## Project 設定
+
+**位置：** `.skillshare/config.yaml`（在專案根目錄下）
+
+Project 設定使用與 Global 設定不同的格式。
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runkids/skillshare/main/schemas/project-config.schema.json
+# Targets — 字串或物件形式
+targets:
+  - claude                    # 字串：已知的 Target，使用預設值
+  - cursor
+  - name: custom-ide               # 物件：自訂路徑與模式
+    path: ./tools/ide/skills
+    mode: symlink
+  - name: codex                    # 帶有篩選條件的物件
+    include: [codex-*]
+    exclude: [codex-experimental-*]
+
+# 遠端 Skill — 由 install/uninstall 自動管理
+skills:
+  - name: pdf
+    source: anthropic/skills/pdf
+  - name: _team-skills
+    source: github.com/team/skills
+    tracked: true                  # 連同 git 歷史紀錄一起 clone
+
+# Audit — 欄位與 Global 相同
+audit:
+  block_threshold: HIGH
+  profile: strict
+```
+
+### `targets`（Project）
+
+支援兩種 YAML 形式：
+
+| 形式 | 範例 | 使用時機 |
+|------|---------|--------------|
+| **字串** | `- claude` | 已知的 Target，使用預設路徑與 merge 模式 |
+| **物件** | `- name: x, path: ..., mode: ..., include: [...], exclude: [...]` | 自訂路徑、覆寫模式，或個別 Target 的篩選條件 |
+
+### `skills`（Project）
+
+與 [Global 的 `skills` 欄位](#skills) 使用相同的結構。由 `skillshare install -p` 與 `skillshare uninstall -p` 自動管理。
+
+:::tip 可攜清單
+`config.yaml` 在 Global 與 Project mode 下都是可攜的 Skill 清單 — 在新機器上執行 `skillshare install && skillshare sync`（或在專案中執行 `skillshare install -p`），即可重現相同的設定。
+:::
+
+---
+
+## 管理設定
+
+### 檢視目前的設定
+
+```bash
+skillshare status
+# 顯示 source、targets、模式
+```
+
+### 直接編輯設定
+
+```bash
+# 在編輯器中開啟
+$EDITOR ~/.config/skillshare/config.yaml
+
+# 然後同步以套用變更
+skillshare sync
+```
+
+### 重設設定
+
+```bash
+rm ~/.config/skillshare/config.yaml
+skillshare init
+```
+
+---
+
+## 自訂稽核規則
+
+**位置：**
+
+| 模式 | 路徑 |
+|------|------|
+| Global | `~/.config/skillshare/audit-rules.yaml` |
+| Project | `.skillshare/audit-rules.yaml` |
+
+規則會依序合併：**內建 → Global → Project**。你可以新增規則、停用內建規則，或覆寫嚴重程度。
+
+```yaml
+rules:
+  # 新增自訂規則
+  - id: flag-todo
+    severity: MEDIUM
+    pattern: todo-comment
+    message: "TODO comment found"
+    regex: '(?i)\bTODO\b'
+
+  # 停用內建規則
+  - id: insecure-http-0
+    enabled: false
+```
+
+| 欄位 | 必要 | 說明 |
+|-------|----------|--------------|
+| `id` | 是 | 唯一的規則識別碼 |
+| `severity` | 是 | `CRITICAL`、`HIGH`、`MEDIUM`、`LOW`、`INFO` |
+| `pattern` | 是 | 樣式分類名稱 |
+| `message` | 是 | 給人閱讀的發現說明 |
+| `regex` | 是 | 用於比對的正規表示式 |
+| `exclude` | 否 | 當該行也符合此正規表示式時，抑制此比對結果 |
+| `enabled` | 否 | 設為 `false` 可停用一個內建規則 |
+
+要建立起始範本檔案：
+
+```bash
+skillshare audit --init-rules       # Global
+skillshare audit --init-rules -p    # Project
+```
+
+完整細節請參閱 [audit 指令](/docs/reference/commands/audit)。
+
+---
+
+## 環境變數
+
+| 變數 | 說明 |
+|----------|-------------|
+| `SKILLSHARE_CONFIG` | 覆寫設定檔路徑 |
+| `GITHUB_TOKEN` | 用於解決 API 速率限制問題 |
+
+**範例：**
+```bash
+SKILLSHARE_CONFIG=~/custom-config.yaml skillshare status
+```
+
+---
+
+## Skill 中繼資料
+
+當你安裝一個 Skill 時，skillshare 會把它的中繼資料記錄在集中式的 `.metadata.json` 檔案中：
+
+```json
+{
+  "skills": [
+    {
+      "name": "pdf",
+      "source": "anthropics/skills/skills/pdf",
+      "type": "github",
+      "installed_at": "2026-01-20T15:30:00Z",
+      "repo_url": "https://github.com/anthropics/skills.git",
+      "subdir": "skills/pdf",
+      "version": "abc1234"
+    }
+  ]
+}
+```
+
+每個 Skill 項目包含：
+
+| 欄位 | 說明 |
+|-------|-------------|
+| `name` | Skill 目錄名稱 |
+| `source` | 原始的安裝來源輸入值 |
+| `type` | Source 類型（`github`、`local` 等） |
+| `installed_at` | 安裝時間戳記 |
+| `repo_url` | Git clone URL（僅限 git Source） |
+| `subdir` | 子目錄路徑（僅限單一儲存庫內含多個套件的 Source） |
+| `version` | 安裝時的 git commit hash |
+
+`skillshare update` 與 `skillshare check` 會用它來得知該從哪裡取得更新。
+
+**請勿手動編輯這個檔案。**
+
+---
+
+## 平台差異
+
+### macOS / Linux
+
+```yaml
+source: ~/.config/skillshare/skills
+targets:
+  claude:
+    path: ~/.claude/skills
+```
+
+使用 symlink。
+
+### Windows
+
+```yaml
+source: %AppData%\skillshare\skills
+targets:
+  claude:
+    path: %USERPROFILE%\.claude\skills
+```
+
+使用 NTFS junction（不需要系統管理員權限）。
+
+---
+
+## 相關文件
+
+- [Source 與 Targets](/docs/understand/source-and-targets) — 核心概念
+- [Sync 模式](/docs/understand/sync-modes) — Merge vs copy vs symlink
