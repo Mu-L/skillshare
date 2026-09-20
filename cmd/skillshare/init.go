@@ -704,9 +704,18 @@ func detectCLIDirectories(home string) []detectedDir {
 	ui.Header("Detecting CLI skills directories")
 	defaultTargets := config.DefaultTargets()
 	var detected []detectedDir
+	universalAlias := false
 
 	for name, target := range defaultTargets {
 		if isSharedUniversalSkillsAlias(name, target, defaultTargets) {
+			// The skills path can't identify the tool (it belongs to universal),
+			// so fall back to its install dir and credit universal instead.
+			if dir := config.DetectDir(name); dir != "" {
+				if _, err := os.Stat(dir); err == nil {
+					universalAlias = true
+					ui.Info("Found: %-12s → universal (%s)", name, target.SkillsConfig().Path)
+				}
+			}
 			continue
 		}
 
@@ -761,7 +770,7 @@ func detectCLIDirectories(home string) []detectedDir {
 	// The universal path (~/.agents/skills/) is the cross-tool shared directory
 	// used by vercel-labs/skills (npx skills list). It won't exist on disk until
 	// we create it, so normal directory detection won't find it.
-	if len(detected) > 0 && !sliceHasName(detected, "universal", func(d detectedDir) string { return d.name }) {
+	if (len(detected) > 0 || universalAlias) && !sliceHasName(detected, "universal", func(d detectedDir) string { return d.name }) {
 		if target, ok := defaultTargets["universal"]; ok {
 			uniPath := target.SkillsConfig().Path
 			detected = append(detected, detectedDir{
@@ -1549,9 +1558,16 @@ type agentInfo struct {
 func detectNewAgents(existingCfg *config.Config) []agentInfo {
 	defaultTargets := config.DefaultTargets()
 	var newAgents []agentInfo
+	universalAlias := false
 
 	for name, target := range defaultTargets {
 		if isSharedUniversalSkillsAlias(name, target, defaultTargets) {
+			// Detected through its install dir instead; counts for universal.
+			if dir := config.DetectDir(name); dir != "" {
+				if _, err := os.Stat(dir); err == nil {
+					universalAlias = true
+				}
+			}
 			continue
 		}
 
@@ -1575,7 +1591,7 @@ func detectNewAgents(existingCfg *config.Config) []agentInfo {
 
 	// Auto-include universal if any new agent is found but universal isn't
 	// already configured and not yet in the candidate list.
-	if len(newAgents) > 0 {
+	if len(newAgents) > 0 || universalAlias {
 		if _, configured := existingCfg.Targets["universal"]; !configured {
 			if !sliceHasName(newAgents, "universal", func(a agentInfo) string { return a.name }) {
 				if target, ok := defaultTargets["universal"]; ok {

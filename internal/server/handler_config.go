@@ -197,11 +197,15 @@ func (s *Server) handleAvailableTargets(w http.ResponseWriter, r *http.Request) 
 	items := make([]availTarget, 0, len(defaults))
 	for name, tc := range defaults {
 		_, installed := targets[name]
-		// Check if the tool's config directory exists (parent of skills path)
+		// Check if the tool's config directory exists: its declared detect dir,
+		// else the parent of the skills path.
 		detected := false
 		if !installed {
-			parentDir := filepath.Dir(tc.Path)
-			if _, err := os.Stat(parentDir); err == nil {
+			probe := config.DetectDir(name)
+			if probe == "" {
+				probe = filepath.Dir(tc.Path)
+			}
+			if _, err := os.Stat(probe); err == nil {
 				detected = true
 			}
 		}

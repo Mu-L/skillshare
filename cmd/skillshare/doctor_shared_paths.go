@@ -86,7 +86,7 @@ func checkSharedTargetPaths(cfg *config.Config, result *doctorResult, isProject 
 }
 
 // checkCrossTargetDiscovery warns when an enabled target's runtime is
-// documented (via also_scans metadata) to also read a path that another enabled
+// documented (via its target metadata) to also read a path that another enabled
 // target writes to. Catches overlaps that checkSharedTargetPaths misses:
 // different primary paths but converging runtime discovery (e.g. Codex's
 // ~/.codex/skills primary plus its ~/.agents/skills also_scans means it sees
@@ -118,14 +118,12 @@ func checkCrossTargetDiscovery(cfg *config.Config, result *doctorResult, isProje
 	overlapsByScanner := make(map[string]*scannerOverlap)
 
 	for scanner := range primaryByName {
-		var alsoPaths []string
-		if isProject {
-			alsoPaths = config.AlsoScansProject(scanner)
-		} else {
-			alsoPaths = config.AlsoScansGlobal(scanner)
-		}
-		for _, p := range alsoPaths {
+		for _, p := range config.RuntimeScanPaths(scanner, isProject) {
 			resolved := filepath.Clean(p)
+			if resolved == primaryByName[scanner] {
+				// The scanner's own write path — checkSharedTargetPaths covers it.
+				continue
+			}
 			writers, ok := writersByPath[resolved]
 			if !ok {
 				continue

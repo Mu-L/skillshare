@@ -197,6 +197,24 @@ func TestCheckCrossTargetDiscovery_ProjectMode(t *testing.T) {
 	}
 }
 
+func TestCheckCrossTargetDiscovery_IgnoresScannerOwnPath(t *testing.T) {
+	// warp and universal share ~/.agents/skills, which is also warp's own
+	// runtime scan path. shared_target_paths already reports that collision —
+	// cross_target_discovery must not double-report it.
+	cfg := &config.Config{
+		Targets: map[string]config.TargetConfig{
+			"universal": {Skills: &config.ResourceTargetConfig{Path: "~/.agents/skills"}},
+			"warp":      {Skills: &config.ResourceTargetConfig{Path: "~/.agents/skills"}},
+		},
+	}
+	r := &doctorResult{}
+	checkCrossTargetDiscovery(cfg, r, false)
+
+	if r.warnings != 0 {
+		t.Errorf("expected 0 warnings, got %d (checks=%+v)", r.warnings, r.checks)
+	}
+}
+
 func TestCheckSharedTargetPaths_EmptyPathSkipped(t *testing.T) {
 	cfg := &config.Config{
 		Targets: map[string]config.TargetConfig{

@@ -28,7 +28,11 @@ type targetAlsoScans struct {
 }
 
 type targetSpec struct {
-	Name      string          `yaml:"name"`
+	Name string `yaml:"name"`
+	// Detect is the tool's install directory (e.g. ~/.codex). Only needed for
+	// targets whose skills path is shared with another target, where the skills
+	// path alone cannot tell the tools apart.
+	Detect    string          `yaml:"detect,omitempty"`
 	Skills    targetPathPair  `yaml:"skills"`
 	Agents    targetPathPair  `yaml:"agents,omitempty"`
 	AlsoScans targetAlsoScans `yaml:"also_scans,omitempty"`
@@ -217,6 +221,53 @@ func AlsoScansProject(name string) []string {
 		return paths
 	}
 	return nil
+}
+
+// DetectDir returns the install directory that identifies a target's tool,
+// tilde-expanded and OS-normalised. Returns "" for unknown targets or targets
+// without detect metadata (their skills path already identifies them).
+func DetectDir(name string) string {
+	specs, err := loadTargetSpecs()
+	if err != nil {
+		return ""
+	}
+	for _, spec := range specs {
+		if spec.Name != name {
+			continue
+		}
+		return normalizeTargetPath(spec.Detect)
+	}
+	return ""
+}
+
+// RuntimeScanPaths returns every path a target's runtime reads: its also_scans
+// paths plus its built-in default skills path. Callers stay correct when a
+// default path moves into also_scans (or back), and when the user has pinned
+// the target to a different path in their config.
+func RuntimeScanPaths(name string, isProject bool) []string {
+	var scans []string
+	var primary string
+	if isProject {
+		scans = AlsoScansProject(name)
+		primary = ProjectTargets()[name].Path
+	} else {
+		scans = AlsoScansGlobal(name)
+		primary = DefaultTargets()[name].Path
+	}
+
+	paths := make([]string, 0, len(scans)+1)
+	seen := make(map[string]bool, len(scans)+1)
+	for _, p := range scans {
+		if p == "" || seen[p] {
+			continue
+		}
+		seen[p] = true
+		paths = append(paths, p)
+	}
+	if primary != "" && !seen[primary] {
+		paths = append(paths, primary)
+	}
+	return paths
 }
 
 // LookupProjectTarget returns the known project target config for a name.
@@ -444,8 +495,10 @@ func ProjectTargetDotDirs() map[string]bool {
 
 	dirs := map[string]bool{".skillshare": true}
 	for _, spec := range specs {
-		// Collect dot-dirs from both skill and agent project paths.
-		for _, p := range []string{spec.Skills.Project, spec.Agents.Project} {
+		// Collect dot-dirs from skill, agent and also-scanned project paths.
+		projectPaths := []string{spec.Skills.Project, spec.Agents.Project}
+		projectPaths = append(projectPaths, spec.AlsoScans.Project...)
+		for _, p := range projectPaths {
 			if p == "" {
 				continue
 			}

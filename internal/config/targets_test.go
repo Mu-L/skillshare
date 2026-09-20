@@ -3,6 +3,8 @@ package config
 import (
 	"slices"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestGroupedProjectTargets_UniversalGrouped(t *testing.T) {
@@ -191,6 +193,62 @@ func TestLookupAgentTarget_Alias(t *testing.T) {
 	}
 	if project.Path != ".factory/droids" {
 		t.Fatalf("factory project agent path = %q, want %q", project.Path, ".factory/droids")
+	}
+}
+
+func TestTargetSpec_ParsesDetect(t *testing.T) {
+	var file targetsFile
+	if err := yaml.Unmarshal([]byte("targets:\n  - name: codex\n    detect: \"~/.codex\"\n    skills:\n      global: \"~/.agents/skills\"\n"), &file); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got := file.Targets[0].Detect; got != "~/.codex" {
+		t.Errorf("Detect = %q, want %q", got, "~/.codex")
+	}
+}
+
+func TestDetectDir_UnsetTargetsReturnEmpty(t *testing.T) {
+	if got := DetectDir("claude"); got != "" {
+		t.Errorf("DetectDir(claude) = %q, want empty (no detect in targets.yaml)", got)
+	}
+	if got := DetectDir("nonexistent-tool"); got != "" {
+		t.Errorf("DetectDir(unknown) = %q, want empty", got)
+	}
+}
+
+func TestRuntimeScanPaths_UnionOfAlsoScansAndPrimary(t *testing.T) {
+	got := RuntimeScanPaths("codex", false)
+	for _, want := range []string{normalizeTargetPath("~/.agents/skills"), normalizeTargetPath("~/.codex/skills")} {
+		if !slices.Contains(got, want) {
+			t.Errorf("RuntimeScanPaths(codex, global) = %v, missing %s", got, want)
+		}
+	}
+
+	project := RuntimeScanPaths("codex", true)
+	for _, want := range []string{".codex/skills", ".agents/skills"} {
+		if !slices.Contains(project, want) {
+			t.Errorf("RuntimeScanPaths(codex, project) = %v, missing %s", project, want)
+		}
+	}
+}
+
+func TestRuntimeScanPaths_Deduplicates(t *testing.T) {
+	// warp's primary path is ~/.agents/skills and it has no also_scans.
+	got := RuntimeScanPaths("warp", false)
+	seen := make(map[string]bool, len(got))
+	for _, p := range got {
+		if seen[p] {
+			t.Errorf("RuntimeScanPaths(warp) has duplicate %q: %v", p, got)
+		}
+		seen[p] = true
+	}
+}
+
+func TestProjectTargetDotDirs_IncludesAlsoScans(t *testing.T) {
+	dirs := ProjectTargetDotDirs()
+
+	// .clinerules only appears in cline's also_scans.project.
+	if !dirs[".clinerules"] {
+		t.Error("expected .clinerules (cline also_scans.project) in ProjectTargetDotDirs")
 	}
 }
 
