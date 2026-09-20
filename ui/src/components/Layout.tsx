@@ -26,6 +26,7 @@ import { useGlobalShortcuts } from '../hooks/useGlobalShortcuts';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import ShortcutHUD from './ShortcutHUD';
 import ScrollToTop from './ScrollToTop';
+import CopyButton from './CopyButton';
 import ThemePopover from './ThemePopover';
 import LanguagePopover from './LanguagePopover';
 import { useTour } from './tour';
@@ -109,7 +110,11 @@ export default function Layout() {
           <svg className="ss-squig ss-only-playful" width="112" height="7" viewBox="0 0 112 7" aria-hidden="true">
             <path d="M1 4 Q 8 0 15 4 T 29 4 T 43 4 T 57 4 T 71 4 T 85 4 T 99 4 T 111 4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
           </svg>
-          <span className="truncate" title={home}>{t(isProjectMode ? 'app.project' : 'app.global')}{home && ` · ${shortenHome(home)}`}</span>
+          <div className="group flex items-center gap-1 min-w-0">
+            <span className="truncate" title={home}>{t(isProjectMode ? 'app.project' : 'app.global')}{home && ` · ${shortenHome(home)}`}</span>
+            {/* The label is truncated, so the tooltip is the only place the full path shows — copying saves retyping it. */}
+            {home && <CopyButton value={home} title={t('common.copyPath')} copiedLabel="" className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100" />}
+          </div>
         </div>
 
         <nav className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">

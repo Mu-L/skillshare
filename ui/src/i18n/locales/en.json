@@ -211,6 +211,7 @@
   "common.scrollToTop": "Scroll to top",
   "common.save": "Save",
   "common.copy": "Copy",
+  "common.copyPath": "Copy path",
   "dashboard.error.title": "Oops! Something went wrong.",
   "dashboard.quickActions.browseSkills.description": "View and manage your skills",
   "dashboard.quickActions.securityAudit.description": "Scan skills for threats",
