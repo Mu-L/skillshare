@@ -9,7 +9,7 @@ All notable changes to skillshare are documented here. For the full commit histo
 
 ---
 
-## [0.22.0] - 2026-09-21
+## [0.21.2] - 2026-09-21
 
 ### New Features
 
@@ -91,10 +91,19 @@ All notable changes to skillshare are documented here. For the full commit histo
 #### Targets
 
 - **`antigravity-cli` is its own target** — the Antigravity CLI reads `~/.gemini/antigravity-cli/skills` and never the app's folder, so as an alias of `antigravity` it received skills in a folder it does not read. A path-less `antigravity-cli:` entry in the config is now valid.
+- **Convert agents for a tool that reads a different format** — an `extension:` on a target's `agents` block converts each agent while it syncs, reusing the extension mechanism of extras. The new built-in `opencode-agents` turns Claude-style agents into OpenCode agents. It keeps only the fields OpenCode documents and adds `mode: subagent` when missing. It refuses agents that limit their tools (`tools`, `disallowedTools`, `permissionMode`), because dropping those would give the OpenCode agent every tool. `codex-agents` works here too and writes `.toml` files. Converted targets are never collected back into your source. The dashboard sets the extension from the target's Agents tab, and the targets list tags a target that uses one. Refs: #267, #241.
+
+  ```yaml
+  targets:
+    opencode:
+      agents:
+        extension: opencode-agents
+  ```
 
 #### Dashboard
 
 - **Beautify button in the config editor** — reformats `config.yaml` in the editor, keeping comments, so the result is visible and revertable before you save.
+- **Expand the config editor** — an Expand button opens the same editor and assistant panel in a near-fullscreen dialog, for files too long to read in the inline row. The dialog ignores backdrop clicks and Escape, so an edit in progress is never dismissed by accident.
 - **The install dialog opens on the URL tab** — installing from a known repo URL is the common path. A `?install=search` link still opens the search tab.
 - **Copy the config path from the sidebar** — a copy button appears on hover next to the truncated path.
 - **Analyze follows the target in the URL** — target and project pages link straight into the analysis of that target, and project targets are listed after your own with their tool icon.
@@ -109,6 +118,7 @@ All notable changes to skillshare are documented here. For the full commit histo
 - **`doctor` suggests removing the right target for a discovery overlap** — it pointed at the target that owns the shared folder, such as `universal`, and removing that hides skills from every tool reading the folder. It now suggests removing the scanning target, such as `codex`. Refs: #135.
 - **Overlap warnings match each tool's documentation** — the list of extra folders each tool scans covered nine targets and had drifted. Kimi no longer gets a false warning for `~/.agents/skills`, and OpenCode, Goose, Copilot, Crush, Droid, Pi, Cline, Command Code, Deep Agents, Kilo Code, OpenClaw, OpenHands and Kode now get a warning when paired with a target whose folder they also read. Refs: #135.
 - **The dashboard's Update now no longer hangs waiting for a password** — when the binary lives in a root-owned folder, the upgrade waited up to ten minutes for a `sudo` prompt nobody could see. It now fails at once and names the terminal command to run. Cached credentials and `NOPASSWD` setups still upgrade. The release download also has a timeout.
+- **A rejected target save in the dashboard changes nothing** — when one field was invalid, such as a malformed include pattern, fields sent in the same save were still applied in memory and written by the next successful save.
 - **The Gitea token stays on the API host** — a download URL on another origin is refused and the install falls back to a git clone, so a hostile server cannot collect `GITEA_TOKEN`.
 
 ### Breaking Changes
