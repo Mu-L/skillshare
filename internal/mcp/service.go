@@ -36,7 +36,7 @@ func (s *Service) nativePath(target string) (string, error) {
 			return filepath.Join(s.ProjectRoot, ".agents", "mcp_config.json"), nil
 		}
 		if target == "opencode" {
-			return jsoncPath("opencode", s.ProjectRoot)
+			return jsoncPath("opencode", s.ProjectRoot, filepath.Join(s.ProjectRoot, ".opencode"))
 		}
 		if target == "kilocode" {
 			return jsoncPath("kilo", s.ProjectRoot, filepath.Join(s.ProjectRoot, ".kilo"))

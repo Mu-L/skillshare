@@ -77,6 +77,26 @@ func TestOpenCodeJSONCPath(t *testing.T) {
 	}
 }
 
+// OpenCode also loads opencode.json from a project's .opencode directory, so a file kept
+// there is the one to write. Writing a second one at the root would mask it. Refs: #289.
+func TestOpenCodeProjectPathReusesDotOpenCode(t *testing.T) {
+	s := testService(t)
+	s.ProjectRoot = t.TempDir()
+	if got, err := s.nativePath("opencode"); err != nil || got != filepath.Join(s.ProjectRoot, "opencode.json") {
+		t.Fatalf("new project file %q: %v", got, err)
+	}
+	nested := filepath.Join(s.ProjectRoot, ".opencode", "opencode.json")
+	if err := os.MkdirAll(filepath.Dir(nested), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(nested, []byte("{}"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.nativePath("opencode"); err != nil || got != nested {
+		t.Fatalf("existing .opencode file %q: %v", got, err)
+	}
+}
+
 // Kilo merges every config file it finds, so an existing file is reused wherever it
 // is, a new one goes where Kilo's docs put it, and two candidates are ambiguous.
 func TestKiloCodePath(t *testing.T) {

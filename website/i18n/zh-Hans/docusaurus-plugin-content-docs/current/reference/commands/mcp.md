@@ -242,8 +242,10 @@ Antigravity 使用当前的[官方 MCP 配置](https://antigravity.google/docs/m
 受支持的 OAuth 登录。Skillshare 绝不会将引用展开为明文凭据。
 
 OpenCode 会为其 global 目录遵循 `XDG_CONFIG_HOME`。如果已存在
-`opencode.jsonc`，会使用它而不是创建 `opencode.json`；如果所选目录中
-两者都存在，请在同步之前先合并它们。自定义的 OpenCode 配置
+`opencode.jsonc`，会使用它而不是创建 `opencode.json`。在项目中，
+OpenCode 还会从 `.opencode/` 读取这两个文件名，因此如果文件放在那里，Skillshare 就会
+写入那个文件；新文件则会创建在项目根目录。如果存在多个
+文件，请在同步之前先合并它们。自定义的 OpenCode 配置
 路径、目录覆盖、内联配置以及继承的祖先文件不受管理。
 它们可能会在 OpenCode 中覆盖所选的目标位置。
 

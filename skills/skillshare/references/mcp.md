@@ -148,9 +148,10 @@ setups usually go wrong.
 - Entries are written in OpenCode's own shape: `local` / `remote` types under `mcp`,
   and `{env:VARIABLE}` for `fromEnv`. Write the portable form in the source; Skillshare
   converts it.
-- An existing `opencode.jsonc` is used instead of creating `opencode.json`. If both
-  exist in the same directory, sync stops; the user consolidates them first. Comments
-  and unrelated settings are preserved.
+- An existing `opencode.jsonc` is used instead of creating `opencode.json`. A project
+  file kept in `.opencode/` is reused too; a new one goes in the project root. If more
+  than one exists, sync stops; the user consolidates them first. Comments and unrelated
+  settings are preserved.
 - `OPENCODE_CONFIG`, `OPENCODE_CONFIG_DIR`, inline config and ancestor-directory files
   are not managed and may override what Skillshare wrote.
 - `--disabled` writes `{"enabled": false}` for the named server in the project file.

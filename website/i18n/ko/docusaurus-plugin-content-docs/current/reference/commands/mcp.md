@@ -239,8 +239,10 @@ Antigravity의 `fromEnv`와 `bearerToken` export는 문서화된 구성에 환�
 참조를 평문 자격 증명으로 확장하지 않습니다.
 
 OpenCode는 global 디렉터리에 대해 `XDG_CONFIG_HOME`을 존중합니다. 기존
-`opencode.jsonc`는 `opencode.json`을 생성하는 대신 사용됩니다. 선택한 디렉터리에
-둘 다 존재하면 동기화 전에 통합하세요. 사용자 지정 OpenCode 구성 경로, 디렉터리
+`opencode.jsonc`는 `opencode.json`을 생성하는 대신 사용됩니다. 프로젝트에서는
+OpenCode가 `.opencode/`에서도 두 이름을 모두 읽으므로, 그곳에 둔 파일이 있으면
+Skillshare는 그 파일에 쓰며, 새 파일은 프로젝트 루트에 생성됩니다. 둘 이상
+존재하면 동기화 전에 통합하세요. 사용자 지정 OpenCode 구성 경로, 디렉터리
 오버라이드, 인라인 구성, 상속된 상위 파일은 관리되지 않습니다. 이들은 OpenCode에서
 선택한 대상을 재정의할 수 있습니다.
 

@@ -211,8 +211,10 @@ Antigravity 使用目前的[官方 MCP 設定格式](https://antigravity.google/
 明文憑證。
 
 OpenCode 的 global 目錄遵循 `XDG_CONFIG_HOME`。若既有的
-`opencode.jsonc` 存在，會優先使用它而不是建立 `opencode.json`；若所選目錄中
-兩者皆存在，請先整合它們再進行同步。自訂的 OpenCode config
+`opencode.jsonc` 存在，會優先使用它而不是建立 `opencode.json`。在 project 中，
+OpenCode 也會讀取 `.opencode/` 中的這兩個檔名，因此若檔案放在那裡，Skillshare 就會
+寫入那個檔案；新檔案則會建立在 project 根目錄。若有多個檔案
+存在，請先整合它們再進行同步。自訂的 OpenCode config
 路徑、目錄覆寫、內嵌 config 與繼承的上層檔案不受
 管理。它們可能會覆蓋 OpenCode 中所選的目的地。
 

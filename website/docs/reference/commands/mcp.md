@@ -245,8 +245,10 @@ supported OAuth login inside Antigravity. Skillshare never expands references
 into plaintext credentials.
 
 OpenCode respects `XDG_CONFIG_HOME` for its global directory. An existing
-`opencode.jsonc` is used instead of creating `opencode.json`; if both exist in
-the selected directory, consolidate them before syncing. Custom OpenCode config
+`opencode.jsonc` is used instead of creating `opencode.json`. In a project,
+OpenCode also reads both names from `.opencode/`, so a file kept there is the one
+Skillshare writes to; a new file is created at the project root. If more than one
+exists, consolidate them before syncing. Custom OpenCode config
 paths, directory overrides, inline config and inherited ancestor files are not
 managed. They may override the selected destination in OpenCode.
 

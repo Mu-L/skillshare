@@ -171,7 +171,7 @@ Antigravity は現在の[公式 MCP 設定](https://antigravity.google/docs/mcp)
 Antigravity 内で対応している OAuth ログインを完了してください。Skillshare は参照を平文の認証情報に展開することは決してありません。
 
 OpenCode は、global ディレクトリについて `XDG_CONFIG_HOME` を尊重します。既存の
-`opencode.jsonc` は `opencode.json` を作成する代わりに使用されます。選択したディレクトリに両方存在する場合は、sync する前に統合してください。カスタムの OpenCode config パス、ディレクトリオーバーライド、インラインの config、継承された祖先ファイルは管理対象外です。これらは OpenCode 内で選択した送信先を上書きすることがあります。
+`opencode.jsonc` は `opencode.json` を作成する代わりに使用されます。project では、OpenCode は `.opencode/` からも両方の名前を読み込みます。そのため、そこに置かれたファイルがあれば Skillshare はそのファイルに書き込み、新しいファイルは project ルートに作成されます。複数存在する場合は、sync する前に統合してください。カスタムの OpenCode config パス、ディレクトリオーバーライド、インラインの config、継承された祖先ファイルは管理対象外です。これらは OpenCode 内で選択した送信先を上書きすることがあります。
 
 Kilo Code は OpenCode と同じフォーマットを使用します。project ルートと `.kilo/` から `kilo.jsonc` と `kilo.json` を読み込み、
 それらをマージします。そのため Skillshare は既に存在する方に書き込み、どちらも存在しない場合にのみ `kilo.jsonc` を作成します。
