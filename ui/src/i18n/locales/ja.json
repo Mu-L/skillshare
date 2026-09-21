@@ -1656,6 +1656,8 @@
   "mcp.projects.writesSwitch": "{target} に {field} を書き込み",
   "mcp.projects.noSwitch": "どの Agent にもプロジェクト単位のスイッチがありません。",
   "mcp.projects.noSwitchHere": "このプロジェクトで使う Agent には、ここでオフにできるものがありません。",
+  "mcp.projects.stillOn": "{targets} にはプロジェクト単位のスイッチがないため、ここでも読み込まれます。",
+  "mcp.projects.staleSwitch": "独自の Agent リスト付きで保存されており、このプロジェクトと一致しません。一度オンにしてからオフにすると、プロジェクトに従うようになります。",
   "mcp.projects.overridden": "このプロジェクトは同じ名前のサーバーを独自に定義しています。",
   "mcp.kilocodeProjectEnv": "Kilo Code MCP {name}: Kilo はプロジェクト設定で環境変数参照を許可しておらず、検出するとファイル全体を無視します。ここで fromEnv を削除するか、このサーバーをグローバルモードで定義してください。",
   "mcp.importError.json": "有効な JSON / JSONC ではありません。構文を確認してください。",

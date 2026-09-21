@@ -203,6 +203,19 @@ func (s *Service) render(source *Source) (map[fileKey]map[string]map[string]any,
 	return desired, nil
 }
 
+// SwitchTargets is where a switch-only entry that names no targets goes: the Agents among
+// defaults that have a per-project switch and, when reached says where the global server of
+// that name is written, that receive it. Never nil, so the result reads as a decision.
+func SwitchTargets(server Server, defaults, reached []string) TargetList {
+	targets := TargetList{}
+	for _, target := range defaults {
+		if _, err := renderDisabled(target, server); err == nil && (reached == nil || slices.Contains(reached, target)) {
+			targets = append(targets, target)
+		}
+	}
+	return targets
+}
+
 // followingSwitches gives each switch-only entry that names no targets the Agents where it has
 // something to do: those the project uses, that have a per-project switch and, when global
 // says where the server of that name goes, that receive it. The list is worked out on every
@@ -226,12 +239,7 @@ func followingSwitches(servers map[string]Server, defaults []string, global *Sou
 				}
 			}
 		}
-		server.Targets = TargetList{}
-		for _, target := range defaults {
-			if _, err := renderDisabled(target, server); err == nil && (reached == nil || slices.Contains(reached, target)) {
-				server.Targets = append(server.Targets, target)
-			}
-		}
+		server.Targets = SwitchTargets(server, defaults, reached)
 		out[name] = server
 	}
 	return out

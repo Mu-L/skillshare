@@ -1656,6 +1656,8 @@
   "mcp.projects.writesSwitch": "{target} مقدار {field} را می‌گیرد",
   "mcp.projects.noSwitch": "هیچ‌کدام از Agentهایش کلید جداگانه برای هر پروژه ندارد.",
   "mcp.projects.noSwitchHere": "هیچ‌کدام از Agentهای این پروژه نمی‌تواند آن را اینجا خاموش کند.",
+  "mcp.projects.stillOn": "{targets} کلید جداگانه برای هر پروژه ندارد، پس آنجا همچنان بارگذاری می‌شود.",
+  "mcp.projects.staleSwitch": "با فهرست Agent خودش ذخیره شده که با این پروژه یکی نیست. یک بار روشن و دوباره خاموش کنید تا از پروژه پیروی کند.",
   "mcp.projects.overridden": "این پروژه سرور خودش را با همین نام تعریف کرده است.",
   "mcp.kilocodeProjectEnv": "Kilo Code MCP {name}: کیلو ارجاع به متغیر محیطی را در پیکربندی پروژه مجاز نمی‌داند و با یافتن آن، کل فایل را نادیده می‌گیرد؛ fromEnv را از اینجا حذف کنید یا این سرور را در حالت سراسری تعریف کنید.",
   "mcp.importError.json": "JSON یا JSONC معتبر نیست. نحو را بررسی کنید.",

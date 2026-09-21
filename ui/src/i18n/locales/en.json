@@ -1656,6 +1656,8 @@
   "mcp.projects.writesSwitch": "{target} gets {field}",
   "mcp.projects.noSwitch": "None of its Agents has a per-project switch.",
   "mcp.projects.noSwitchHere": "None of the Agents this project uses can turn it off here.",
+  "mcp.projects.stillOn": "No per-project switch in {targets}, so it still loads there.",
+  "mcp.projects.staleSwitch": "Saved with its own Agents, which differ from this project's. Turn it on and off again to follow the project.",
   "mcp.projects.overridden": "This project defines its own server with this name.",
   "mcp.kilocodeProjectEnv": "Kilo Code MCP {name}: Kilo does not allow environment references in project config and ignores the whole file when it finds one; remove fromEnv here or define this server in global mode",
   "mcp.importError.json": "Not valid JSON or JSONC. Check the syntax.",

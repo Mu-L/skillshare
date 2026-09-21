@@ -1656,6 +1656,8 @@
   "mcp.projects.writesSwitch": "{target} mendapat {field}",
   "mcp.projects.noSwitch": "Tidak ada Agent-nya yang punya sakelar per proyek.",
   "mcp.projects.noSwitchHere": "Tidak ada Agent yang dipakai proyek ini yang bisa mematikannya di sini.",
+  "mcp.projects.stillOn": "Tidak ada sakelar per proyek di {targets}, jadi di sana tetap dimuat.",
+  "mcp.projects.staleSwitch": "Tersimpan dengan daftar Agent sendiri yang berbeda dari proyek ini. Nyalakan lalu matikan lagi agar mengikuti proyek.",
   "mcp.projects.overridden": "Proyek ini mendefinisikan server sendiri dengan nama ini.",
   "mcp.kilocodeProjectEnv": "Kilo Code MCP {name}: Kilo tidak mengizinkan referensi variabel lingkungan dalam konfigurasi proyek dan akan mengabaikan seluruh file saat menemukannya; hapus fromEnv di sini atau definisikan server ini dalam mode global.",
   "mcp.importError.json": "Bukan JSON atau JSONC yang valid. Periksa sintaksnya.",

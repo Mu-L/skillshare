@@ -57,7 +57,8 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
   const name = shortenHome(root);
   // A switch for a global server belongs to the list above; everything else is the project's own.
   const own = Object.fromEntries(Object.entries(servers).filter(([n, s]) => !(s.disabled && globals[n])));
-  const targetsOf = (n: string) => own[n]?.targets ?? targets;
+  // A switch that names no targets follows the project, and Pi has one only with pi-mcp-adapter.
+  const targetsOf = (n: string) => own[n]?.targets ?? (own[n]?.disabled ? targets.filter((x) => x !== 'pi' || own[n].piExtension === 'pi-mcp-adapter') : targets);
   const offTargets = mcpOffTargets;
 
   const save = async (mutation: MCPMutation) => {
@@ -145,6 +146,11 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
                   : to.length > 0 ? t('mcp.projects.followsGlobal')
                   // Some Agent could turn it off, just none this project uses.
                   : switchTargets(server, defaults, mcpOffTargets).length > 0 ? t('mcp.projects.noSwitchHere') : t('mcp.projects.noSwitch');
+                // What the page has to admit: the badge says off, yet an Agent without a switch keeps
+                // loading the server here, and a list saved with the entry does not follow the project.
+                const written = entry?.targets ?? to;
+                const stillOn = off ? targets.filter((x) => (server.targets ?? defaults).includes(x) && !written.includes(x)) : [];
+                const stale = off && entry.targets && [...entry.targets].sort().join() !== [...to].sort().join();
                 return (
                   <div key={n} className="ss-r">
                     <span className="ss-cat sm mcp"><Plug size={14} /></span>
@@ -156,7 +162,11 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
                       </span>
                       <span className="truncate text-xs text-ink-3">{server.url ? 'http' : 'stdio'} · <span className="font-mono">{describeEndpoint(server)}</span></span>
                     </span>
-                    <span id={`mcp-sw-${n}`} className="max-w-[250px] text-right text-xs text-ink-2">{hint}</span>
+                    <span id={`mcp-sw-${n}`} className="flex max-w-[280px] flex-col gap-0.5 text-right text-xs text-ink-2">
+                      <span>{hint}</span>
+                      {stillOn.length > 0 && <span className="text-warn">{t('mcp.projects.stillOn', { targets: stillOn.map(targetLabel).join(', ') })}</span>}
+                      {stale && <span className="text-warn">{t('mcp.projects.staleSwitch')}</span>}
+                    </span>
                     <button type="button" role="switch" aria-checked={!off} aria-label={n} aria-describedby={`mcp-sw-${n}`} className={`ss-sw ${off ? '' : 'on'} disabled:opacity-50`} disabled={busy || (!off && to.length === 0) || Boolean(entry && !off)} onClick={() => void toggleGlobal(n, off)}><i /></button>
                   </div>
                 );

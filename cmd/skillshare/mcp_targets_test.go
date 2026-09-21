@@ -2,6 +2,7 @@ package main
 
 import (
 	"skillshare/internal/mcp"
+	"strings"
 	"testing"
 )
 
@@ -59,5 +60,13 @@ func TestMCPListNamesServersWithoutTargets(t *testing.T) {
 	got := mcpServersWithoutTargets(source, plan)
 	if len(got) != 2 || got[0] != [2]string{"parked", "no targets"} || got[1] != [2]string{"local", "no targets (/repo)"} {
 		t.Fatalf("%v", got)
+	}
+}
+
+func TestMCPListShowsWhereASwitchGoes(t *testing.T) {
+	source := &mcp.Source{Targets: []string{"cursor", "opencode"}, Servers: map[string]mcp.Server{"docs": {Disabled: true}}}
+	got := mcpListItems(source, nil)[0].(mcpListItem).description
+	if !strings.Contains(got, "· opencode ·") {
+		t.Fatalf("a switch goes only to the Agents that have one: %s", got)
 	}
 }

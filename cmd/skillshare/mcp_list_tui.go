@@ -47,6 +47,10 @@ func mcpListItems(source *mcp.Source, plan *mcp.Plan) []list.Item {
 		targets := server.Targets
 		if targets == nil {
 			targets = source.Targets
+			// A switch goes only where an Agent has one, which is what sync will write.
+			if server.Disabled {
+				targets = mcp.SwitchTargets(server, source.Targets, nil)
+			}
 		}
 		status := []string{}
 		if plan != nil {

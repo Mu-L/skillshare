@@ -1656,6 +1656,8 @@
   "mcp.projects.writesSwitch": "{target} bekommt {field}",
   "mcp.projects.noSwitch": "Keiner seiner Agents hat einen Schalter pro Projekt.",
   "mcp.projects.noSwitchHere": "Keiner der Agents dieses Projekts kann ihn hier ausschalten.",
+  "mcp.projects.stillOn": "Kein Schalter pro Projekt in {targets}, dort wird er weiterhin geladen.",
+  "mcp.projects.staleSwitch": "Mit eigener Agent-Liste gespeichert, die von der dieses Projekts abweicht. Einmal ein- und wieder ausschalten, damit er dem Projekt folgt.",
   "mcp.projects.overridden": "Dieses Projekt definiert einen eigenen Server mit diesem Namen.",
   "mcp.kilocodeProjectEnv": "Kilo Code MCP {name}: Kilo erlaubt keine Umgebungsvariablen-Referenzen in der Projektkonfiguration und ignoriert die gesamte Datei, sobald eine gefunden wird. Entfernen Sie hier fromEnv oder definieren Sie diesen Server im globalen Modus.",
   "mcp.importError.json": "Kein gültiges JSON oder JSONC. Syntax prüfen.",
