@@ -39,6 +39,7 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
                 <span className="flex items-center gap-2">
                   <span title={row.name} className={`truncate font-mono font-semibold ${row.server ? '' : 'text-ink-3 line-through'}`}>{row.name}</span>
                   {row.server && Object.values(row.cells).some((c) => c.action === 'add' || c.action === 'update' || c.action === 'remove') && <span className="ss-tag warn">{t('plugins.pending')}</span>}
+                  {row.server && !row.server.disabled && row.server.targets?.length === 0 && <span className="ss-tag">{t('plugins.noAgentsYet')}</span>}
                   {!row.server && <span className="ss-st bad">{t('mcp.removedFromSource')}</span>}
                 </span>
                 {/* Transport and endpoint on one quiet line, the same shape as a plugin row. */}

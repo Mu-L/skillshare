@@ -1050,6 +1050,8 @@
   "mcp.restorePreview": "미리보기",
   "mcp.moreActions": "{name} 추가 작업",
   "mcp.needTarget": "서버에는 target이 하나 이상 필요합니다.",
+  "mcp.noTargetsNote": "Agent를 선택하지 않으면 Skillshare에만 보관되고 어떤 설정 파일에도 기록되지 않습니다",
+  "mcp.noTargetsToast": "{name}은(는) Skillshare에 남습니다. 다음 동기화 때 모든 Agent에서 제거됩니다.",
   "mcp.conflictLead.one": "먼저 해결할 충돌이 1개 있습니다.",
   "mcp.conflictLead.other": "먼저 해결할 충돌이 {count}개 있습니다.",
   "mcp.conflict.unmanaged": "{target}에 skillshare가 아직 관리하지 않는 {name} 항목이 이미 있습니다.",

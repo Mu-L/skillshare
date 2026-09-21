@@ -1050,6 +1050,8 @@
   "mcp.restorePreview": "预览",
   "mcp.moreActions": "{name} 的更多操作",
   "mcp.needTarget": "服务器至少需要一个 target。",
+  "mcp.noTargetsNote": "未选 Agent 时，只会保留在 Skillshare，不会写入任何配置文件",
+  "mcp.noTargetsToast": "{name} 会保留在 Skillshare。下次同步时会从所有 Agent 移除。",
   "mcp.conflictLead.one": "需要先解决 1 个冲突。",
   "mcp.conflictLead.other": "需要先解决 {count} 个冲突。",
   "mcp.conflict.unmanaged": "{target} 已有自己的 {name} 条目，尚未由 skillshare 管理。",

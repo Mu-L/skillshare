@@ -1050,6 +1050,8 @@
   "mcp.restorePreview": "Vorschau",
   "mcp.moreActions": "Weitere Aktionen für {name}",
   "mcp.needTarget": "Ein Server braucht mindestens ein Target.",
+  "mcp.noTargetsNote": "Ohne ausgewählten Agent bleibt er nur in Skillshare und wird in keine Konfigurationsdatei geschrieben",
+  "mcp.noTargetsToast": "{name} bleibt in Skillshare. Beim nächsten Sync wird er aus allen Agents entfernt.",
   "mcp.conflictLead.one": "Zuerst 1 Konflikt lösen.",
   "mcp.conflictLead.other": "Zuerst {count} Konflikte lösen.",
   "mcp.conflict.unmanaged": "{target} hat bereits einen eigenen Eintrag {name}, den skillshare noch nicht verwaltet.",

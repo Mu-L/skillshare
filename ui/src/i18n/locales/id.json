@@ -1050,6 +1050,8 @@
   "mcp.restorePreview": "Pratinjau",
   "mcp.moreActions": "Tindakan lain untuk {name}",
   "mcp.needTarget": "Server butuh setidaknya satu target.",
+  "mcp.noTargetsNote": "Tanpa Agent yang dipilih, server hanya disimpan di Skillshare, tidak ditulis ke file konfigurasi mana pun",
+  "mcp.noTargetsToast": "{name} tetap di Skillshare. Sinkronisasi berikutnya menghapusnya dari semua Agent.",
   "mcp.conflictLead.one": "Selesaikan 1 konflik dulu.",
   "mcp.conflictLead.other": "Selesaikan {count} konflik dulu.",
   "mcp.conflict.unmanaged": "{target} sudah punya entri {name} sendiri yang belum dikelola skillshare.",

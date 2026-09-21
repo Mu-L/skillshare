@@ -104,7 +104,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
   const taken = !initial && existingNames.includes(trimmed);
   const nameError = trimmed && !NAME.test(trimmed) ? t('mcp.nameHint') : taken ? t('mcp.nameTaken') : '';
   const words = splitCommand(command);
-  const canSave = Boolean(trimmed) && !nameError && targets.length > 0 && (off || (http ? url.trim() !== '' : words.length > 0)) && (!targets.includes('pi') || off || Boolean(piExtension)) && (piExtension !== 'pi-mcp-adapter' || directToolsComplete(directTools)) && !saving;
+  const canSave = Boolean(trimmed) && !nameError && (targets.length > 0 || !off) && (off || (http ? url.trim() !== '' : words.length > 0)) && (!targets.includes('pi') || off || Boolean(piExtension)) && (piExtension !== 'pi-mcp-adapter' || directToolsComplete(directTools)) && !saving;
   const title = t(off ? (initial ? 'mcp.editOff' : 'mcp.addOff') : (initial ? 'mcp.editServer' : 'mcp.addServer'));
   const visibleTargets = new Set([...availableTargets, ...targets].filter((x) => !off || offTargets.includes(x)));
 
@@ -138,7 +138,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
     if (!canSave) return;
     const next = build();
     // A server without its own targets keeps inheriting while the selection matches
-    const inherited = !server?.targets && targets.length === defaultTargets.length && targets.every((x) => defaultTargets.includes(x));
+    const inherited = !server?.targets && targets.length > 0 && targets.length === defaultTargets.length && targets.every((x) => defaultTargets.includes(x));
     if (!inherited || off) next.targets = ordered;
     setSaving(true);
     setError('');
@@ -252,7 +252,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
       {viewing ? <div className="df"><Button variant="secondary" onClick={() => setViewing(false)}>{t('common.back')}</Button></div> : <div className="df">
         <span className="flex-1 text-[13px]">
           {targets.length === 0
-            ? <span className="ss-st warn">{t('mcp.pickTarget')}</span>
+            ? (off ? <span className="ss-st warn">{t('mcp.pickTarget')}</span> : <span className="text-ink-2">{t('mcp.noTargetsNote')}</span>)
             : <span className="text-ink-2">{t(targets.length === 1 ? 'mcp.writes.one' : 'mcp.writes.other', { count: targets.length })}{/* ponytail: the preview renders global paths only; give /api/mcp/render a project to show it here too. */}{complete && !project && <button type="button" className="ss-more ml-1.5" onClick={() => setViewing(true)}>{t('mcp.viewConfigShort')}</button>}</span>}
         </span>
         <Button variant="ghost" onClick={onClose} disabled={saving}>{t('common.cancel')}</Button>

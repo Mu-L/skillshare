@@ -65,6 +65,30 @@ describe('MCP server dialog', () => {
     await waitFor(() => expect(mcpApi.save).toHaveBeenCalledWith(expect.objectContaining({ server: { url: 'https://docs.example/mcp', targets: ['claude', 'codex'] } })));
   });
 
+  // Refs: #289. With no Agent the server is kept in Skillshare and written nowhere.
+  it('saves a server with no Agent selected as an explicit empty list', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByLabelText('Name'), 'docs');
+    await user.click(screen.getByRole('button', { name: 'streamable-http' }));
+    await user.type(screen.getByLabelText('URL'), 'https://docs.example/mcp');
+    await user.click(screen.getByRole('checkbox', { name: 'Claude' }));
+    expect(screen.getByText('With no Agent selected, it is only kept in Skillshare, not written to any config file')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mcpApi.save).toHaveBeenCalledWith(expect.objectContaining({ server: { url: 'https://docs.example/mcp', targets: [] } })));
+  });
+
+  // An empty selection equals empty defaults, but leaving targets out would inherit them and be refused.
+  it('sends the empty list even when the defaults are empty too', async () => {
+    const user = userEvent.setup();
+    renderDialog({ defaultTargets: [] });
+    await user.type(screen.getByLabelText('Name'), 'docs');
+    await user.click(screen.getByRole('button', { name: 'streamable-http' }));
+    await user.type(screen.getByLabelText('URL'), 'https://docs.example/mcp');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mcpApi.save).toHaveBeenCalledWith(expect.objectContaining({ server: { url: 'https://docs.example/mcp', targets: [] } })));
+  });
+
   it('keeps explicit targets and existing headers when editing', async () => {
     const user = userEvent.setup();
     const server = { url: 'https://docs.example/mcp', headers: { 'X-Team': 'core' }, targets: ['claude'] };

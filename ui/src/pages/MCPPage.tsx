@@ -85,16 +85,14 @@ export default function MCPPage() {
     if (target === 'pi' && on && !servers[name].piExtension) { setPiSetupName(name); setEditing(name); return; }
     const current = targetsOf(name);
     const next = mcpTargets.filter((x) => (x === target ? on : current.includes(x)));
-    if (next.length === 0) {
-      toast(t('mcp.needTarget'), 'warning');
-      return;
-    }
     const server = { ...servers[name], targets: next };
     // Tick right away; saving only touches the source, Sync writes the files
     const prev = cache.getQueryData<MCPList>(queryKeys.mcp);
     cache.setQueryData<MCPList>(queryKeys.mcp, (old) => old && { ...old, source: { ...old.source, servers: { ...old.source.servers, [name]: server } } });
     try {
       await mcpApi.save({ name, server, replace: true });
+      // Not blocked, but said out loud: the next sync takes the server out of every Agent.
+      if (next.length === 0) toast(t('mcp.noTargetsToast', { name }), 'info');
     } catch (e) {
       if (prev) cache.setQueryData(queryKeys.mcp, prev);
       toast(describeError(t, (e as Error).message), 'error');

@@ -50,6 +50,8 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
   const defaults = data.source.targets ?? [];
   const targets = project.targets ?? defaults;
   const servers = project.servers ?? {};
+  // A global server no Agent receives is active nowhere, so a project has nothing to turn off.
+  const shownGlobals = Object.keys(globals).filter((n) => servers[n] || globals[n].targets?.length !== 0).sort();
   const roots = Object.keys(data.source.projects ?? {});
   const changes = (data.plan?.changes ?? []).filter((c) => projectOf(roots, c) === root);
   const name = shortenHome(root);
@@ -63,8 +65,10 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
     try {
       await mcpApi.save({ ...mutation, project: root });
       onChanged();
+      return true;
     } catch (e) {
       toast(describeError(t, (e as Error).message), 'error');
+      return false;
     } finally {
       setBusy(false);
     }
@@ -81,9 +85,10 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
 
   const toggleOwn = (n: string, target: string, on: boolean) => {
     const next = mcpTargets.filter((x) => (x === target ? on : targetsOf(n).includes(x)));
-    if (next.length === 0) return toast(t('mcp.needTarget'), 'warning');
+    // A switch-only entry needs an Agent to turn the server off for; a server may have none.
+    if (next.length === 0 && own[n].disabled) return toast(t('mcp.needTarget'), 'warning');
     if (target === 'pi' && on && !own[n].piExtension && !own[n].disabled) return setEditing(n);
-    void save({ name: n, replace: true, server: { ...own[n], targets: next } });
+    void save({ name: n, replace: true, server: { ...own[n], targets: next } }).then((saved) => { if (saved && next.length === 0) toast(t('mcp.noTargetsToast', { name: n }), 'info'); });
   };
 
   const openMenu = (e: React.MouseEvent<HTMLButtonElement>, n: string) => {
@@ -128,10 +133,10 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
         </div>
 
         <section className="mt-3 flex flex-col">
-          <div className="ss-sec"><h2>{t('mcp.projects.globalServers')}</h2><span className="ss-cnt">{Object.keys(globals).length}</span><span className="text-[13px] text-ink-2">{t('mcp.projects.globalHint')}</span></div>
-          {Object.keys(globals).length > 0 ? (
+          <div className="ss-sec"><h2>{t('mcp.projects.globalServers')}</h2><span className="ss-cnt">{shownGlobals.length}</span><span className="text-[13px] text-ink-2">{t('mcp.projects.globalHint')}</span></div>
+          {shownGlobals.length > 0 ? (
             <div className="ss-list">
-              {Object.keys(globals).sort().map((n) => {
+              {shownGlobals.map((n) => {
                 const server = globals[n];
                 const entry = servers[n];
                 const off = Boolean(entry?.disabled);

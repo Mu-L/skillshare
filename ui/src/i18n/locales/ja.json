@@ -1050,6 +1050,8 @@
   "mcp.restorePreview": "プレビュー",
   "mcp.moreActions": "{name} のその他の操作",
   "mcp.needTarget": "サーバーには target が 1 つ以上必要です。",
+  "mcp.noTargetsNote": "Agent を選ばない場合は Skillshare に保存するだけで、どの設定ファイルにも書き込みません",
+  "mcp.noTargetsToast": "{name} は Skillshare に残ります。次の同期ですべての Agent から削除されます。",
   "mcp.conflictLead.one": "先に解決する競合が 1 件あります。",
   "mcp.conflictLead.other": "先に解決する競合が {count} 件あります。",
   "mcp.conflict.unmanaged": "{target} には skillshare がまだ管理していない {name} の項目がすでにあります。",
