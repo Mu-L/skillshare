@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MCPPlan } from '../../api/mcp';
-import { buildMatrix, describeError, describeMessage, groupByFile, isResolvable, joinCommand, splitCommand, switchTargets, targetLabel } from './mcpView';
+import { buildMatrix, describeError, describeMessage, canImportConflict, groupByFile, isResolvable, joinCommand, splitCommand, switchTargets, targetLabel } from './mcpView';
 import { mcpTargets } from '../../api/mcp';
 
 const change = (name: string, target: string, action: string, message?: string) => ({ name, target, action, message, path: `/${target}.json` });
@@ -79,5 +79,13 @@ describe('groupByFile', () => {
       { target: 'opencode', path: '/work/app/opencode.json', name: 'context7', root: '/work/app', action: 'add' },
     ]);
     expect(groups.map((g) => g.offListFor)).toEqual([undefined, '/work/app', undefined]);
+  });
+});
+
+describe('canImportConflict', () => {
+  // Import reads the Agent's global file, which holds the server and never the project's switch.
+  it('offers no import for a changed switch, which only a replace can settle', () => {
+    const changed = { target: 'opencode', path: '/work/app/opencode.json', name: 'docs', action: 'conflict', message: 'Agent configuration changed; import it or explicitly replace this entry' };
+    expect([canImportConflict(changed), canImportConflict({ ...changed, root: '/work/app', switch: true })]).toEqual([true, false]);
   });
 });

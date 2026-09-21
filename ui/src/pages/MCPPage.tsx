@@ -22,7 +22,7 @@ import { MCPConfigDialog } from '../components/mcp/MCPConfigView';
 import MCPRemoveDialog from '../components/mcp/MCPRemoveDialog';
 import MCPRestoreDialog from '../components/mcp/MCPRestoreDialog';
 import MCPServerDialog from '../components/mcp/MCPServerDialog';
-import { buildMatrix, describeError, describeMessage, isShadowed, isResolvable, targetLabel, type MCPChange } from '../components/mcp/mcpView';
+import { buildMatrix, canImportConflict, describeError, describeMessage, isShadowed, isResolvable, projectOf, targetLabel, type MCPChange } from '../components/mcp/mcpView';
 import { useT } from '../i18n';
 import { shortenHome } from '../lib/paths';
 import { queryKeys } from '../lib/queryKeys';
@@ -214,13 +214,15 @@ export default function MCPPage() {
               <AlertCircle size={16} className="self-start mt-0.5" />
               <div className="flex flex-1 flex-col gap-2">
                 {conflicts.map((c, i) => (
-                  <div key={`${c.target}:${c.name}`} className="flex items-center gap-3">
+                  <div key={`${c.path}:${c.target}:${c.name}`} className="flex items-center gap-3">
                     <span className="flex-1">
                       {i === 0 && <b>{t(conflicts.length === 1 ? 'mcp.conflictLead.one' : 'mcp.conflictLead.other', { count: conflicts.length })} </b>}
                       {conflictText(c)}
+                      {/* One server can conflict in several folders, so a project's row says which. */}
+                      {projectOf(roots, c) && <span className="text-ink-2"> · {shortenHome(projectOf(roots, c)!)}</span>}
                     </span>
                     {isResolvable(c) && <>
-                      <Button size="sm" variant="secondary" disabled={busy} onClick={() => void resolve(c.target, c.name, 'import')}>{t('mcp.importFromAgent', { target: targetLabel(c.target) })}</Button>
+                      {canImportConflict(c) && <Button size="sm" variant="secondary" disabled={busy} onClick={() => void resolve(c.target, c.name, 'import')}>{t('mcp.importFromAgent', { target: targetLabel(c.target) })}</Button>}
                       <Button size="sm" variant="secondary" disabled={busy} onClick={() => void resolve(c.target, c.name, 'replace')}>{t('mcp.replace')}</Button>
                     </>}
                   </div>

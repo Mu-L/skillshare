@@ -111,6 +111,9 @@ export const isResolvable = (change: MCPChange) =>
   change.action === 'conflict' &&
   ['mcp.conflictChanged', 'mcp.conflictUnmanaged', 'mcp.conflictOrphaned'].includes(conflictKeys[conflictPrefix(change.message ?? '')]);
 
+/** Whether importing can settle a conflict. It reads the Agent's global file, which never holds a project's switch. */
+export const canImportConflict = (change: MCPChange) => isResolvable(change) && !change.switch;
+
 /** Agents a project can turn a global server off for: those it uses, that the server reaches and that have a switch. */
 export const switchTargets = (server: MCPServer, defaults: string[], projectTargets: readonly string[]) =>
   (server.targets ?? defaults).filter((x) => mcpOffTargets.includes(x) && projectTargets.includes(x) && (x !== 'pi' || server.piExtension === 'pi-mcp-adapter'));

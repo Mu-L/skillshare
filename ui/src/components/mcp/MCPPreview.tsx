@@ -6,7 +6,7 @@ import Badge from '../Badge';
 import Button from '../Button';
 import { Checkbox } from '../Checkbox';
 import { useT } from '../../i18n';
-import { countActions, describeMessage, groupByFile, isResolvable, statusVariant } from './mcpView';
+import { canImportConflict, countActions, describeMessage, groupByFile, isResolvable, statusVariant } from './mcpView';
 
 export type MCPResolve = (target: string, name: string, action: 'import' | 'replace') => void;
 
@@ -49,9 +49,9 @@ export default function MCPPreview({ plan, onResolve, busy = false }: Props) {
               {change.message ? <span className="text-sm text-pencil-light">{describeMessage(t, change.message)}</span> : null}
             </div>
             {onResolve && isResolvable(change) ? <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="secondary" disabled={busy} onClick={() => onResolve(change.target, change.name, 'import')}>{t('mcp.importFromAgent', { target: change.target })}</Button>
+              {canImportConflict(change) ? <Button size="sm" variant="secondary" disabled={busy} onClick={() => onResolve(change.target, change.name, 'import')}>{t('mcp.importFromAgent', { target: change.target })}</Button> : null}
               <Button size="sm" variant="secondary" loading={busy} onClick={() => onResolve(change.target, change.name, 'replace')}>{t('mcp.replace')}</Button>
-              <span className="text-xs text-pencil-light">{t('mcp.resolveHint', { target: change.target })}</span>
+              {canImportConflict(change) ? <span className="text-xs text-pencil-light">{t('mcp.resolveHint', { target: change.target })}</span> : null}
             </div> : null}
           </li>)}
         </ul>
