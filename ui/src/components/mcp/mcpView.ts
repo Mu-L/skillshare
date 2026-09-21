@@ -24,9 +24,11 @@ export function buildMatrix(servers: Record<string, MCPServer>, plan: MCPPlan | 
   return [...rows.values()];
 }
 
-/** The mcp.projects root a change's file sits in, if any. */
-// ponytail: matched on the path; add a root to mcp.Change if a project file ever lives outside its folder.
-export const projectOf = (roots: string[], path: string) => roots.find((root) => path.startsWith(root + '/') || path.startsWith(root + '\\'));
+/** The mcp.projects root a change belongs to, if any. */
+// The plan says so outright, because Claude Code's off list is written to the global file
+// rather than to anything under the folder it turns a server off for.
+export const projectOf = (roots: string[], change: MCPChange) =>
+  change.root ?? roots.find((root) => change.path.startsWith(root + '/') || change.path.startsWith(root + '\\'));
 
 export function countActions(changes: MCPChange[]): Record<string, number> {
   const counts: Record<string, number> = {};

@@ -38,7 +38,7 @@ export interface MCPPlan {
   revision: string;
   sourcePath: string;
   blocked: boolean;
-  changes: { target: string; path: string; name: string; action: string; message?: string }[];
+  changes: { target: string; path: string; name: string; root?: string; action: string; message?: string }[];
 }
 export interface MCPResult { plan?: MCPPlan; applied: string[]; backupIds: string[] }
 export interface MCPCandidate { name: string; server: MCPServer; problems: string[]; warnings: string[]; from?: string }

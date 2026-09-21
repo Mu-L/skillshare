@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Check, KeyRound, Link2, Plus, SquareTerminal, X } from 'lucide-react';
 import { mcpApi, mcpOffTargets, mcpTargets, type MCPServer, type MCPValue } from '../../api/mcp';
-import { useAppContext } from '../../context/AppContext';
 import AgentIcon from '../AgentIcon';
 import Button from '../Button';
 import DialogShell from '../DialogShell';
@@ -72,6 +71,8 @@ interface Props {
   availableTargets?: readonly string[];
   /** A root under mcp.projects: the server is saved there instead of in mcp.servers. */
   project?: string;
+  /** Adds a switch that turns off a server the Agent defines globally, not a server. */
+  off?: boolean;
   /** Present when adding, so the user can swap to pasting a snippet instead of filling the fields. */
   onMode?: (mode: 'form' | 'paste') => void;
   onClose: () => void;
@@ -79,14 +80,15 @@ interface Props {
 }
 
 /** Add or edit one source server. Saving only changes the source; Sync writes the config files. */
-export default function MCPServerDialog({ initial, defaultTargets, defaultPiExtension = '', existingNames, availableTargets = mcpTargets, project, onMode, onClose, onSaved }: Props) {
+export default function MCPServerDialog({ initial, defaultTargets, defaultPiExtension = '', existingNames, availableTargets = mcpTargets, project, off: offKind = false, onMode, onClose, onSaved }: Props) {
   const t = useT();
   const server = initial?.server;
+  // The entry point already chose which kind of entry this is, so the dialog never asks again.
+  const off = initial ? Boolean(server?.disabled) : offKind;
+  const offTargets = mcpOffTargets;
   const [piExtension, setPiExtension] = useState(server?.piExtension ?? defaultPiExtension);
   const [name, setName] = useState(initial?.name ?? '');
-  const { isProjectMode } = useAppContext();
   const [http, setHttp] = useState(Boolean(server?.url));
-  const [off, setOff] = useState(Boolean(server?.disabled));
   const [directTools, setDirectTools] = useState(() => directToolsDraft(server?.directTools));
   const [command, setCommand] = useState(server?.command ? joinCommand([server.command, ...(server.args ?? [])]) : '');
   const [env, setEnv] = useState(() => envRows(server?.env));
@@ -94,7 +96,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
   const [viewing, setViewing] = useState(false);
   const [url, setUrl] = useState(server?.url ?? '');
   const [tokenEnv, setTokenEnv] = useState(server?.bearerToken?.fromEnv ?? '');
-  const [targets, setTargets] = useState<string[]>(server?.targets ?? defaultTargets);
+  const [targets, setTargets] = useState<string[]>(server?.targets ?? (off ? defaultTargets.filter((x) => offTargets.includes(x)) : defaultTargets));
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -103,9 +105,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
   const nameError = trimmed && !NAME.test(trimmed) ? t('mcp.nameHint') : taken ? t('mcp.nameTaken') : '';
   const words = splitCommand(command);
   const canSave = Boolean(trimmed) && !nameError && targets.length > 0 && (off || (http ? url.trim() !== '' : words.length > 0)) && (!targets.includes('pi') || off || Boolean(piExtension)) && (piExtension !== 'pi-mcp-adapter' || directToolsComplete(directTools)) && !saving;
-  const title = t(initial ? 'mcp.editServer' : 'mcp.addServer');
-  // mcp.projects cannot reach Claude's off list, which lives in the file the global servers use.
-  const offTargets = mcpOffTargets.filter((x) => !project || x !== 'claude');
+  const title = t(off ? (initial ? 'mcp.editOff' : 'mcp.addOff') : (initial ? 'mcp.editServer' : 'mcp.addServer'));
   const visibleTargets = new Set([...availableTargets, ...targets].filter((x) => !off || offTargets.includes(x)));
 
   /** The server as the fields describe it right now. */
@@ -159,7 +159,8 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
       </div>
       {/* The view takes the whole body, so a long file has room; the fields live in state and come back as they were. */}
       {viewing ? <div className="db"><MCPConfigView mutation={mutation} /></div> : <form id="mcp-server" className="db" onSubmit={(e) => { e.preventDefault(); void save(); }}>
-        {onMode && (
+        {/* Pasting a snippet only makes sense for a server, not for an off switch. */}
+        {onMode && !off && (
           <SegmentedControl<'form' | 'paste'>
             className="self-start"
             value="form"
@@ -167,30 +168,29 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
             options={[{ value: 'form', label: t('mcp.manualTab') }, { value: 'paste', label: t('mcp.pasteTab') }]}
           />
         )}
+        {off && <div className="ss-note inf"><span className="flex-1">{t('mcp.offHint')}</span></div>}
         <div className="grid grid-cols-2 gap-3.5">
           <div className="ss-fld">
-            <label htmlFor="mcp-name">{t('mcp.name')}</label>
+            <label htmlFor="mcp-name">{off ? t('mcp.offName') : t('mcp.name')}</label>
             <span className={`ss-inp ${nameError ? 'err' : ''}`}>
               <input id="mcp-name" autoFocus={!initial} value={name} onChange={(e) => setName(e.target.value)} placeholder="github" disabled={Boolean(initial) || saving} />
             </span>
             {nameError && <span className="hp !text-bad">{nameError}</span>}
           </div>
-          <div className="ss-fld">
-            <span className="text-[13px] font-semibold">{t('mcp.transport')}</span>
-            <SegmentedControl
-              className="self-start"
-              value={off ? 'off' : http ? 'streamable-http' : 'stdio'}
-              onChange={(v) => {
-                setOff(v === 'off');
-                if (v === 'off') setTargets(targets.filter((x) => offTargets.includes(x)));
-                else setHttp(v === 'streamable-http');
-              }}
-              options={[{ value: 'stdio', label: 'stdio' }, { value: 'streamable-http', label: 'streamable-http' }, ...(isProjectMode || project || off ? [{ value: 'off', label: t('mcp.offHere') }] : [])]}
-            />
-          </div>
+          {!off && (
+            <div className="ss-fld">
+              <span className="text-[13px] font-semibold">{t('mcp.transport')}</span>
+              <SegmentedControl
+                className="self-start"
+                value={http ? 'streamable-http' : 'stdio'}
+                onChange={(v) => setHttp(v === 'streamable-http')}
+                options={[{ value: 'stdio', label: 'stdio' }, { value: 'streamable-http', label: 'streamable-http' }]}
+              />
+            </div>
+          )}
         </div>
 
-        {off ? <div className="ss-note inf"><span className="flex-1">{t('mcp.offHint')}</span></div> : http ? (
+        {off ? null : http ? (
           <>
             <div className="ss-fld">
               <label htmlFor="mcp-url">URL</label>
@@ -224,7 +224,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
         )}
 
         <div className="ss-fld">
-          <span className="text-[13px] font-semibold">{t('mcp.targets')}</span>
+          <span className="text-[13px] font-semibold">{off ? t('mcp.offTargets') : t('mcp.targets')}</span>
           <div className="flex flex-wrap gap-x-5 gap-y-3">
             {mcpTargets.filter((target) => visibleTargets.has(target)).map((target) => {
               const on = targets.includes(target);

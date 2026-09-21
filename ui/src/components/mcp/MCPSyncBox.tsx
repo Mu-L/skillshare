@@ -17,7 +17,7 @@ export default function MCPSyncBox({ changes, roots }: { changes: MCPChange[]; r
         <>
           <div className="flex flex-col gap-1.5">
             {pending.map((c) => {
-              const root = projectOf(roots, c.path);
+              const root = projectOf(roots, c);
               return <RailLine key={`${c.path}:${c.target}:${c.name}`} name={c.name} agent={root ? `${targetLabel(c.target)} · ${shortenHome(root)}` : targetLabel(c.target)} word={c.action} />;
             })}
           </div>

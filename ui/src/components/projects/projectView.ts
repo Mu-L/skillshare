@@ -42,7 +42,7 @@ export function projectHealth(project: ProjectRow, targets: Target[], mcp: MCPLi
   if (project.missing) return { state: 'missing', count: 0 };
   const mine = targets.filter((tg) => tg.project === project.path).map(targetHealth);
   const roots = Object.keys(mcp?.source.projects ?? {});
-  const changes = (mcp?.plan?.changes ?? []).filter((c) => projectOf(roots, c.path) === project.path);
+  const changes = (mcp?.plan?.changes ?? []).filter((c) => projectOf(roots, c) === project.path);
   const conflicts = changes.filter((c) => c.action === 'conflict').length + mine.filter((h) => h.state === 'problem').length;
   if (conflicts > 0) return { state: 'conflict', count: conflicts };
   const pending = mine.reduce((n, h) => n + h.pending, 0) + changes.filter((c) => ['add', 'update', 'remove'].includes(c.action)).length;

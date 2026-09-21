@@ -1,5 +1,111 @@
 # Changelog
 
+## [0.22.0] - 2026-09-21
+
+### New Features
+
+#### Projects
+
+- **Manage many project folders from the global config** — a `projects:` key declares a folder once, with the tools used there. `sync` then treats each one as a `<project>@<tool>` target with its own mode and filters, so you no longer list every project skills folder as a custom target or run project mode in each repo.
+
+  ```yaml
+  # ~/.config/skillshare/config.yaml
+  projects:
+    ~/work/project01:
+      targets: [claude, codex]
+      skills:
+        mode: copy
+        include:
+          - myskill-*
+      agents: {}
+  ```
+
+  ```bash
+  skillshare sync --dry-run   # preview
+  skillshare sync
+  ```
+
+  Tools that share a project skills folder are written once. A project whose folder is missing is skipped with a warning instead of failing the sync, and `collect` and `target` leave project targets alone. Refs: #286.
+- **MCP servers for many projects in one place** — `mcp.projects` lists project roots, each with its own `targets`, `servers` and `directTools`. One `sync mcp` plans the global files and every root together, and removing a root cleans up what was written there.
+
+  ```yaml
+  # ~/.config/skillshare/config.yaml
+  mcp:
+    projects:
+      ~/work/project01:
+        targets: [opencode, pi]
+        servers:
+          context7:                  # off in this project only
+            disabled: true
+  ```
+
+  `mcp.projects` is refused in a project config. A `disabled` entry works for Claude Code, OpenCode, Kilo Code and Pi with `pi-mcp-adapter`. For Claude Code the switch is written to `~/.claude.json`, where it keeps its per-project off list, and the server definitions in that file are left as they are. Codex is refused, because a switch for a server its global config lacks stops Codex loading its config at all. Refs: #286.
+- **Projects page in the dashboard** — in global mode, a Projects page lists each project with Skills, Agents and MCP tabs. Adding a project takes a folder and its targets, and an ordinary target that already points inside a project can be converted. On a project's MCP tab, every global server has a switch that turns it off for that project.
+
+#### Install
+
+- **Project lockfile** — project mode now writes `.skillshare/skills.lock.json` next to `config.yaml`. The config records which skills the project wants; the lockfile records the exact commit each one resolved to. Commit both, and `skillshare install -p` gives every teammate the same commit even after upstream moves on.
+
+  ```bash
+  skillshare install github.com/team/skills --all -p   # writes the lockfile
+  git add .skillshare/ && git commit -m "Add team skills"
+
+  skillshare install -p          # a teammate gets the locked commits
+  skillshare update --all -p     # moves the pins forward; commit the lockfile again
+  ```
+
+  Tracked repos are pinned too and stay on their branch, so they can still be updated. `update -p` and the dashboard move a pin only for skills whose commit changed, a tracked repo with uncommitted changes is left alone, and `uninstall -p` drops the pin.
+- **Pin an install to a tag or a commit** — `--branch` now accepts a tag or a commit SHA as well as a branch name. `check` resolves tags and skips the network for full SHAs, which can never move.
+
+  ```bash
+  skillshare install github.com/team/skills --branch v1.2.0 --all
+  skillshare install github.com/team/skills --branch 8f14e45fceea167a5a36dedd4bea2543ce848564 --all
+  ```
+
+  `--track` is refused with a tag or a SHA, in the CLI and the dashboard, because a tracked repo needs a branch to pull. Refs: #281.
+- **Gitea and CNB sources** — skills install from Gitea (gitea.com and self-hosted) and CNB (cnb.cool), including subdirectories and web URLs. Private repos use `GITEA_TOKEN` and `CNB_TOKEN`, and self-hosted instances are listed under `gitea_hosts` and `cnb_hosts` in the config, or in `SKILLSHARE_GITEA_HOSTS` and `SKILLSHARE_CNB_HOSTS`. Subdirectory installs download through each platform's contents API and fall back to a git clone. Refs: #168.
+
+#### MCP connections
+
+- **`directTools` for Pi** — `pi-mcp-adapter` can register a server's tools as individual Pi tools. Set it per server, as a default under `mcp`, or per project. It accepts `true`, `false`, `search`, or tool names separated by commas.
+
+  ```bash
+  skillshare mcp add docs --url https://example.com/mcp --target pi --pi-extension pi-mcp-adapter --direct-tools search --no-tui
+  ```
+
+- **Edit MCP defaults in the dashboard** — a Defaults section on the Servers tab edits `mcp.targets` and `mcp.directTools`, which could only be changed by hand before.
+
+#### Analyze
+
+- **`analyze` measures what each target actually loads** — a symlink target exposes the whole source folder, so skills disabled in `.skillignore` are now counted for it and flagged `disabled`. For merge and copy targets, skills you dropped into the target folder by hand are counted and flagged `local`. Token estimates charge one token per wide character, so Chinese, Japanese and Korean text is no longer undercounted by roughly four times. The CLI, the TUI, the dashboard and the sync summary now report the same numbers.
+
+#### Targets
+
+- **`antigravity-cli` is its own target** — the Antigravity CLI reads `~/.gemini/antigravity-cli/skills` and never the app's folder, so as an alias of `antigravity` it received skills in a folder it does not read. A path-less `antigravity-cli:` entry in the config is now valid.
+
+#### Dashboard
+
+- **Beautify button in the config editor** — reformats `config.yaml` in the editor, keeping comments, so the result is visible and revertable before you save.
+- **The install dialog opens on the URL tab** — installing from a known repo URL is the common path. A `?install=search` link still opens the search tab.
+- **Copy the config path from the sidebar** — a copy button appears on hover next to the truncated path.
+- **Analyze follows the target in the URL** — target and project pages link straight into the analysis of that target, and project targets are listed after your own with their tool icon.
+
+#### Documentation
+
+- **The docs site is available in four more languages** — Traditional Chinese, Simplified Chinese, Japanese and Korean, at full parity with the English docs. The README is available in the same languages.
+
+### Bug Fixes
+
+- **A skill installed into a group reaches the project config** — `install <git source> --into <group> -p`, and installing a config entry that has `group:`, wrote the skill's metadata into the group folder. The skill was then missing from `config.yaml`, so teammates running `install -p` did not get it. Config installs were affected in global mode too.
+- **`doctor` suggests removing the right target for a discovery overlap** — it pointed at the target that owns the shared folder, such as `universal`, and removing that hides skills from every tool reading the folder. It now suggests removing the scanning target, such as `codex`. Refs: #135.
+- **Overlap warnings match each tool's documentation** — the list of extra folders each tool scans covered nine targets and had drifted. Kimi no longer gets a false warning for `~/.agents/skills`, and OpenCode, Goose, Copilot, Crush, Droid, Pi, Cline, Command Code, Deep Agents, Kilo Code, OpenClaw, OpenHands and Kode now get a warning when paired with a target whose folder they also read. Refs: #135.
+- **The dashboard's Update now no longer hangs waiting for a password** — when the binary lives in a root-owned folder, the upgrade waited up to ten minutes for a `sudo` prompt nobody could see. It now fails at once and names the terminal command to run. Cached credentials and `NOPASSWD` setups still upgrade. The release download also has a timeout.
+- **The Gitea token stays on the API host** — a download URL on another origin is refused and the install falls back to a git clone, so a hostile server cannot collect `GITEA_TOKEN`.
+
+### Breaking Changes
+
+- **The `codex`, `goose` and `openhands` targets moved to `.agents/skills`** — `~/.agents/skills` globally and `.agents/skills` in a project, because each tool now documents that location and reads its old folder only for backward compatibility. With `universal` also configured, the old default showed every skill twice. A global config stores full paths, so an existing one keeps its path and its `doctor` overlap warning. A project config stores target names only, so it follows the new default on its next `sync -p`, which also removes the links Skillshare left in the old folder; folders you made by hand there are kept. A fresh `init` sets up only `universal` for Codex. Refs: #135.
+
 ## [0.21.1] - 2026-09-20
 
 ### New Features

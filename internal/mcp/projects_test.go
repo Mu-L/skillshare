@@ -98,9 +98,9 @@ func TestProjectsRemovedRootIsCleaned(t *testing.T) {
 
 func TestProjectsRejected(t *testing.T) {
 	for name, tc := range map[string]struct{ config, want string }{
-		"relative root":   {"mcp:\n  projects:\n    work/p1:\n      servers: {}\n", "absolute"},
-		"unknown field":   {"mcp:\n  projects:\n    $TMP/p1:\n      path: x\n", "field path not found"},
-		"claude disabled": {"mcp:\n  projects:\n    $TMP/p1:\n      servers:\n        x:\n          disabled: true\n          targets: [claude]\n", "project mode"},
+		"relative root":  {"mcp:\n  projects:\n    work/p1:\n      servers: {}\n", "absolute"},
+		"unknown field":  {"mcp:\n  projects:\n    $TMP/p1:\n      path: x\n", "field path not found"},
+		"codex disabled": {"mcp:\n  projects:\n    $TMP/p1:\n      servers:\n        x:\n          disabled: true\n          targets: [codex]\n", "stops loading its whole config"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, _ := projectsService(t, tc.config)

@@ -385,8 +385,8 @@ mcp:
 - **A server Skillshare itself defines does not need this.** Unselect the Agent on
   that server instead, and the next sync removes its entry.
 
-In the dashboard, this is the **Off in this project** choice beside `stdio` and
-`streamable-http` when adding a server. It appears only in project mode.
+In the dashboard, this is the **Turn off a global server** button beside **Add
+server**. It appears in project mode and on a project's MCP tab.
 
 ## Manage several projects from the global config {#manage-several-projects-from-the-global-config}
 
@@ -422,8 +422,8 @@ mcp:
 A project lists only what differs from the global config. A global server such as
 `context7` needs no entry here: the Agent reads its global file and the project's file
 together, so it already loads in every project. A `disabled` entry
-[turns it off in that folder](#turn-off-a-global-server-in-one-project), for the
-clients listed there except Claude Code.
+[turns it off in that folder](#turn-off-a-global-server-in-one-project), for any of the
+clients listed there.
 
 Each key is a project folder: an absolute path, or one starting with `~`. Under it go
 the same `targets` and `servers` that project's own `config.yaml` would hold under
@@ -487,9 +487,9 @@ Limits:
 - No command edits it: `skillshare mcp add` manages `mcp.servers` and leaves
   `mcp.projects` as written. Edit it in `config.yaml`, or in the
   [dashboard](#projects-in-the-dashboard).
-- `disabled` cannot target Claude Code here, because its off list lives in
-  `~/.claude.json`, the same file the global servers are written to. Use
-  [project mode](#turn-off-a-global-server-in-one-project) in that folder instead.
+- A `disabled` entry for Claude Code is written to `~/.claude.json`, the same file the
+  global servers go to, because that is where Claude Code keeps its per-project off
+  list. The servers themselves are left as they are.
 - If a folder also has its own `.skillshare/config.yaml` managing the same entry, the
   plan reports a conflict rather than overwriting it.
 

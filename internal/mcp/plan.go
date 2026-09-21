@@ -14,11 +14,28 @@ var grokServerName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_-]*$`)
 
 // Change deliberately contains no native values, which may include credentials.
 type Change struct {
-	Target  string `json:"target"`
-	Path    string `json:"path"`
-	Name    string `json:"name"`
+	Target string `json:"target"`
+	Path   string `json:"path"`
+	Name   string `json:"name"`
+	// Root is the mcp.projects folder this change belongs to, empty for a global one. The
+	// path usually says, but Claude Code's per-project off list lives in the global file.
+	Root    string `json:"root,omitempty"`
 	Action  string `json:"action"`
 	Message string `json:"message,omitempty"`
+}
+
+// changeRoot is the mcp.projects folder a file plan writes for. Claude Code's off list
+// sits in ~/.claude.json, outside every root, so its native target carries the root.
+func changeRoot(target, path string, roots []string) string {
+	if root, ok := strings.CutPrefix(target, claudeOffPrefix); ok {
+		return root
+	}
+	for _, root := range roots {
+		if strings.HasPrefix(path, root+string(filepath.Separator)) {
+			return root
+		}
+	}
+	return ""
 }
 
 // Plan is a redacted, optimistic-concurrency-protected preview.
@@ -54,6 +71,12 @@ type filePlan struct {
 	section       string
 	changes       map[string]map[string]any
 }
+
+// fileKey is one Agent file plus the native target that reads and edits it. Claude Code's
+// per-project off list shares ~/.claude.json with the user-scope servers, so a path alone
+// cannot say which of the two a plan means. Each key gets its own filePlan; apply rereads
+// the file for every one of them, so two plans for one file fold in order.
+type fileKey struct{ path, target string }
 
 // ownershipKey is one entry in one file. Claude's off list shares ~/.claude.json with the
 // user-scope servers a global config may own under the same name, so it keys apart.
@@ -118,17 +141,16 @@ func (s *Service) previewSource(source *Source) (*Plan, error) {
 	return s.previewResolved(source, nil)
 }
 
-// render builds every native entry the source asks for, keyed by native path. A global
-// source's projects land in the same maps, so one plan, one revision and one ledger owner
-// cover every root: separate plans would each read the others' entries as leftovers.
-func (s *Service) render(source *Source) (map[string]map[string]map[string]any, map[string]string, error) {
-	desired := map[string]map[string]map[string]any{}
-	targets := map[string]string{}
+// render builds every native entry the source asks for, keyed by file and native target. A
+// global source's projects land in the same map, so one plan, one revision and one ledger
+// owner cover every root: separate plans would each read the others' entries as leftovers.
+func (s *Service) render(source *Source) (map[fileKey]map[string]map[string]any, error) {
+	desired := map[fileKey]map[string]map[string]any{}
 	if s.ProjectRoot != "" && len(source.Projects) > 0 {
-		return nil, nil, fmt.Errorf("mcp.projects belongs in the global config; this project already syncs its own mcp.servers")
+		return nil, fmt.Errorf("mcp.projects belongs in the global config; this project already syncs its own mcp.servers")
 	}
-	if err := s.renderScope(desired, targets, source.Servers, source.Targets, source.DirectTools); err != nil {
-		return nil, nil, err
+	if err := s.renderScope(desired, source.Servers, source.Targets, source.DirectTools); err != nil {
+		return nil, err
 	}
 	for _, root := range sortedKeys(source.Projects) {
 		project := source.Projects[root]
@@ -138,31 +160,19 @@ func (s *Service) render(source *Source) (map[string]map[string]map[string]any, 
 		if defaults == nil {
 			defaults = source.Targets
 		}
-		for name, server := range project.Servers {
-			selected := server.Targets
-			if selected == nil {
-				selected = defaults
-			}
-			if server.Disabled && slices.Contains(selected, "claude") {
-				// ponytail: Claude's off list lives in ~/.claude.json, the file the global
-				// servers also write, and a plan edits each file once under one native target.
-				// Key file plans by path and target if this is ever needed.
-				return nil, nil, fmt.Errorf("MCP %s in %s: turning off a Claude server from mcp.projects is not supported; use project mode in that folder", name, root)
-			}
-		}
 		directTools := project.DirectTools
 		if directTools == nil {
 			directTools = source.DirectTools
 		}
-		if err := scoped.renderScope(desired, targets, project.Servers, defaults, directTools); err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", root, err)
+		if err := scoped.renderScope(desired, project.Servers, defaults, directTools); err != nil {
+			return nil, fmt.Errorf("%s: %w", root, err)
 		}
 	}
-	return desired, targets, nil
+	return desired, nil
 }
 
 // renderScope adds one scope's servers: the global one, or a single project root.
-func (s *Service) renderScope(desired map[string]map[string]map[string]any, targets map[string]string, servers map[string]Server, defaults []string, directTools any) error {
+func (s *Service) renderScope(desired map[fileKey]map[string]map[string]any, servers map[string]Server, defaults []string, directTools any) error {
 	piExtension := ""
 	for _, name := range sortedKeys(servers) {
 		server := servers[name]
@@ -188,7 +198,6 @@ func (s *Service) renderScope(desired map[string]map[string]map[string]any, targ
 			if err != nil {
 				return err
 			}
-			targets[path] = native
 			entry, err := Render(target, server)
 			if err != nil {
 				return fmt.Errorf("%s / %s: %w", target, name, err)
@@ -196,14 +205,15 @@ func (s *Service) renderScope(desired map[string]map[string]map[string]any, targ
 			if target == "goose" {
 				entry["name"] = name
 			}
-			if desired[path] == nil {
-				desired[path] = map[string]map[string]any{}
+			key := fileKey{path, native}
+			if desired[key] == nil {
+				desired[key] = map[string]map[string]any{}
 			}
-			desired[path][name] = entry
+			desired[key][name] = entry
 		}
 	}
 	if s.ProjectRoot != "" {
-		if desired[filepath.Join(s.ProjectRoot, ".mcp.json")] != nil && desired[filepath.Join(s.ProjectRoot, ".github", "mcp.json")] != nil {
+		if desired[fileKey{filepath.Join(s.ProjectRoot, ".mcp.json"), "claude"}] != nil && desired[fileKey{filepath.Join(s.ProjectRoot, ".github", "mcp.json"), "copilot"}] != nil {
 			return fmt.Errorf("Claude and Copilot project MCP destinations overlap in precedence; use global mode for one client")
 		}
 	}
@@ -301,13 +311,14 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 		return nil, err
 	}
 	p := &Plan{SourcePath: source.Path, Changes: []Change{}, source: source, state: state, stateBytes: stateBytes}
-	desired, targets, err := s.render(source)
+	desired, err := s.render(source)
 	if err != nil {
 		return nil, err
 	}
+	// A file the source no longer writes still needs a plan, to remove what it left there.
 	for _, owned := range state.Entries {
-		if owned.Owner == source.ConfigPath {
-			targets[owned.Path] = owned.Target
+		if key := (fileKey{owned.Path, owned.Target}); owned.Owner == source.ConfigPath && desired[key] == nil {
+			desired[key] = map[string]map[string]any{}
 		}
 	}
 	proposal, _ := json.Marshal(struct {
@@ -330,8 +341,21 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 			local[path] = scoped.claudeLocalServers()
 		}
 	}
-	for _, path := range sortedKeys(targets) {
-		target := targets[path]
+	projectRoots := sortedKeys(source.Projects)
+	keys := make([]fileKey, 0, len(desired))
+	for key := range desired {
+		keys = append(keys, key)
+	}
+	// Path first, then target, so ~/.claude.json writes its servers before the off list
+	// that names them. Apply rereads the file per plan, so the later one sees the earlier.
+	slices.SortFunc(keys, func(a, b fileKey) int {
+		if a.path != b.path {
+			return strings.Compare(a.path, b.path)
+		}
+		return strings.Compare(a.target, b.target)
+	})
+	for _, fk := range keys {
+		path, target := fk.path, fk.target
 		data, exists, mode, err := safeRead(path)
 		if err != nil {
 			return nil, err
@@ -341,13 +365,13 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
 		f := &filePlan{path: path, target: target, before: data, exists: exists, mode: mode, section: sectionDigest(native), changes: map[string]map[string]any{}}
-		revision += path + f.section
+		revision += path + target + f.section
 		names := map[string]bool{}
-		for name := range desired[path] {
+		for name := range desired[fk] {
 			names[name] = true
 		}
 		for _, owned := range state.Entries {
-			if owned.Owner == source.ConfigPath && owned.Path == path {
+			if owned.Owner == source.ConfigPath && owned.Path == path && owned.Target == target {
 				names[owned.Name] = true
 			}
 		}
@@ -356,7 +380,7 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 			owned, managed := state.Entries[key]
 			current := native.Entries[name]
 			currentHash := entryHash(managedEntry(target, current))
-			want := desired[path][name]
+			want := desired[fk][name]
 			wantHash := entryHash(managedEntry(target, want))
 			for _, resolution := range resolutions {
 				if resolution.Target != shownTarget(target) || resolution.Name != name {
@@ -379,7 +403,7 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 				managed = true
 				p.state.Entries[key] = owned
 			}
-			change := Change{Target: shownTarget(target), Path: path, Name: name}
+			change := Change{Target: shownTarget(target), Path: path, Name: name, Root: changeRoot(target, path, projectRoots)}
 			switch {
 			case managed && owned.Owner != source.ConfigPath:
 				change.Action, change.Message = "conflict", "managed by another Skillshare config: "+owned.Owner

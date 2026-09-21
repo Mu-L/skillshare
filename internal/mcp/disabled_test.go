@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -167,6 +168,70 @@ func TestClaudeDisabledUsesProjectOffList(t *testing.T) {
 	}
 	if got := s.RenderNative("docs", Server{Disabled: true, Targets: []string{"claude"}}); got[0].Error != "" || got[0].Path != file || !strings.Contains(got[0].Content, "disabledMcpServers") {
 		t.Fatalf("preview %+v", got)
+	}
+}
+
+// One plan writes ~/.claude.json twice: the user-scope servers, then the off list of a
+// root under mcp.projects that turns one of them off. Both live in that one file.
+func TestClaudeProjectsOffListSharesTheGlobalFile(t *testing.T) {
+	s := testService(t)
+	root := filepath.Join(s.Home, "project")
+	file := filepath.Join(s.Home, ".claude.json")
+	write := func(project string) {
+		t.Helper()
+		source := "mcp:\n  targets: [claude]\n  servers:\n    docs:\n      url: https://example.com/mcp\n  projects:\n    " + root + ":\n      servers:\n" + project
+		if err := os.WriteFile(s.ConfigPath, []byte(source), 0600); err != nil {
+			t.Fatal(err)
+		}
+		plan, err := s.Preview()
+		if err != nil || plan.Blocked {
+			t.Fatalf("preview %+v %v", plan, err)
+		}
+		// Both changes name ~/.claude.json as claude, so only Root tells the off switch from
+		// the server. The dashboard needs it to keep the switch out of the global list.
+		var roots []string
+		for _, c := range plan.Changes {
+			if c.Path == file && c.Target == "claude" && c.Name == "docs" {
+				roots = append(roots, c.Root)
+			}
+		}
+		slices.Sort(roots)
+		if want := []string{"", root}; !slices.Equal(roots, want) {
+			t.Fatalf("roots of the docs changes are %q, want %q", roots, want)
+		}
+		if _, err := s.Apply(plan.Revision); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read := func() (map[string]any, []string) {
+		t.Helper()
+		var got struct {
+			McpServers map[string]any
+			Projects   map[string]struct{ DisabledMcpServers []string }
+		}
+		data, _ := os.ReadFile(file)
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("%v: %s", err, data)
+		}
+		return got.McpServers, got.Projects[root].DisabledMcpServers
+	}
+
+	write("        docs:\n          disabled: true\n          targets: [claude]\n")
+	servers, off := read()
+	if servers["docs"] == nil {
+		t.Fatal("the off list overwrote the user-scope server")
+	}
+	if strings.Join(off, ",") != "docs" {
+		t.Fatalf("off list %q", off)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".mcp.json")); !os.IsNotExist(err) {
+		t.Fatal("the switch belongs in ~/.claude.json, not .mcp.json")
+	}
+
+	// Turning it back on removes only the name, leaving the server it named.
+	write("        {}\n")
+	if servers, off = read(); servers["docs"] == nil || len(off) != 0 {
+		t.Fatalf("back on: %v %q", servers["docs"], off)
 	}
 }
 

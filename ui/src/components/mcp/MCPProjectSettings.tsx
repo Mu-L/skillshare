@@ -25,17 +25,31 @@ interface TargetsProps {
 /** A project's targets: the global ones, or its own pick. */
 export function ProjectTargets({ value, defaults, offered, onChange, disabled }: TargetsProps) {
   const t = useT();
-  const own = value !== undefined;
-  const pick = (target: string, on: boolean) => onChange(mcpTargets.filter((x) => (x === target ? on : value?.includes(x))));
+  // An empty own list is stored as "no key", which reads back as inherit. Without
+  // local state the toggle would spring back whenever there is nothing to save yet:
+  // both on the way in, and when a project that already had its own list is emptied.
+  const [picking, setPicking] = useState(false);
+  const own = value !== undefined || picking;
+  const pick = (target: string, on: boolean) => {
+    setPicking(true);
+    onChange(mcpTargets.filter((x) => (x === target ? on : value?.includes(x))));
+  };
+  const mode = (v: 'inherit' | 'own') => {
+    setPicking(v === 'own');
+    // Seeding from the global list saves at once; with nothing to seed, the empty
+    // toggles are shown and the first tick is what saves.
+    if (v === 'inherit') onChange(undefined);
+    else if (defaults.length > 0) onChange(defaults);
+  };
   return (
     <div className="flex flex-col gap-3">
       <SegmentedControl
         className="self-start"
         value={own ? 'own' : 'inherit'}
-        onChange={(v) => onChange(v === 'own' ? defaults : undefined)}
+        onChange={mode}
         options={[{ value: 'inherit', label: t('mcp.projects.inherit') }, { value: 'own', label: t('mcp.projects.ownTargets') }]}
       />
-      {own && <div className="flex flex-wrap gap-x-5 gap-y-3"><TargetToggles offered={offered} selected={value} onToggle={pick} disabled={disabled} /></div>}
+      {own && <div className="flex flex-wrap gap-x-5 gap-y-3"><TargetToggles offered={offered} selected={value ?? []} onToggle={pick} disabled={disabled} /></div>}
       <span className="hp text-xs text-ink-2">{defaults.length > 0 ? t('mcp.projects.targetsHint', { targets: defaults.map(targetLabel).join(', ') }) : t('mcp.projects.noGlobalTargets')}</span>
     </div>
   );

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, Archive, ChevronDown, Copy, Download, Eye, Pencil, Plug, Plus, Trash2, X } from 'lucide-react';
+import { AlertCircle, Archive, ChevronDown, Copy, Download, Eye, Pencil, Plug, Plus, PowerOff, Trash2, X } from 'lucide-react';
 import { mcpApi, mcpTargets, type MCPMutation, type MCPPlan, type MCPSettings } from '../api/mcp';
 import Button from '../components/Button';
+import { useAppContext } from '../context/AppContext';
 import DialogShell from '../components/DialogShell';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
@@ -36,6 +37,8 @@ export default function MCPPage() {
   const cache = useQueryClient();
   const [params] = useSearchParams();
   const { data, error, isPending } = useQuery({ queryKey: queryKeys.mcp, queryFn: mcpApi.list });
+  const { isProjectMode } = useAppContext();
+  const [addingOff, setAddingOff] = useState(false); // the new entry is a switch, not a server
   const [piSetupName, setPiSetupName] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null); // '' adds a new server
   // Adding takes two shapes: fill the fields, or paste a snippet. Both end up saving one source server.
@@ -65,9 +68,11 @@ export default function MCPPage() {
   const defaults = data?.source.targets ?? [];
   const targetsOf = (name: string) => servers[name]?.targets ?? defaults;
   const changes = data?.plan?.changes ?? [];
-  // mcp.projects puts a server of the same name into other folders; this list is the global files only.
+  // mcp.projects puts a server of the same name into other folders; this list is the global
+  // files only. A project's off switch for Claude Code lands in a global path, so ask the
+  // change which scope it came from rather than trusting the path alone.
   const globalPaths = Object.values(data?.paths ?? {});
-  const rows = data ? buildMatrix(servers, data.plan && { ...data.plan, changes: changes.filter((c) => globalPaths.includes(c.path)) }) : [];
+  const rows = data ? buildMatrix(servers, data.plan && { ...data.plan, changes: changes.filter((c) => !c.root && globalPaths.includes(c.path)) }) : [];
   // The plan still covers every project's files, so the sync box counts them.
   const roots = Object.keys(data?.source.projects ?? {});
   const conflicts = changes.filter((c) => c.action === 'conflict');
@@ -168,7 +173,9 @@ export default function MCPPage() {
         actions={<span className="flex items-center gap-2.5" data-tour="mcp-actions">
           {data?.backups.length ? <Button variant="ghost" onClick={() => setBackupsOpen(true)}><Archive size={15} />{t('mcp.backupsButton')}</Button> : null}
           <Button variant="secondary" onClick={() => setImporting({})}><Download size={15} />{t('mcp.importFromTarget')}</Button>
-          <Button variant="primary" onClick={() => { setAddMode('form'); setEditing(''); }}><Plus size={15} />{t('mcp.addServer')}</Button>
+          {/* Only a project file can turn off a server the Agent defines globally. */}
+          {isProjectMode && <Button variant="ghost" onClick={() => { setAddingOff(true); setAddMode('form'); setEditing(''); }}><PowerOff size={15} />{t('mcp.addOff')}</Button>}
+          <Button variant="primary" onClick={() => { setAddingOff(false); setAddMode('form'); setEditing(''); }}><Plus size={15} />{t('mcp.addServer')}</Button>
         </span>}
       />
 
@@ -232,7 +239,7 @@ export default function MCPPage() {
               description={t('mcp.emptyHint')}
               action={<div className="flex gap-2">
                 <Button variant="secondary" onClick={() => setImporting({})}><Download size={15} />{t('mcp.importFromTarget')}</Button>
-                <Button variant="primary" onClick={() => { setAddMode('form'); setEditing(''); }}><Plus size={15} />{t('mcp.addServer')}</Button>
+                <Button variant="primary" onClick={() => { setAddingOff(false); setAddMode('form'); setEditing(''); }}><Plus size={15} />{t('mcp.addServer')}</Button>
               </div>}
             />
           )}
@@ -257,6 +264,7 @@ export default function MCPPage() {
         />
       ) : (
         <MCPServerDialog
+          off={editing === '' && addingOff}
           defaultPiExtension={Object.values(servers).find((s) => s.piExtension)?.piExtension}
           initial={editing ? { name: editing, server: piSetupName === editing ? { ...servers[editing], targets: [...targetsOf(editing), 'pi'] } : servers[editing] } : undefined}
           defaultTargets={defaults}

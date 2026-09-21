@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pencil, Plug, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plug, Plus, PowerOff, Trash2 } from 'lucide-react';
 import { mcpApi, mcpOffTargets, mcpTargets, type MCPMutation, type MCPServer } from '../../api/mcp';
 import Button from '../Button';
 import ConfirmDialog from '../ConfirmDialog';
@@ -9,6 +9,7 @@ import { useToast } from '../Toast';
 import { useT } from '../../i18n';
 import { shortenHome } from '../../lib/paths';
 import { DirectToolsSetting, ProjectTargets, useDirectToolsLabel } from './MCPProjectSettings';
+import MCPImportDialog from './MCPImportDialog';
 import MCPRemoveDialog from './MCPRemoveDialog';
 import MCPServerDialog from './MCPServerDialog';
 import MCPServerList from './MCPServerList';
@@ -18,8 +19,9 @@ import { buildMatrix, describeEndpoint, projectOf, targetLabel } from './mcpView
 
 type MCPList = Awaited<ReturnType<typeof mcpApi.list>>;
 
-// What each Agent's project file gets for a switch, as its docs spell it.
-const switchField: Record<string, string> = { opencode: 'enabled: false', kilocode: 'enabled: false', pi: 'disabled: true' };
+// What each Agent gets for a switch, as its docs spell it. Claude Code is the one that
+// takes a name rather than a field, in the per-project off list inside ~/.claude.json.
+const switchField: Record<string, string> = { claude: 'disabledMcpServers', opencode: 'enabled: false', kilocode: 'enabled: false', pi: 'disabled: true' };
 
 interface Props {
   data: MCPList;
@@ -36,6 +38,8 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
   const directLabel = useDirectToolsLabel();
   const [pickTargets, setPickTargets] = useState(false);
   const [editing, setEditing] = useState<string | null>(null); // '' adds a new server
+  const [addMode, setAddMode] = useState<'form' | 'paste'>('form');
+  const [addingOff, setAddingOff] = useState(false); // the new entry is a switch, not a server
   const [removing, setRemoving] = useState('');
   const [dropping, setDropping] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -47,12 +51,12 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
   const targets = project.targets ?? defaults;
   const servers = project.servers ?? {};
   const roots = Object.keys(data.source.projects ?? {});
-  const changes = (data.plan?.changes ?? []).filter((c) => projectOf(roots, c.path) === root);
+  const changes = (data.plan?.changes ?? []).filter((c) => projectOf(roots, c) === root);
   const name = shortenHome(root);
   // A switch for a global server belongs to the list above; everything else is the project's own.
   const own = Object.fromEntries(Object.entries(servers).filter(([n, s]) => !(s.disabled && globals[n])));
   const targetsOf = (n: string) => own[n]?.targets ?? targets;
-  const offTargets = mcpOffTargets.filter((x) => x !== 'claude');
+  const offTargets = mcpOffTargets;
 
   const save = async (mutation: MCPMutation) => {
     setBusy(true);
@@ -117,7 +121,10 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
               <dd className="max-w-[320px]"><DirectToolsSetting value={project.directTools} disabled={busy} unsetLabel={t('mcp.directToolsInherit', { value: directLabel(data.source.directTools) })} onSave={(directTools) => void save({ replace: true, settings: { targets: project.targets, directTools } })} /></dd>
             </>}
           </dl>
-          {pickTargets && <ProjectTargets value={project.targets} defaults={defaults} offered={offered} disabled={busy} onChange={(next) => void save({ replace: true, settings: { targets: next, directTools: project.directTools } })} />}
+          {/* Indented to the value column of the dl above, so the expanded control
+              lines up under the pill that opened it instead of under its label:
+              its 110px label column plus the 14px column gap of .ss-kv. */}
+          {pickTargets && <div className="pl-[124px]"><ProjectTargets value={project.targets} defaults={defaults} offered={offered} disabled={busy} onChange={(next) => void save({ replace: true, settings: { targets: next, directTools: project.directTools } })} /></div>}
         </div>
 
         <section className="mt-3 flex flex-col">
@@ -131,8 +138,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
                 const to = switchable(server);
                 const hint = entry && !off ? t('mcp.projects.overridden')
                   : off ? (entry.targets ?? to).filter((x) => switchField[x]).map((x) => t('mcp.projects.writesSwitch', { target: targetLabel(x), field: switchField[x] })).join(', ')
-                  : to.length > 0 ? t('mcp.projects.followsGlobal')
-                  : (server.targets ?? defaults).includes('claude') ? t('mcp.projects.claudeOnly') : t('mcp.projects.noSwitch');
+                  : to.length > 0 ? t('mcp.projects.followsGlobal') : t('mcp.projects.noSwitch');
                 return (
                   <div key={n} className="ss-r">
                     <span className="ss-cat sm mcp"><Plug size={14} /></span>
@@ -154,27 +160,48 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
         </section>
 
         <section className="mt-3 flex flex-col">
-          <div className="ss-sec !items-center"><h2>{t('mcp.projects.onlyHere')}</h2><span className="ss-cnt">{ownRows.length}</span><Button className="ml-auto" size="sm" variant="secondary" onClick={() => setEditing('')}><Plus size={14} />{t('mcp.addServer')}</Button></div>
+          {/* Two named actions rather than one button that then asks which it was. */}
+          <div className="ss-sec !items-center"><h2>{t('mcp.projects.onlyHere')}</h2><span className="ss-cnt">{ownRows.length}</span>
+            <Button className="ml-auto" size="sm" variant="ghost" onClick={() => { setAddingOff(true); setAddMode('form'); setEditing(''); }}><PowerOff size={14} />{t('mcp.addOff')}</Button>
+            <Button size="sm" variant="secondary" onClick={() => { setAddingOff(false); setAddMode('form'); setEditing(''); }}><Plus size={14} />{t('mcp.addServer')}</Button>
+          </div>
           {ownRows.length > 0
             ? <MCPServerList rows={ownRows} targets={shown} targetsOf={targetsOf} offTargets={offTargets} onToggle={toggleOwn} onMenu={openMenu} />
             : <p className="text-[13px] text-ink-3">{t('mcp.projects.noOnlyHere')}</p>}
         </section>
-        <Button className="mt-6 self-start" size="sm" variant="ghost" onClick={() => setDropping(true)}><Trash2 size={14} />{t('projects.mcp.stop')}</Button>
+        {/* -ml cancels the ghost button's own padding, so its icon lines up with
+            the section headings above rather than sitting indented from them. */}
+        <Button className="mt-6 -ml-[11px] self-start" size="sm" variant="ghost" onClick={() => setDropping(true)}><Trash2 size={14} />{t('projects.mcp.stop')}</Button>
       </RailLayout>
 
-      {editing !== null && (
+      {editing !== null && (editing === '' && addMode === 'paste' ? (
+        <MCPImportDialog
+          source="paste"
+          project={root}
+          servers={servers}
+          defaultTargets={targets}
+          availableTargets={offered}
+          paths={data.paths}
+          detected={data.detected}
+          onMode={setAddMode}
+          onClose={() => setEditing(null)}
+          onImported={() => { setEditing(null); onChanged(); toast(t('mcp.toast.saved'), 'success'); }}
+        />
+      ) : (
         <MCPServerDialog
           project={root}
+          off={editing === '' && addingOff}
           defaultPiExtension={Object.values({ ...globals, ...own }).find((s) => s.piExtension)?.piExtension}
           initial={editing ? { name: editing, server: own[editing] } : undefined}
           defaultTargets={targets}
           existingNames={Object.keys(servers)}
           availableTargets={offered}
+          onMode={editing === '' ? setAddMode : undefined}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); onChanged(); toast(t('mcp.toast.saved'), 'success'); }}
         />
-      )}
-      {removing && <MCPRemoveDialog name={removing} project={root} inScope={(path) => projectOf(roots, path) === root} onClose={() => setRemoving('')} onSaved={() => { const n = removing; setRemoving(''); onChanged(); toast(t('mcp.toast.removed', { name: n }), 'success'); }} />}
+      ))}
+      {removing && <MCPRemoveDialog name={removing} project={root} inScope={(c) => projectOf(roots, c) === root} onClose={() => setRemoving('')} onSaved={() => { const n = removing; setRemoving(''); onChanged(); toast(t('mcp.toast.removed', { name: n }), 'success'); }} />}
       <ConfirmDialog open={dropping} variant="danger" loading={busy} title={t('projects.mcp.stopTitle', { name })} message={t('projects.mcp.stopMessage')} confirmText={t('projects.mcp.stop')} onCancel={() => setDropping(false)} onConfirm={() => void drop()} />
       <SkillContextMenu open={!!menu} anchorPoint={menu ?? undefined} items={menu?.items ?? []} onClose={() => setMenu(null)} />
     </div>

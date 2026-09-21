@@ -42,17 +42,21 @@ interface Props {
   detected: string[];
   /** A conflicting entry to take over: it may replace the source server of the same name. */
   conflict?: { target: string; name: string };
+  /** A root under mcp.projects: the import is written to that project instead of the global source. */
+  project?: string;
+  /** Overrides the targets offered, for a project where only some Agents have a file. */
+  availableTargets?: readonly string[];
   /** Present when this is the paste half of "add a server", so the user can swap back to the form. */
   onMode?: (mode: 'form' | 'paste') => void;
   onClose: () => void;
   onImported: () => void;
 }
 
-export default function MCPImportDialog({ source, servers, defaultTargets, paths, detected, conflict, onMode, onClose, onImported }: Props) {
+export default function MCPImportDialog({ source, servers, defaultTargets, paths, detected, conflict, project, availableTargets: offered, onMode, onClose, onImported }: Props) {
   const t = useT();
   const { toast } = useToast();
   const tab = source;
-  const availableTargets = mcpTargets.filter((x) => paths[x]);
+  const availableTargets = offered ?? mcpTargets.filter((x) => paths[x]);
   const [from, setFrom] = useState(conflict?.target ?? availableTargets.find((x) => detected.includes(x)) ?? availableTargets[0] ?? '');
   const [content, setContent] = useState('');
   const [pasted, setPasted] = useState('');
@@ -103,7 +107,7 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
       // A takeover keeps the targets the existing server already has
       const own = servers[c.name]?.targets;
       const write = own ?? (inherited ? undefined : mcpTargets.filter((x) => targets.includes(x)));
-      const mutation: MCPMutation = { name: c.name, server: { ...c.server, ...(piExtension && { piExtension }), ...(write && { targets: write }) }, replace: c.name in servers };
+      const mutation: MCPMutation = { ...(project && { project }), name: c.name, server: { ...c.server, ...(piExtension && { piExtension }), ...(write && { targets: write }) }, replace: c.name in servers };
       // Adopting records the tool's identical entry as managed, so the next sync has no conflict there
       if (c.from && (own ?? targets).includes(c.from)) mutation.resolutions = [{ target: c.from, name: c.name, action: 'adopt' }];
       try {

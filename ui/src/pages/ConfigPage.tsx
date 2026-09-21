@@ -55,6 +55,9 @@ export default function ConfigPage() {
   const urlTab = searchParams.get('tab');
   useEffect(() => {
     setTab(urlTab === 'extensions' || urlTab === 'skillignore' || urlTab === 'agentignore' ? urlTab : 'config');
+    // The expanded editor belongs to one file tab, so a tab arriving from the URL,
+    // such as the browser's back button, closes it rather than retitling it.
+    setExpanded(false);
   }, [urlTab]);
   const [showSyncBanner, setShowSyncBanner] = useState(false);
   const [showSyncPreview, setShowSyncPreview] = useState(false);

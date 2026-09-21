@@ -326,7 +326,7 @@ func (s *Service) MutateBatch(mutations []Mutation, revision string, sync bool) 
 	resolutions := batchResolutions(mutations)
 	if !sync && revision == "" && len(resolutions) == 0 {
 		// Save only still refuses definitions that could never synchronize.
-		if _, _, err := s.render(source); err != nil {
+		if _, err := s.render(source); err != nil {
 			return nil, err
 		}
 	} else {

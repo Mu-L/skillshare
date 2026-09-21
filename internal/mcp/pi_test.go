@@ -89,7 +89,7 @@ func TestPiImportTransportAndMixedExtensions(t *testing.T) {
 		t.Fatal("legacy SSE silently converted")
 	}
 	s := testService(t)
-	_, _, err = s.render(&Source{Targets: []string{"pi"}, Servers: map[string]Server{
+	_, err = s.render(&Source{Targets: []string{"pi"}, Servers: map[string]Server{
 		"a": {Command: "echo", PiExtension: "pi-mcp-adapter"},
 		"b": {Command: "echo", PiExtension: "pi-mcp-extension"},
 	}})
@@ -124,7 +124,7 @@ func TestPiDirectoryOverride(t *testing.T) {
 	if err != nil || path != filepath.Join(s.Home, "custom-pi", "mcp.json") {
 		t.Fatalf("%s %v", path, err)
 	}
-	_, _, err = s.render(&Source{Targets: []string{"pi"}, Servers: map[string]Server{"docs": {Command: "echo", PiExtension: "pi-mcp-extension"}}})
+	_, err = s.render(&Source{Targets: []string{"pi"}, Servers: map[string]Server{"docs": {Command: "echo", PiExtension: "pi-mcp-extension"}}})
 	if err == nil {
 		t.Fatal("extension ignores the directory override")
 	}

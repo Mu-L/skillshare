@@ -14,8 +14,8 @@ interface Props {
   name: string;
   /** A root under mcp.projects, when the server is one of that project's. */
   project?: string;
-  /** Files of this scope. One name can be in the global source and in projects, and only one of them goes. */
-  inScope?: (path: string) => boolean;
+  /** Changes of this scope. One name can be in the global source and in projects, and only one of them goes. */
+  inScope?: (change: MCPChange) => boolean;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -25,7 +25,7 @@ export default function MCPRemoveDialog({ name, project, inScope = () => true, o
   const { data: plan, error, isPending } = useQuery({ queryKey: ['mcp-remove-preview', project, name], queryFn: () => mcpApi.preview({ project, name, remove: true }), gcTime: 0 });
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const changes = plan?.changes.filter((c) => c.name === name && inScope(c.path)) ?? [];
+  const changes = plan?.changes.filter((c) => c.name === name && inScope(c)) ?? [];
   const title = t('mcp.removeTitle', { name });
 
   const save = async (sync: boolean) => {
