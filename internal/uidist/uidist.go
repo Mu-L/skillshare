@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"skillshare/internal/config"
+	"skillshare/internal/utils"
 	"skillshare/internal/version"
 )
 
@@ -39,7 +40,8 @@ func IsCached(ver string) (string, bool) {
 
 // Download fetches the UI dist tarball for the given version, verifies its
 // checksum, extracts it to the cache directory, and cleans up old versions.
-func Download(ver string) error {
+// onProgress (may be nil) receives tarball download progress.
+func Download(ver string, onProgress utils.ProgressFunc) error {
 	dir := CacheDir(ver)
 
 	// Fetch expected checksum
@@ -50,7 +52,7 @@ func Download(ver string) error {
 
 	// Download tarball to temp file
 	tarballURL := version.BuildUIDistURL(ver)
-	tmpFile, err := downloadToTemp(tarballURL)
+	tmpFile, err := downloadToTemp(tarballURL, onProgress)
 	if err != nil {
 		return fmt.Errorf("failed to download UI assets: %w", err)
 	}
@@ -153,7 +155,7 @@ func parseChecksum(r io.Reader, target string) (string, error) {
 const maxDownloadSize = 100 * 1024 * 1024 // 100 MB
 
 // downloadToTemp downloads a URL to a temporary file and returns its path.
-func downloadToTemp(url string) (string, error) {
+func downloadToTemp(url string, onProgress utils.ProgressFunc) (string, error) {
 	client := &http.Client{Timeout: 120 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -171,7 +173,7 @@ func downloadToTemp(url string) (string, error) {
 	}
 	defer tmp.Close()
 
-	limited := io.LimitReader(resp.Body, maxDownloadSize+1)
+	limited := io.LimitReader(utils.NewProgressReader(resp.Body, resp.ContentLength, onProgress), maxDownloadSize+1)
 	n, err := io.Copy(tmp, limited)
 	if err != nil {
 		os.Remove(tmp.Name())

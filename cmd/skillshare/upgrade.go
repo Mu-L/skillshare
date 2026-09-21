@@ -21,6 +21,7 @@ import (
 	"skillshare/internal/oplog"
 	"skillshare/internal/ui"
 	"skillshare/internal/uidist"
+	"skillshare/internal/utils"
 	versionpkg "skillshare/internal/version"
 )
 
@@ -205,8 +206,9 @@ func upgradeCLIBinary(dryRun, force bool) (string, error) {
 
 	// Download
 	hasUIDownload := latestVersion != ""
-	downloadSpinner := ui.StartTreeSpinner(fmt.Sprintf("Downloading v%s...", latestVersion), !hasUIDownload)
-	if err := downloadAndReplace(downloadURL, execPath); err != nil {
+	downloadLabel := fmt.Sprintf("Downloading v%s...", latestVersion)
+	downloadSpinner := ui.StartTreeSpinner(downloadLabel, !hasUIDownload)
+	if err := downloadAndReplace(downloadURL, execPath, downloadProgress(downloadLabel, downloadSpinner.Update)); err != nil {
 		downloadSpinner.Fail("Failed to download")
 		return "", fmt.Errorf("failed to upgrade: %w", err)
 	}
@@ -218,7 +220,7 @@ func upgradeCLIBinary(dryRun, force bool) (string, error) {
 	// Pre-download UI assets for the new version (best-effort)
 	if hasUIDownload {
 		uiSpinner := ui.StartTreeSpinner("Downloading UI assets...", true)
-		if err := uidist.Download(latestVersion); err != nil {
+		if err := uidist.Download(latestVersion, downloadProgress("Downloading UI assets...", uiSpinner.Update)); err != nil {
 			uiSpinner.Warn("UI download skipped (run 'skillshare ui' to retry)")
 		} else {
 			uiSpinner.Success("UI assets cached")
@@ -339,7 +341,22 @@ func doSkillDownload(skillshareSkillDir, sourceDir, fromVersion string) error {
 	return nil
 }
 
-func downloadAndReplace(url, destPath string) error {
+// downloadProgress returns a callback that appends "read / total" to label.
+// Only on a TTY: non-TTY spinners print a new line per update.
+func downloadProgress(label string, update func(string)) utils.ProgressFunc {
+	if !ui.IsTTY() {
+		return nil
+	}
+	return func(read, total int64) {
+		if total > 0 {
+			update(fmt.Sprintf("%s  %s / %s", label, formatBytes(read), formatBytes(total)))
+		} else {
+			update(fmt.Sprintf("%s  %s", label, formatBytes(read)))
+		}
+	}
+}
+
+func downloadAndReplace(url, destPath string, onProgress utils.ProgressFunc) error {
 	// Bounds the whole download; the release archive is ~10MB.
 	client := &http.Client{Timeout: 5 * time.Minute}
 	resp, err := client.Get(url)
@@ -351,12 +368,13 @@ func downloadAndReplace(url, destPath string) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("download failed with status %d", resp.StatusCode)
 	}
+	body := utils.NewProgressReader(resp.Body, resp.ContentLength, onProgress)
 
 	// Windows uses zip, others use tar.gz
 	if runtime.GOOS == "windows" {
-		return extractFromZip(resp.Body, destPath)
+		return extractFromZip(body, destPath)
 	}
-	return extractFromTarGz(resp.Body, destPath)
+	return extractFromTarGz(body, destPath)
 }
 
 func extractFromTarGz(r io.Reader, destPath string) error {

@@ -616,7 +616,7 @@ func ensureUIAvailable() (string, error) {
 
 	// Download with spinner
 	sp := ui.StartSpinner("Downloading UI assets...")
-	if err := uidist.Download(ver); err != nil {
+	if err := uidist.Download(ver, downloadProgress("Downloading UI assets...", sp.Update)); err != nil {
 		sp.Fail("Download failed")
 		fmt.Println()
 		ui.Warning("Install with the full installer to get the web UI:")
