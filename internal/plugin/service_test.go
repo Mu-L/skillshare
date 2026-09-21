@@ -303,3 +303,19 @@ func TestCheckReportsTheSourceVersion(t *testing.T) {
 		t.Fatalf("check did not report the new version: %+v %v", p, err)
 	}
 }
+
+func TestRecordedSourceDoesNotBlockAnotherDistribution(t *testing.T) {
+	s, _, _ := fakeClaude(t)
+	r := Request{Action: "add", Source: fixture(t), Plugin: "demo"}
+	p, err := s.Preview(context.Background(), r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Apply(context.Background(), r, p.Revision); err != nil {
+		t.Fatal(err)
+	}
+	p, err = s.Preview(context.Background(), Request{Action: "add", Source: fixture(t), Plugin: "demo", Name: "demo", Targets: []string{"claude"}})
+	if err != nil || p.Blocked {
+		t.Fatalf("another source for one Agent was blocked: %+v %v", p, err)
+	}
+}

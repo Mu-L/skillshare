@@ -161,6 +161,8 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 			name = c.Name
 		}
 		pack, exists := d.packages[name]
+		// The recorded source is where Agents are bound from later. It does not stop one Agent
+		// from using another distribution under the same name.
 		otherSource := pack.Source != "" && (pack.Source != discovered.Source || pack.Plugin != c.Name || pack.SourceRef != discovered.SourceRef)
 		if len(r.Targets) == 0 {
 			// Only record the package; Agents are bound later from the same source.
@@ -202,10 +204,6 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 				if change.Message == "" {
 					change.Message = "No native manifest for this target; plugin components will not be silently converted or omitted."
 				}
-			}
-			if otherSource && change.Action != "blocked" {
-				change.Action = "blocked"
-				change.Message = "Package already uses a different source; choose another name or remove it first."
 			}
 			if old, ok := d.packages[name].Bindings[target]; ok {
 				if old.Source == b.Source && old.Plugin == b.Plugin && old.SourceRef == b.SourceRef {
