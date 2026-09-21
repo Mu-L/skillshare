@@ -73,6 +73,7 @@ export default function TargetsPage() {
                   <span className="flex items-center gap-2">
                     <span className="font-semibold">{tg.name}</span>
                     {tg.name === 'universal' && <span className="ss-tag">{t('targets.sharedPath')}</span>}
+                    {tg.agentExtension && <span className="ss-tag">extension: {tg.agentExtension}</span>}
                   </span>
                   <span className="truncate font-mono text-[12px] text-ink-3" title={tg.path}>{shortenHome(tg.path)}</span>
                 </span>
