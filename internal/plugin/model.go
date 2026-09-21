@@ -4,7 +4,9 @@ package plugin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"slices"
 )
 
 var Targets = func() []string {
@@ -47,7 +49,9 @@ type Request struct {
 // ProblemKey names the sentence the dashboard can translate and ProblemArgs fill its
 // {placeholders}. Problem stays the English the CLI prints, and is the fallback.
 type TargetPackage struct {
-	Manifest    string            `json:"manifest"`
+	Manifest string `json:"manifest"`
+	// Path is set when this Agent's catalog points at its own folder; empty means Candidate.Path.
+	Path        string            `json:"path,omitempty"`
 	Version     string            `json:"version,omitempty"`
 	Entry       string            `json:"entry,omitempty"`
 	Components  []string          `json:"components"`
@@ -73,6 +77,44 @@ type Candidate struct {
 	Components  []string                 `json:"components"`
 	Problem     string                   `json:"problem,omitempty"`
 	ProblemKey  string                   `json:"problemKey,omitempty"`
+	ProblemArgs map[string]string        `json:"problemArgs,omitempty"`
+	// catalogEntry keeps the component fields a Claude catalog entry defines itself, for the
+	// catalog Skillshare writes at install time (strict: false plugins have nothing else).
+	catalogEntry map[string]json.RawMessage
+}
+
+// pathFor is the folder, relative to the source, that target installs from.
+func (c Candidate) pathFor(target string) string {
+	if p := c.TargetInfo[target].Path; p != "" {
+		return p
+	}
+	return c.Path
+}
+
+// collectTargets derives Targets, Components and the OpenCode entry from TargetInfo.
+func (c *Candidate) collectTargets() {
+	c.Targets, c.Components = []string{}, []string{}
+	for target, info := range c.TargetInfo {
+		if info.Problem != "" {
+			continue
+		}
+		c.Targets = append(c.Targets, target)
+		for _, component := range info.Components {
+			if !slices.Contains(c.Components, component) {
+				c.Components = append(c.Components, component)
+			}
+		}
+		if target == "opencode" {
+			c.Entry = info.Entry
+		}
+	}
+	slices.Sort(c.Targets)
+	slices.Sort(c.Components)
+}
+
+// block records why this package cannot be installed from the source.
+func (c *Candidate) block(key, message string, args map[string]string) {
+	c.Problem, c.ProblemKey, c.ProblemArgs = message, key, args
 }
 
 type Discovery struct {

@@ -182,7 +182,7 @@ func (s *Service) applyAdditional(ctx context.Context, c Change, b Binding) erro
 		}
 		for _, candidate := range d.Candidates {
 			if candidate.Name == b.Plugin {
-				root = filepath.Join(snapshot, "content", candidate.Path)
+				root = filepath.Join(snapshot, "content", candidate.pathFor(c.Target))
 			}
 		}
 		if root == "" {

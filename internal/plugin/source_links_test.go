@@ -2,8 +2,11 @@ package plugin
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 )
 
@@ -75,6 +78,111 @@ func TestDiscoverAllCatalogsAndRelativeURL(t *testing.T) {
 	}
 	if len(d.Candidates) != 2 || d.Candidates[0].Problem != "" || len(d.Candidates[0].Targets) != 5 {
 		t.Fatalf("catalogs not merged: %+v", d)
+	}
+}
+
+func TestDiscoverPrefersLocalPathOverExternalCatalogEntry(t *testing.T) {
+	root := fixture(t)
+	writeFile(t, root, ".agents/plugins/marketplace.json", `{"name":"codex-market","plugins":[{"name":"demo","source":{"source":"url","url":"https://example.com/demo.git"}}]}`)
+	writeFile(t, root, ".claude-plugin/marketplace.json", `{"name":"claude-market","plugins":[{"name":"demo","source":"./"}]}`)
+	d, err := Discover(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Candidates) != 1 || d.Candidates[0].Path != "." || d.Candidates[0].Problem != "" {
+		t.Fatalf("local catalog entry not preferred: %+v", d.Candidates)
+	}
+}
+
+func TestDiscoverKeepsCatalogWhenOneEntryIsBroken(t *testing.T) {
+	root := fixture(t)
+	writeFile(t, root, ".cursor-plugin/marketplace.json", `{"name":"market","plugins":[{"name":"demo","source":"./"},{"name":"broken","source":"./broken"}]}`)
+	writeFile(t, root, "broken/README.md", "no manifest")
+	d, err := Discover(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Candidates) != 2 || d.Candidates[0].Problem != "" || d.Candidates[1].ProblemKey != "plugins.problem.noManifest" {
+		t.Fatalf("broken entry not isolated: %+v", d.Candidates)
+	}
+}
+
+func TestDiscoverClaudeEntryWithoutManifest(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, ".claude-plugin/marketplace.json", `{"name":"market","plugins":[{"name":"tool","source":"./tool","description":"Tool"}]}`)
+	writeFile(t, root, "tool/skills/x/SKILL.md", "---\nname: x\ndescription: X\n---\n")
+	d, err := Discover(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := d.Candidates[0]
+	if c.Problem != "" || !slices.Equal(c.Targets, []string{"claude"}) || !slices.Contains(c.Components, "skills") {
+		t.Fatalf("manifest-less Claude entry not usable: %+v", c)
+	}
+}
+
+func TestDiscoverClaudeEntryThatIsOneSkill(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, ".claude-plugin/marketplace.json", `{"name":"market","plugins":[{"name":"tool","source":"./tool","strict":false}]}`)
+	writeFile(t, root, "tool/SKILL.md", "---\nname: tool\ndescription: Tool\n---\n")
+	d, err := Discover(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := d.Candidates[0]; c.Problem != "" || !slices.Equal(c.Components, []string{"skills"}) {
+		t.Fatalf("root SKILL.md not read as the plugin's skill: %+v", c)
+	}
+}
+
+func TestDiscoverRenamedEntryStaysInstallableInClaude(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, ".claude-plugin/marketplace.json", `{"name":"market","plugins":[{"name":"foo","source":"./p"}]}`)
+	writeFile(t, root, "p/.claude-plugin/plugin.json", `{"name":"bar"}`)
+	writeFile(t, root, "p/.codex-plugin/plugin.json", `{"name":"bar","skills":"./skills"}`)
+	writeFile(t, root, "p/skills/x/SKILL.md", "---\nname: x\ndescription: X\n---\n")
+	d, err := Discover(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := d.Candidates[0]
+	if c.Problem != "" || c.Name != "foo" || !slices.Contains(c.Targets, "claude") || slices.Contains(c.Targets, "codex") {
+		t.Fatalf("renamed entry should install in Claude only: %+v", c)
+	}
+}
+
+func TestClaudeCatalogEntryCarriesStrictDefinition(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, ".claude-plugin/marketplace.json", `{"name":"market","plugins":[{"name":"lsp","source":"./lsp","version":"1.0.0","strict":false,"lspServers":{"clangd":{"command":"clangd"}}}]}`)
+	writeFile(t, root, "lsp/README.md", "catalog-defined")
+	d, err := Discover(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := json.Marshal(pluginEntry(d.Candidates[0], "./content/lsp", "claude"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Candidates[0].Problem != "" || !strings.Contains(string(entry), `"version":"1.0.0"`) || !strings.Contains(string(entry), `"strict":false`) || !strings.Contains(string(entry), `"clangd"`) {
+		t.Fatalf("catalog definition not carried into the install catalog: %+v %s", d.Candidates[0], entry)
+	}
+}
+
+func TestDiscoverUsesEachAgentsOwnCatalogPath(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, ".agents/plugins/marketplace.json", `{"name":"market","plugins":[{"name":"ctx","source":{"source":"local","path":"./plugins/codex/ctx"}}]}`)
+	writeFile(t, root, ".claude-plugin/marketplace.json", `{"name":"market","plugins":[{"name":"ctx","source":"./plugins/claude/ctx"}]}`)
+	for _, dir := range []string{"plugins/codex/ctx", "plugins/claude/ctx"} {
+		writeFile(t, root, dir+"/.claude-plugin/plugin.json", `{"name":"ctx"}`)
+		writeFile(t, root, dir+"/skills/x/SKILL.md", "---\nname: x\ndescription: X\n---\n")
+	}
+	writeFile(t, root, "plugins/codex/ctx/.codex-plugin/plugin.json", `{"name":"ctx","skills":"./skills"}`)
+	d, err := Discover(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := d.Candidates[0]
+	if len(d.Candidates) != 1 || c.Problem != "" || c.pathFor("codex") != "plugins/codex/ctx" || c.pathFor("claude") != "plugins/claude/ctx" {
+		t.Fatalf("per-Agent paths not kept: %+v", d.Candidates)
 	}
 }
 

@@ -25,7 +25,7 @@ export const syncAction = (b: PluginBinding, host?: PluginInventory['hosts'][num
   if (b.pending) return b.pending === 'install' && exists ? '' : b.pending;
   return !host || host.error || exists ? '' : 'install';
 };
-export interface PluginCandidate { name: string; description: string; version: string; targets: PluginTarget[]; components: string[]; problem?: string; problemKey?: string; targetInfo?: Record<string, { manifest: string; version?: string; entry?: string; components: string[]; problem?: string; problemKey?: string; problemArgs?: Record<string, string> }> }
+export interface PluginCandidate { name: string; description: string; version: string; targets: PluginTarget[]; components: string[]; problem?: string; problemKey?: string; problemArgs?: Record<string, string>; targetInfo?: Record<string, { manifest: string; version?: string; entry?: string; components: string[]; problem?: string; problemKey?: string; problemArgs?: Record<string, string> }> }
 export interface PluginDiscovery {
   warnings?: string[]; source: string; sourceRef?: string; commit?: string; targetDefinitions?: PluginTargetDefinition[]; digest: string; candidates: PluginCandidate[] }
 export interface PluginPlan { revision: string; blocked: boolean; changes: { name: string; target: PluginTarget; id: string; action: string; message?: string; components?: string[] }[] }

@@ -75,10 +75,10 @@ func (s *Service) materialize(ctx context.Context, b Binding, target string) (st
 		return "", fmt.Errorf("source changed while copying; preview again")
 	}
 	rel := "./content"
-	if candidate.Path != "." {
-		rel += "/" + candidate.Path
+	if p := candidate.pathFor(target); p != "." {
+		rel += "/" + p
 	}
-	catalog := map[string]any{"name": market, "owner": map[string]string{"name": "skillshare"}, "plugins": []any{map[string]any{"name": candidate.Name, "source": rel, "policy": map[string]string{"installation": "AVAILABLE", "authentication": "ON_INSTALL"}, "category": "Productivity"}}}
+	catalog := map[string]any{"name": market, "owner": map[string]string{"name": "skillshare"}, "plugins": []any{pluginEntry(*candidate, rel, target)}}
 	data, err := json.MarshalIndent(catalog, "", "  ")
 	if err != nil {
 		return "", err
@@ -274,4 +274,17 @@ func (s *Service) registered(ctx context.Context, target, id, path string) (bool
 		}
 	}
 	return false, nil
+}
+
+// pluginEntry is the one plugin in the catalog Skillshare writes next to a snapshot. For Claude,
+// an entry that defines its own components (strict: false, skills, lspServers, ...) keeps them.
+func pluginEntry(c Candidate, source, target string) map[string]any {
+	entry := map[string]any{"name": c.Name, "source": source, "policy": map[string]string{"installation": "AVAILABLE", "authentication": "ON_INSTALL"}, "category": "Productivity"}
+	if target != "claude" {
+		return entry
+	}
+	for key, raw := range c.catalogEntry {
+		entry[key] = raw
+	}
+	return entry
 }

@@ -158,7 +158,7 @@ func discoverRoot(root, source string, explicit ...string) (*Discovery, error) {
 		return nil, err
 	}
 	result := &Discovery{TargetDefinitions: TargetDefinitions(), Source: source, Digest: digest, Candidates: []Candidate{}}
-	paths := map[string]string{}
+	seenAt := map[string]int{}
 	// Read all native catalogs; the same package may be advertised more than once.
 	for _, path := range []string{".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json", ".cursor-plugin/marketplace.json", ".github/plugin/marketplace.json", ".plugin/marketplace.json", "marketplace.json"} {
 		data, err := os.ReadFile(filepath.Join(root, path))
@@ -169,11 +169,8 @@ func discoverRoot(root, source string, explicit ...string) (*Discovery, error) {
 			return nil, err
 		}
 		var catalog struct {
-			Name    string `json:"name"`
-			Plugins []struct {
-				Name   string          `json:"name"`
-				Source json.RawMessage `json:"source"`
-			} `json:"plugins"`
+			Name    string                       `json:"name"`
+			Plugins []map[string]json.RawMessage `json:"plugins"`
 		}
 		if err := json.Unmarshal(data, &catalog); err != nil {
 			result.Warnings = append(result.Warnings, fmt.Sprintf("%s: invalid marketplace: %v", path, err))
@@ -184,51 +181,82 @@ func discoverRoot(root, source string, explicit ...string) (*Discovery, error) {
 			continue
 		}
 		seen := map[string]bool{}
-		for _, entry := range catalog.Plugins {
-			if !namePattern.MatchString(entry.Name) || seen[entry.Name] {
-				return nil, fmt.Errorf("invalid or duplicate plugin name: %s", entry.Name)
+		for _, fields := range catalog.Plugins {
+			var name string
+			_ = json.Unmarshal(fields["name"], &name)
+			if !namePattern.MatchString(name) || seen[name] {
+				result.Warnings = append(result.Warnings, fmt.Sprintf("%s: invalid or duplicate plugin name: %s", path, name))
+				continue
 			}
-			seen[entry.Name] = true
+			seen[name] = true
 			var rel string
-			if json.Unmarshal(entry.Source, &rel) != nil {
+			if json.Unmarshal(fields["source"], &rel) != nil {
 				var src struct {
 					Source string `json:"source"`
 					Path   string `json:"path"`
 					URL    string `json:"url"`
 				}
-				_ = json.Unmarshal(entry.Source, &src)
+				_ = json.Unmarshal(fields["source"], &src)
 				if src.Source == "local" {
 					rel = src.Path
 				} else if src.Source == "url" && (src.URL == "." || strings.HasPrefix(src.URL, "./")) {
 					rel = src.URL
 				}
 			}
-			c := Candidate{Name: entry.Name, Marketplace: catalog.Name, Targets: []string{}, Components: []string{}}
-			if rel == "" {
-				c.Problem = "This entry uses an external source. Add its Git repository directly, or install with the native client and import it."
-				c.ProblemKey = "plugins.problem.externalSource"
-			} else {
-				clean := filepath.Clean(rel)
-				if filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
-					return nil, fmt.Errorf("plugin path escapes marketplace: %s", rel)
+			// One broken entry marks its own row; the rest of the marketplace stays installable.
+			c := Candidate{Name: name, Marketplace: catalog.Name, Targets: []string{}, Components: []string{}}
+			clean := filepath.Clean(rel)
+			switch {
+			case rel == "":
+				c.block("plugins.problem.externalSource", "This entry uses an external source. Add its Git repository directly, or install with the native client and import it.", nil)
+			case filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)):
+				c.block("plugins.problem.pathEscapes", "Plugin path escapes the marketplace: "+rel, map[string]string{"path": rel})
+			default:
+				dir := filepath.Join(root, clean)
+				found, err := inspect(dir, explicit...)
+				_, claudeManifest := found.TargetInfo["claude"]
+				switch {
+				case err != nil && path == ".claude-plugin/marketplace.json" && !claudeManifest:
+					// Claude makes plugin.json optional; the catalog entry then names and defines the plugin.
+					found = claudeCatalogCandidate(dir, name, fields)
+				case err != nil:
+					found.block("plugins.problem.noManifest", name+": "+err.Error(), nil)
+				case found.Name != name:
+					// Claude installs under the catalog's name; Codex refuses the mismatch.
+					// ponytail: other Agents are unverified, so they are blocked too; unblock one once its CLI is checked.
+					args := map[string]string{"name": name, "manifest": found.Name}
+					for target, info := range found.TargetInfo {
+						if target != "claude" && info.Problem == "" {
+							info.block("plugins.problem.catalogNameDiffers", "Catalog and manifest names differ for "+name, args)
+							found.TargetInfo[target] = info
+						}
+					}
+					found.collectTargets()
+					if len(found.Targets) == 0 {
+						found.block("plugins.problem.catalogNameDiffers", "Catalog and manifest names differ for "+name, args)
+					}
 				}
-				c, err = inspect(filepath.Join(root, clean), explicit...)
-				if err != nil {
-					return nil, fmt.Errorf("%s: %w", entry.Name, err)
+				c = found
+				c.Name, c.Path, c.Marketplace = name, filepath.ToSlash(clean), catalog.Name
+				if path == ".claude-plugin/marketplace.json" {
+					c.catalogEntry = claudeEntryFields(fields)
 				}
-				if c.Name != entry.Name {
-					return nil, fmt.Errorf("catalog and manifest names differ for %s", entry.Name)
-				}
-				c.Path = filepath.ToSlash(clean)
-				c.Marketplace = catalog.Name
 			}
-			if previous, ok := paths[c.Name]; ok {
-				if previous != c.Path {
-					return nil, fmt.Errorf("catalogs use different paths for %s; choose the plugin directory directly", c.Name)
+			if i, ok := seenAt[c.Name]; ok {
+				// An external entry has no path; a catalog that points inside the source wins over it.
+				// The same folder may be readable by one catalog only (Claude allows no plugin.json).
+				switch previous := result.Candidates[i].Path; {
+				case c.Path == "" || (c.Path == previous && (c.Problem != "" || result.Candidates[i].Problem == "")):
+				case previous == "" || c.Path == previous:
+					result.Candidates[i] = c
+				case result.Candidates[i].Problem != "":
+					result.Candidates[i] = c
+				case c.Problem == "":
+					mergeCatalogPath(&result.Candidates[i], c, catalogOwner[path])
 				}
 				continue
 			}
-			paths[c.Name] = c.Path
+			seenAt[c.Name] = len(result.Candidates)
 			result.Candidates = append(result.Candidates, c)
 		}
 	}
@@ -242,6 +270,25 @@ func discoverRoot(root, source string, explicit ...string) (*Discovery, error) {
 	c.Path = "."
 	result.Candidates = append(result.Candidates, c)
 	return result, nil
+}
+
+// catalogOwner is the Agent each native catalog is written for.
+var catalogOwner = map[string]string{".agents/plugins/marketplace.json": "codex", ".claude-plugin/marketplace.json": "claude", ".cursor-plugin/marketplace.json": "cursor", ".github/plugin/marketplace.json": "copilot", ".plugin/marketplace.json": "copilot"}
+
+// mergeCatalogPath folds in the same plugin that another catalog places in another folder
+// (one folder per Agent). An Agent keeps the folder found first, unless its own catalog says otherwise.
+func mergeCatalogPath(kept *Candidate, c Candidate, owner string) {
+	for target, info := range c.TargetInfo {
+		if existing, ok := kept.TargetInfo[target]; info.Problem != "" || (ok && existing.Problem == "" && target != owner) {
+			continue
+		}
+		info.Path = c.Path
+		kept.TargetInfo[target] = info
+	}
+	if kept.catalogEntry == nil {
+		kept.catalogEntry = c.catalogEntry
+	}
+	kept.collectTargets()
 }
 
 func copyTree(root, dest string) error {

@@ -50,7 +50,9 @@ export default function PluginAddDialog({ onClose, onPreview, initialSource = ''
       const d = await pluginsApi.discover(source, sourceRef || undefined, entry || undefined);
       setDiscovery(d);
       const plugin = known.find((b) => b?.plugin)?.plugin;
-      if (!keep) { setName(d.candidates.find((c) => c.name === plugin)?.name ?? (d.candidates.length === 1 ? d.candidates[0].name : '')); setTargets([]); }
+      // A blocked row cannot be chosen, so it is never chosen for the user either.
+      const open = d.candidates.filter((c) => !c.problem);
+      if (!keep) { setName(open.find((c) => c.name === plugin)?.name ?? (open.length === 1 ? open[0].name : '')); setTargets([]); }
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   };
@@ -96,7 +98,7 @@ export default function PluginAddDialog({ onClose, onPreview, initialSource = ''
                     <span className={`ss-chk rad ${name === c.name ? 'on' : ''}`} />
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className="flex items-center gap-2"><span className="font-mono font-semibold">{c.name}</span>{c.version && <span className="ss-tag">{c.version}</span>}</span>
-                      {(c.problem || c.description) && <span className={`text-[13px] ${c.problem ? 'text-bad' : 'text-ink-2'}`}>{c.problemKey ? t(c.problemKey, undefined, c.problem) : c.problem || c.description}</span>}
+                      {(c.problem || c.description) && <span className={`text-[13px] ${c.problem ? 'text-bad' : 'text-ink-2'}`}>{c.problemKey ? t(c.problemKey, c.problemArgs, c.problem) : c.problem || c.description}</span>}
                       {c.components.length > 0 && <span className="text-xs text-ink-3">{c.components.join(' · ')}</span>}
                     </span>
                     <span className="ss-stack" aria-hidden="true">{c.targets.map((target) => <span key={target} className="ss-at"><AgentIcon target={target} size={13} /></span>)}</span>

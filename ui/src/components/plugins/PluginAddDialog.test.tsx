@@ -55,6 +55,12 @@ describe('PluginAddDialog targets', () => {
     fireEvent.click(screen.getByRole('button', { name: 'plugins.preview' }));
     await waitFor(() => expect(preview).toHaveBeenCalledWith(expect.objectContaining({ sourceRef: 'v1', targets: ['copilot'] })));
   });
+  it('does not pick the only candidate when it cannot be installed', async () => {
+    vi.mocked(pluginsApi.discover).mockResolvedValue({ targetDefinitions: [], source: '/demo', digest: 'abc', candidates: [{ name: 'demo', description: '', version: '1', components: [], targets: ['codex'], problem: 'blocked', problemKey: 'plugins.problem.noManifest' }] });
+    render(<PluginAddDialog initialSource="/demo" onClose={() => {}} onPreview={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'plugins.discover' }));
+    expect(await screen.findByRole('radio')).toHaveAttribute('aria-checked', 'false');
+  });
   const found = (targets: string[]) => ({
     source: '/demo', digest: 'abc',
     targetDefinitions: [

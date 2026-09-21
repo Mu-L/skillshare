@@ -131,26 +131,41 @@ func inspect(root string, explicit ...string) (Candidate, error) {
 	if info, ok := c.TargetInfo["antigravity"]; ok {
 		c.TargetInfo["antigravity-cli"] = info
 	}
-	for target, info := range c.TargetInfo {
-		if info.Problem != "" {
-			continue
-		}
-		c.Targets = append(c.Targets, target)
-		for _, component := range info.Components {
-			if !slices.Contains(c.Components, component) {
-				c.Components = append(c.Components, component)
-			}
-		}
-		if target == "opencode" {
-			c.Entry = info.Entry
-		}
-	}
+	c.collectTargets()
 	if c.Name == "" {
 		return c, fmt.Errorf("no valid supported plugin manifest found; choose a plugin or marketplace directory")
 	}
-	slices.Sort(c.Targets)
-	slices.Sort(c.Components)
 	return c, nil
+}
+
+// claudeCatalogCandidate describes a Claude plugin that has no plugin.json: its catalog entry
+// names it, and its components come from that entry and the default folders.
+// ponytail: Claude only; other clients that read Claude plugins may still require the manifest.
+func claudeCatalogCandidate(dir, name string, fields map[string]json.RawMessage) Candidate {
+	var desc, version string
+	_ = json.Unmarshal(fields["description"], &desc)
+	_ = json.Unmarshal(fields["version"], &version)
+	info := TargetPackage{Manifest: ".claude-plugin/marketplace.json", Version: version, Components: manifestComponents(dir, "claude", fields, []string{})}
+	c := Candidate{Name: name, Description: desc, Version: version, Targets: []string{}, Components: info.Components, TargetInfo: map[string]TargetPackage{}}
+	if len(info.Components) == 0 {
+		c.block("plugins.problem.noManifest", name+": no plugin.json and no components found", nil)
+		return c
+	}
+	c.TargetInfo["claude"] = info
+	c.Targets = []string{"claude"}
+	return c
+}
+
+// claudeEntryFields are the parts of a Claude catalog entry that define the plugin. With a
+// plugin.json they are merged into it, so several entries can share one folder and differ here.
+func claudeEntryFields(fields map[string]json.RawMessage) map[string]json.RawMessage {
+	entry := map[string]json.RawMessage{}
+	for _, key := range []string{"version", "description", "strict", "skills", "commands", "agents", "hooks", "mcpServers", "lspServers"} {
+		if raw, ok := fields[key]; ok {
+			entry[key] = raw
+		}
+	}
+	return entry
 }
 
 func isDirectory(path string) bool { info, err := os.Stat(path); return err == nil && info.IsDir() }
@@ -194,6 +209,10 @@ func manifestComponents(root, target string, m map[string]json.RawMessage, compo
 		if _, err := os.Stat(filepath.Join(root, entry.path)); err == nil && !slices.Contains(components, entry.kind) {
 			components = append(components, entry.kind)
 		}
+	}
+	// Claude loads a root SKILL.md as the plugin's single skill when nothing else names skills.
+	if _, err := os.Stat(filepath.Join(root, "SKILL.md")); err == nil && target == "claude" && !slices.Contains(components, "skills") {
+		components = append(components, "skills")
 	}
 	slices.Sort(components)
 	return components

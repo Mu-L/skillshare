@@ -167,10 +167,10 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 			case "cursor", "antigravity", "antigravity-cli", "copilot", "grok", "kimi", "hermes", "devin":
 				b.ID = c.Name
 			case "pi":
-				b.ID = filepath.Join(s.snapshotPath(b, target), "content", filepath.FromSlash(c.Path))
+				b.ID = filepath.Join(s.snapshotPath(b, target), "content", filepath.FromSlash(c.pathFor(target)))
 			case "opencode":
 				b.Entry = c.Entry
-				b.ID = fileURL(filepath.Join(s.snapshotPath(b, target), "content", filepath.FromSlash(c.Path), c.Entry))
+				b.ID = fileURL(filepath.Join(s.snapshotPath(b, target), "content", filepath.FromSlash(c.pathFor(target)), c.Entry))
 			}
 			change := Change{Name: name, Target: target, ID: b.ID, Binding: b, Action: "install", Components: b.Components}
 			if c.Problem != "" || !slices.Contains(c.Targets, target) {
