@@ -18,7 +18,9 @@ import (
 type mcpOptions struct {
 	name, url, from, file, revision, piExtension string
 	// directTools is nil unless --direct-tools was given.
-	directTools                                  any
+	directTools any
+	// piOptions is nil unless --pi-options was given; an empty object clears them.
+	piOptions                                    map[string]any
 	targets                                      []string
 	command                                      []string
 	sync, dryRun, json, replace, noTUI, disabled bool
@@ -31,7 +33,7 @@ func parseMCPOptions(args []string) (mcpOptions, error) {
 		case "--":
 			o.command = args[i+1:]
 			i = len(args)
-		case "--url", "--target", "--from", "--file", "--revision", "--pi-extension", "--direct-tools":
+		case "--url", "--target", "--from", "--file", "--revision", "--pi-extension", "--direct-tools", "--pi-options":
 			if i+1 == len(args) {
 				return o, fmt.Errorf("%s requires a value", a)
 			}
@@ -48,6 +50,10 @@ func parseMCPOptions(args []string) (mcpOptions, error) {
 					o.directTools = value
 				default:
 					o.directTools = strings.Split(value, ",")
+				}
+			case "--pi-options":
+				if err := json.Unmarshal([]byte(value), &o.piOptions); err != nil || o.piOptions == nil {
+					return o, fmt.Errorf("--pi-options takes a JSON object, such as '{\"excludeTools\":[\"delete_*\"]}'")
 				}
 			case "--url":
 				o.url = value
@@ -304,6 +310,7 @@ Commands:
 Options:
   --pi-extension <package>  pi-mcp-adapter or pi-mcp-extension (requires installation in Pi)
   --direct-tools <value>    pi-mcp-adapter only: true, false, search, or tool names separated by commas
+  --pi-options <json>       pi-mcp-adapter only: other adapter fields as a JSON object; {} clears them
   --target <client>  Receiving client; repeat for multiple clients, or none to keep
                     the server in Skillshare without writing it to any Agent
   --from <client>    Native client ID (see mcp documentation for destinations)

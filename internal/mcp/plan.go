@@ -503,7 +503,7 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 				change.Action, change.Message = "update", "same settings, laid out one field per line"
 				f.changes[name] = withAgentFields(target, current, want)
 				p.state.Entries[key] = ownership{Owner: source.ConfigPath, Target: target, Path: path, Name: name, Hash: wantHash}
-			case currentHash == wantHash && managed && directToolsChanged(current, want):
+			case currentHash == wantHash && managed && agentFieldsChanged(target, current, want):
 				change.Action = "update"
 				f.changes[name] = withAgentFields(target, current, want)
 			case currentHash == wantHash:

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -45,6 +46,24 @@ func (s Server) validateDirectTools(name string) error {
 	return nil
 }
 
+func (s Server) validatePiOptions(name string) error {
+	if len(s.PiOptions) == 0 {
+		return nil
+	}
+	if s.Disabled {
+		return fmt.Errorf("MCP %s: piOptions cannot be set on a disabled entry; it only switches the server off", name)
+	}
+	if s.PiExtension != "pi-mcp-adapter" {
+		return fmt.Errorf("MCP %s: piOptions are pi-mcp-adapter settings; set piExtension: pi-mcp-adapter", name)
+	}
+	for _, key := range append(additionalManagedFields("pi"), "directTools") {
+		if _, set := s.PiOptions[key]; set {
+			return fmt.Errorf("MCP %s: piOptions cannot set %s; Skillshare writes that field from the server's own settings", name, key)
+		}
+	}
+	return nil
+}
+
 // withDirectToolsDefault fills in mcp.directTools for a pi-mcp-adapter server that sets none.
 func (s Server) withDirectToolsDefault(value any) Server {
 	if s.DirectTools == nil && s.PiExtension == "pi-mcp-adapter" && !s.Disabled {
@@ -53,17 +72,22 @@ func (s Server) withDirectToolsDefault(value any) Server {
 	return s
 }
 
-// directToolsChanged reports a directTools the config sets and the file does not have
-// yet. The field stays out of the ownership hash: people added it to Pi's file by hand
-// before Skillshare could set it, and hashing it would turn their next sync into a conflict.
-func directToolsChanged(current, want map[string]any) bool {
-	value, set := want["directTools"]
-	if !set {
-		return false
+// agentFieldsChanged reports a field outside the ownership hash, Pi's directTools or a
+// piOptions key, that the config sets and the file does not have yet. These stay out of
+// the hash: people added them to Pi's file by hand before Skillshare could set them, and
+// hashing them would turn their next sync into a conflict.
+func agentFieldsChanged(target string, current, want map[string]any) bool {
+	for key, value := range want {
+		if slices.Contains(additionalManagedFields(target), key) {
+			continue
+		}
+		a, _ := json.Marshal(value)
+		b, _ := json.Marshal(current[key])
+		if !bytes.Equal(a, b) {
+			return true
+		}
 	}
-	a, _ := json.Marshal(value)
-	b, _ := json.Marshal(current["directTools"])
-	return !bytes.Equal(a, b)
+	return false
 }
 
 // Pi's extensions share a destination, but not transport or credential syntax.
@@ -101,6 +125,7 @@ func renderPi(s Server) (map[string]any, error) {
 			out["transport"] = "streamable-http"
 		}
 	} else {
+		maps.Copy(out, s.PiOptions)
 		if s.DirectTools != nil {
 			out["directTools"] = s.DirectTools
 		}

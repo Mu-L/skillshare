@@ -82,3 +82,34 @@ func TestMCPDirectToolsFlag(t *testing.T) {
 		t.Fatalf("edit to search: %v", got)
 	}
 }
+
+func TestMCPPiOptionsFlag(t *testing.T) {
+	s := mcpTUIService(t)
+	run := func(handler func(*mcp.Service, mcpOptions) error, args ...string) map[string]any {
+		t.Helper()
+		o, err := parseMCPOptions(append(args, "--no-tui"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = handler(s, o); err != nil {
+			t.Fatal(err)
+		}
+		source, err := mcp.LoadSource(s.ConfigPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return source.Servers["tools"].PiOptions
+	}
+	if got := run(runMCPAdd, "tools", "--target", "pi", "--pi-extension", "pi-mcp-adapter", "--pi-options", `{"excludeTools":["*emulator*"]}`, "--url", "https://example.com/mcp"); len(got) != 1 {
+		t.Fatalf("add: %v", got)
+	}
+	if got := run(runMCPEdit, "tools", "--pi-options", `{"approveTools":["delete_*"]}`); len(got) != 1 || got["approveTools"] == nil {
+		t.Fatalf("edit replaces the options: %v", got)
+	}
+	if got := run(runMCPEdit, "tools", "--pi-options", `{}`); len(got) != 0 {
+		t.Fatalf("an empty object clears them: %v", got)
+	}
+	if _, err := parseMCPOptions([]string{"tools", "--pi-options", `["a"]`}); err == nil {
+		t.Fatal("a JSON array was accepted")
+	}
+}

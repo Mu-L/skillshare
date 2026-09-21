@@ -93,6 +93,7 @@ _skillshare() {
                         '1:command:(add edit import list remove restore)' \
                         '--pi-extension[MCP extension installed in Pi]:extension:(pi-mcp-adapter pi-mcp-extension)' \
                         '--direct-tools[pi-mcp-adapter direct tools: true, false, search or tool names]:value:(true false search)' \
+                        '--pi-options[pi-mcp-adapter only: other adapter fields as a JSON object]:json:' \
                         '--target[Receiving client]:target:' \
                         '--from[Import client]:target:' \
                         '--url[MCP endpoint]:url:' \

@@ -80,6 +80,9 @@ type Server struct {
 	// DirectTools is pi-mcp-adapter's directTools: true, false, "search" or a list of
 	// tool names. Only Pi receives it.
 	DirectTools any `yaml:"directTools,omitempty" json:"directTools,omitempty"`
+	// PiOptions are pi-mcp-adapter fields Skillshare has no setting for, such as
+	// excludeTools. They are written into Pi's entry as given.
+	PiOptions map[string]any `yaml:"piOptions,omitempty" json:"piOptions,omitempty"`
 	// Disabled is the whole entry: it turns off, for one project, a server that the
 	// Agent's global config defines. Unselecting an Agent already covers a server
 	// Skillshare defines, so a disabled server carries no command or url.
@@ -144,6 +147,9 @@ func (s Server) Validate(name string) error {
 		return fmt.Errorf("invalid MCP name %q: use letters, digits, dots, underscores or hyphens", name)
 	}
 	if err := s.validateDirectTools(name); err != nil {
+		return err
+	}
+	if err := s.validatePiOptions(name); err != nil {
 		return err
 	}
 	if s.Disabled {

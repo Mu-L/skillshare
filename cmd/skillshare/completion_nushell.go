@@ -55,6 +55,7 @@ export extern "skillshare mcp" [
     name?: string
     --pi-extension: string # pi-mcp-adapter or pi-mcp-extension
     --direct-tools: string # pi-mcp-adapter only: true, false, search or tool names
+    --pi-options: string # pi-mcp-adapter only: other adapter fields as a JSON object
     --target: string
     --from: string
     --url: string
