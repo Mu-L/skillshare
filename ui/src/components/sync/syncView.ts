@@ -105,8 +105,8 @@ export function mcpGroups(plan: MCPPlan | null | undefined): ChangeGroup[] {
       part: 'mcp',
       name: c.name,
       icon: MCP_ICON[c.action],
-      // In the off list, adding a name turns the server off and removing it turns it back on.
-      text: c.action === 'conflict' ? null : file.offListFor && c.action !== 'update' ? `sync.row.mcp.offList.${c.action}` : `sync.row.mcp.${c.action}`,
+      // A switch-only entry adds or removes no server: it turns one off for a project, or back on.
+      text: c.action === 'conflict' ? null : c.switch && c.action !== 'update' ? `sync.row.mcp.switch.${c.action}` : `sync.row.mcp.${c.action}`,
       detail: c.message,
       counts: c.action !== 'conflict',
     })),

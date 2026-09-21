@@ -38,7 +38,8 @@ export interface MCPPlan {
   revision: string;
   sourcePath: string;
   blocked: boolean;
-  changes: { target: string; path: string; name: string; root?: string; action: string; message?: string }[];
+  /** `switch`: the entry only turns a global server off for one project, so adding it turns the server off there. */
+  changes: { target: string; path: string; name: string; root?: string; switch?: boolean; action: string; message?: string }[];
 }
 export interface MCPResult { plan?: MCPPlan; applied: string[]; backupIds: string[] }
 export interface MCPCandidate { name: string; server: MCPServer; problems: string[]; warnings: string[]; from?: string }

@@ -19,9 +19,21 @@ type Change struct {
 	Name   string `json:"name"`
 	// Root is the mcp.projects folder this change belongs to, empty for a global one. The
 	// path usually says, but Claude Code's per-project off list lives in the global file.
-	Root    string `json:"root,omitempty"`
+	Root string `json:"root,omitempty"`
+	// Switch marks an entry that only turns a global server off for one project. Adding it
+	// turns the server off there and removing it turns it back on; no server comes or goes.
+	Switch  bool   `json:"switch,omitempty"`
 	Action  string `json:"action"`
 	Message string `json:"message,omitempty"`
+}
+
+// switchOnly reports an entry holding nothing but the switch renderDisabled writes. It reads
+// the entry rather than the source, which has nothing left to say once the switch is removed.
+func switchOnly(target string, entry map[string]any) bool {
+	if strings.HasPrefix(target, claudeOffPrefix) {
+		return true
+	}
+	return len(entry) == 1 && (entry["enabled"] == false || entry["disabled"] == true)
 }
 
 // changeRoot is the mcp.projects folder a file plan writes for. Claude Code's off list
@@ -418,6 +430,9 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 				p.state.Entries[key] = owned
 			}
 			change := Change{Target: shownTarget(target), Path: path, Name: name, Root: changeRoot(target, path, projectRoots)}
+			if change.Switch = switchOnly(target, want); want == nil {
+				change.Switch = switchOnly(target, current)
+			}
 			switch {
 			case managed && owned.Owner != source.ConfigPath:
 				change.Action, change.Message = "conflict", "managed by another Skillshare config: "+owned.Owner

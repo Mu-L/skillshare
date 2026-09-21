@@ -88,12 +88,17 @@ describe('runSync', () => {
 });
 
 describe('mcpGroups', () => {
-  it("says a change to a project's Claude off list turns the server on or off there", () => {
-    const plan = { revision: 'r', sourcePath: '', blocked: false, changes: [
-      { target: 'claude', path: '/home/u/.claude.json', name: 'context7', root: '/work/app', action: 'remove' },
-      { target: 'claude', path: '/home/u/.claude.json', name: 'github', root: '/work/app', action: 'add' },
-    ] };
-    const [group] = mcpGroups(plan);
-    expect([group.project, ...group.rows.map((r) => r.text)]).toEqual(['/work/app', 'sync.row.mcp.offList.remove', 'sync.row.mcp.offList.add']);
+  const plan = { revision: 'r', sourcePath: '', blocked: false, changes: [
+    { target: 'claude', path: '/home/u/.claude.json', name: 'context7', root: '/work/app', switch: true, action: 'remove' },
+    { target: 'opencode', path: '/work/app/opencode.json', name: 'context7', root: '/work/app', switch: true, action: 'add' },
+    { target: 'opencode', path: '/work/app/opencode.json', name: 'own', root: '/work/app', action: 'add' },
+  ] };
+
+  it('says a switch-only entry turns the server off or back on in the project', () => {
+    expect(mcpGroups(plan).flatMap((g) => g.rows.map((r) => r.text))).toEqual(['sync.row.mcp.switch.remove', 'sync.row.mcp.switch.add', 'sync.row.mcp.add']);
+  });
+
+  it("names the project on Claude's off list, which sits in the global file", () => {
+    expect(mcpGroups(plan).map((g) => g.project)).toEqual(['/work/app', undefined]);
   });
 });

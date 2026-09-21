@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -251,5 +252,41 @@ func TestClaudeLocalScopeShadowIsReported(t *testing.T) {
 		if shadowed := strings.Contains(c.Message, "local scope"); shadowed != (c.Target == "claude") {
 			t.Fatalf("%s: %q", c.Target, c.Message)
 		}
+	}
+}
+
+// The plan says which changes only flip a switch, so a review can say "turned off here"
+// rather than "new server entry". A removal has no source entry left to ask.
+func TestPlanMarksSwitchOnlyChanges(t *testing.T) {
+	s := testService(t)
+	s.ProjectRoot = filepath.Join(s.Home, "project")
+	marks := func(source, action string) map[string]bool {
+		t.Helper()
+		if err := os.WriteFile(s.ConfigPath, []byte(source), 0600); err != nil {
+			t.Fatal(err)
+		}
+		plan, err := s.Preview()
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := map[string]bool{}
+		for _, c := range plan.Changes {
+			if c.Action != action {
+				t.Fatalf("%s %s: %s, want %s", c.Target, c.Name, c.Action, action)
+			}
+			got[c.Target+"/"+c.Name] = c.Switch
+		}
+		if _, err = s.Apply(plan.Revision); err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	want := map[string]bool{"opencode/docs": true, "pi/docs": true, "claude/docs": true, "opencode/own": false}
+	added := marks("mcp:\n  servers:\n    docs:\n      disabled: true\n      piExtension: pi-mcp-adapter\n      targets: [opencode, pi, claude]\n    own:\n      command: tool\n      targets: [opencode]\n", "add")
+	if !maps.Equal(added, want) {
+		t.Fatalf("add: got %v want %v", added, want)
+	}
+	if removed := marks("mcp:\n  servers: {}\n", "remove"); !maps.Equal(removed, want) {
+		t.Fatalf("remove: got %v want %v", removed, want)
 	}
 }
