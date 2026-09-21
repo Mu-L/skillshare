@@ -130,6 +130,18 @@ func TestDiscoverClaudeEntryWithoutManifest(t *testing.T) {
 	}
 }
 
+func TestDiscoverScopedPackageNameKeepsPi(t *testing.T) {
+	root := fixture(t)
+	writeFile(t, root, "package.json", `{"name":"@owner/demo","pi":{"skills":["./skills"]}}`)
+	d, err := Discover(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := d.Candidates[0]; c.Name != "demo" || !slices.Contains(c.Targets, "pi") {
+		t.Fatalf("scoped npm name blocked Pi: %+v", c.TargetInfo["pi"])
+	}
+}
+
 func TestDiscoverClaudeEntryThatIsOneSkill(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, root, ".claude-plugin/marketplace.json", `{"name":"market","plugins":[{"name":"tool","source":"./tool","strict":false}]}`)

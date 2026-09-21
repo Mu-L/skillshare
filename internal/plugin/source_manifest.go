@@ -100,7 +100,8 @@ func inspect(root string, explicit ...string) (Candidate, error) {
 		if !namePattern.MatchString(name) {
 			info.block("plugins.problem.manifestName", spec.path+" requires a valid plugin name", map[string]string{"manifest": spec.path})
 		}
-		if c.Name != "" && c.Name != name {
+		// An npm name is often scoped (@owner/pkg), and Pi and OpenCode install by path, not by it.
+		if c.Name != "" && c.Name != name && spec.path != "package.json" {
 			info.block("plugins.problem.nameDiffers", "Native manifest name differs from "+c.Name, map[string]string{"name": c.Name})
 		}
 		if info.Problem == "" {
