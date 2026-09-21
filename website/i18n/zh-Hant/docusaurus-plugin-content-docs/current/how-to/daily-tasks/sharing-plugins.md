@@ -55,6 +55,7 @@ skillshare plugin import review@team --from claude --no-tui
 
 - 勾選它，然後同步以安裝缺少的 plugin。
 - 開啟一個 plugin 的列也會列出其來源有提供套件、但尚未勾選的其他 Agents。勾選其中一個會開啟安裝預覽。來源無法提供的 Agents 會在該列末尾以數字統計，點選該數字可查看原因。
+- 新增 plugin 時可以一個 Agent 都不勾。它會留在 Skillshare 中並顯示 **尚未選擇 Agent**，直到你在該列勾選 Agent 之前都不會安裝任何東西。
 - 取消勾選它，然後同步以移除該受管理的安裝。
 - 套件定義仍會保留，因此之後可以再次選取該 target。
 - 在 Claude 或 Codex 內部被停用的 plugin 仍會維持停用；請在該工具中管理原生設定。

@@ -59,6 +59,18 @@ func (s *Service) Apply(ctx context.Context, r Request, revision string) (*Resul
 		if pack.Bindings == nil {
 			pack.Bindings = map[string]Binding{}
 		}
+		if c.Target == "" {
+			if c.Action == "forget" {
+				delete(d.packages, c.Name)
+			} else {
+				pack.Source, pack.SourceRef, pack.Plugin, pack.Entry = c.Binding.Source, c.Binding.SourceRef, c.Binding.Plugin, c.Binding.Entry
+				d.packages[c.Name] = pack
+			}
+			continue
+		}
+		if r.Action == "add" && pack.Source == "" && c.Binding.Source != "" {
+			pack.Source, pack.SourceRef, pack.Plugin, pack.Entry = c.Binding.Source, c.Binding.SourceRef, c.Binding.Plugin, r.Entry
+		}
 		b := c.Binding
 		b.Pending = c.Action
 		if c.Action == "import" || c.Action == "selection" {
@@ -76,6 +88,14 @@ func (s *Service) Apply(ctx context.Context, r Request, revision string) (*Resul
 	var failures []error
 	for _, c := range p.Changes {
 		if c.Action == "noop" {
+			continue
+		}
+		if c.Target == "" {
+			outcome := Outcome{Name: c.Name, Status: "saved", Message: "Added to Skillshare. Choose Agents when you want to install it."}
+			if c.Action == "forget" {
+				outcome.Status, outcome.Message = "removed", "Removed from Skillshare."
+			}
+			result.Results = append(result.Results, outcome)
 			continue
 		}
 		b := d.packages[c.Name].Bindings[c.Target]
@@ -107,7 +127,8 @@ func (s *Service) Apply(ctx context.Context, r Request, revision string) (*Resul
 					outcome.Message = "Existing installation adopted without changing its enabled state."
 				}
 			}
-			if len(pack.Bindings) == 0 {
+			// A package with a recorded source stays managed without Agents until it is removed whole.
+			if len(pack.Bindings) == 0 && (pack.Source == "" || (r.Action == "remove" && len(r.Targets) == 0)) {
 				delete(d.packages, c.Name)
 			} else {
 				d.packages[c.Name] = pack

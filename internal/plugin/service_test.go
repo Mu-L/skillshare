@@ -221,3 +221,85 @@ func TestSyncSelectionDoesNotToggleNativeEnabledState(t *testing.T) {
 		t.Fatalf("unexpected native mutation: %v", mutations)
 	}
 }
+
+func TestAddWithoutTargetsKeepsPackageForLater(t *testing.T) {
+	root := fixture(t)
+	s, installed, mutations := fakeClaude(t)
+	apply := func(r Request) *Plan {
+		t.Helper()
+		p, err := s.Preview(context.Background(), r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.Apply(context.Background(), r, p.Revision); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	p := apply(Request{Action: "add", Source: root, Plugin: "demo"})
+	if len(p.Changes) != 1 || p.Changes[0].Action != "record" || *mutations != 0 {
+		t.Fatalf("add without targets touched an Agent: %+v %d", p.Changes, *mutations)
+	}
+	d, _ := s.load()
+	if pack, ok := d.packages["demo"]; !ok || pack.Source == "" || len(pack.Bindings) != 0 {
+		t.Fatalf("package not kept for later: %+v", d.packages)
+	}
+	apply(Request{Action: "add", Name: "demo", Source: root, Plugin: "demo", Targets: []string{"claude"}})
+	apply(Request{Action: "remove", Name: "demo", Targets: []string{"claude"}})
+	if d, _ = s.load(); len(*installed) != 0 || d.packages["demo"].Source == "" {
+		t.Fatalf("removing the last Agent dropped the package: %+v %+v", *installed, d.packages)
+	}
+	apply(Request{Action: "remove", Name: "demo"})
+	if d, _ = s.load(); len(d.packages) != 0 {
+		t.Fatalf("remove kept the package: %+v", d.packages)
+	}
+}
+
+// fakeClaude answers like a Claude Code CLI with an empty inventory, and counts the calls that change it.
+func fakeClaude(t *testing.T) (*Service, *[]Installed, *int) {
+	home := t.TempDir()
+	installed := []Installed{}
+	mutations := 0
+	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state"), Run: func(ctx context.Context, dir, bin string, args ...string) ([]byte, error) {
+		joined := strings.Join(args, " ")
+		switch {
+		case joined == "--version":
+			return []byte("test-version"), nil
+		case strings.Contains(joined, "--help"):
+			return []byte("install add remove uninstall update enable disable --json --scope"), nil
+		case joined == "plugin list --json":
+			return json.Marshal(installed)
+		case joined == "plugin marketplace list --json":
+			return []byte(`[]`), nil
+		}
+		mutations++
+		if len(args) > 2 && args[1] == "install" {
+			installed = append(installed, Installed{ID: args[2], PluginID: args[2], Installed: true, Enabled: true, Scope: "user"})
+		}
+		if len(args) > 2 && args[1] == "uninstall" {
+			installed = []Installed{}
+		}
+		return []byte(`{}`), nil
+	}}
+	return s, &installed, &mutations
+}
+
+func TestCheckReportsTheSourceVersion(t *testing.T) {
+	root := fixture(t)
+	s, _, _ := fakeClaude(t)
+	r := Request{Action: "add", Source: root, Plugin: "demo", Targets: []string{"claude"}}
+	p, err := s.Preview(context.Background(), r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Apply(context.Background(), r, p.Revision); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".claude-plugin/plugin.json"), []byte(`{"name":"demo","version":"1.1.0"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	p, err = s.Preview(context.Background(), Request{Action: "check"})
+	if err != nil || len(p.Changes) != 1 || p.Changes[0].Action != "update-available" || p.Changes[0].Binding.Version != "1.1.0" {
+		t.Fatalf("check did not report the new version: %+v %v", p, err)
+	}
+}

@@ -12,6 +12,7 @@ skillshare plugin                         # Interactive manager
 skillshare plugin add                     # Source → plugin → targets → review
 skillshare plugin discover ./my-plugin --json
 skillshare plugin add ./my-plugin --target claude --target codex --no-tui
+skillshare plugin add ./my-plugin --no-tui   # 先交给 Skillshare 管理，之后再选 target
 skillshare plugin import review@team --from claude --no-tui
 skillshare plugin list --json
 skillshare plugin inspect review --json
@@ -27,6 +28,8 @@ skillshare plugin remove review --no-tui
 `enable` 和 `disable` 改变的是 **Skillshare 的同步选择**，而不是 Agent 的原生启用状态。取消选择某个
 target 会保存该选择。下一次 `sync plugins` 会移除其受管理的安装，但保留定义。再次选择它
 则允许下一次 sync 重新安装。未受管理的 plugins 不受影响。
+
+`add` 不带 `--target`（或在交互选单中什么都不选）会把 plugin 交给 Skillshare 管理，但不安装到任何地方。之后可以用相同的 source 与 `--name` 加上 target，或在 dashboard 中从该 plugin 的行勾选；安装的是当时的 source 内容。这类 plugin 在最后一个 target 被移除后仍会保留。不带 `--target` 的 `remove NAME` 会把它从 Skillshare 移除。
 
 ## 命令
 

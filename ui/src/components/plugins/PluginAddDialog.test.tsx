@@ -24,6 +24,14 @@ describe('PluginAddDialog targets', () => {
     fireEvent.click(screen.getByRole('button', { name: 'plugins.preview' }));
     await waitFor(() => expect(preview).toHaveBeenCalledWith(expect.objectContaining({ targets: ['antigravity'] })));
   });
+  it('previews with no Agent chosen, so the plugin is only added to Skillshare', async () => {
+    const preview = vi.fn().mockResolvedValue(undefined);
+    render(<PluginAddDialog initialSource="/demo" onClose={() => {}} onPreview={preview} />);
+    fireEvent.click(screen.getByRole('button', { name: 'plugins.discover' }));
+    await screen.findByRole('checkbox', { name: 'Pi' });
+    fireEvent.click(screen.getByRole('button', { name: 'plugins.preview' }));
+    await waitFor(() => expect(preview).toHaveBeenCalledWith(expect.objectContaining({ plugin: 'demo', targets: [] })));
+  });
   it('moves global-only Cursor out of the picker in project mode, with its reason', async () => {
     context.isProjectMode = true;
     render(<PluginAddDialog initialSource="/demo" onClose={() => {}} onPreview={vi.fn()} />);

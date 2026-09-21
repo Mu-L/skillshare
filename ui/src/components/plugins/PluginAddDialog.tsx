@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { pluginsApi, targetMap, type PluginBinding, type PluginDiscovery, type PluginRequest, type PluginTarget } from '../../api/plugins';
+import { pluginsApi, targetMap, type PluginBinding, type PluginDiscovery, type PluginPackage, type PluginRequest, type PluginTarget } from '../../api/plugins';
 import { Check, ChevronDown, ChevronRight, Search, X } from 'lucide-react';
 import AgentIcon from '../AgentIcon';
 import { agentReasons } from './agentReasons';
@@ -20,12 +20,14 @@ interface Props {
   initialName?: string;
   /** What the plugin is bound to already. With it the dialog adds Agents to that plugin: the source is known, so it opens on discovery's answer. */
   bound?: Partial<Record<PluginTarget, PluginBinding>>;
+  /** What was recorded when the plugin was added, for a plugin that has no Agent yet. */
+  recorded?: Pick<PluginPackage, 'sourceRef' | 'entry' | 'plugin'>;
 }
 
-export default function PluginAddDialog({ onClose, onPreview, initialSource = '', initialName = '', bound }: Props) {
+export default function PluginAddDialog({ onClose, onPreview, initialSource = '', initialName = '', bound, recorded }: Props) {
   const t = useT();
   const { isProjectMode } = useAppContext();
-  const known = Object.values(bound ?? {});
+  const known = [...Object.values(bound ?? {}), recorded];
   const extending = !!bound && !!initialSource;
   const [sourceRef, setSourceRef] = useState(known.find((b) => b?.sourceRef)?.sourceRef ?? '');
   const [entry, setEntry] = useState(known.find((b) => b?.entry)?.entry ?? '');
@@ -164,9 +166,11 @@ export default function PluginAddDialog({ onClose, onPreview, initialSource = ''
       </div>
       <div className="df">
         {discovery && !extending && <Button variant="ghost" className="mr-auto" disabled={busy} onClick={() => { setDiscovery(null); setError(''); setEntry(''); setEntryOpen(false); }}>{t('common.back')}</Button>}
+        {/* Beside the button it explains, and only while it applies: nothing ticked adds the plugin without installing it. */}
+        {selected && !selected.problem && !extending && !targets.length && <span className="text-xs text-ink-3">{t('plugins.targetsOptional')}</span>}
         <Button variant="ghost" disabled={busy} onClick={onClose}>{t('common.cancel')}</Button>
         {discovery
-          ? <Button loading={busy} disabled={!targets.length || !!selected?.problem} onClick={() => void preview()}>{t('plugins.preview')}</Button>
+          ? <Button loading={busy} disabled={!selected || !!selected.problem || (extending && !targets.length)} onClick={() => void preview()}>{t('plugins.preview')}</Button>
           : <Button type="submit" form="plugin-source" loading={busy} disabled={!source.trim()}><Search size={15} />{t('plugins.discover')}</Button>}
       </div>
     </DialogShell>

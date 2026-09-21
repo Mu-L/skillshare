@@ -181,6 +181,9 @@ func executePlugin(s *plugin.Service, o pluginOptions) error {
 			fmt.Println("No plugins managed yet. Run 'skillshare plugin add' or 'skillshare plugin import'.")
 		}
 		for name, p := range inventory.Packages {
+			if len(p.Bindings) == 0 {
+				fmt.Printf("%s · no targets · %s\n", name, p.Source)
+			}
 			for _, target := range plugin.Targets {
 				if b, ok := p.Bindings[target]; ok {
 					state := "not installed"
@@ -248,7 +251,7 @@ func executePlugin(s *plugin.Service, o pluginOptions) error {
 			}
 		} else {
 			for _, r := range result.Results {
-				fmt.Printf("%s · %s · %s\n%s\n", r.Name, r.Target, r.Status, r.Message)
+				fmt.Printf("%s · %s · %s\n%s\n", r.Name, pluginTargetLabel(r.Target), r.Status, r.Message)
 			}
 		}
 	}
@@ -257,7 +260,7 @@ func executePlugin(s *plugin.Service, o pluginOptions) error {
 
 func printPluginPlan(p *plugin.Plan) {
 	for _, c := range p.Changes {
-		fmt.Printf("%s · %s · %s · %s\n", c.Name, c.Target, c.Action, c.ID)
+		fmt.Printf("%s · %s · %s · %s\n", c.Name, pluginTargetLabel(c.Target), c.Action, c.ID)
 		if len(c.Components) > 0 {
 			fmt.Println("Includes:", strings.Join(c.Components, ", "))
 		}
@@ -266,4 +269,12 @@ func printPluginPlan(p *plugin.Plan) {
 		}
 	}
 	fmt.Println("Revision:", p.Revision)
+}
+
+// pluginTargetLabel names package-level changes, which apply to Skillshare rather than an Agent.
+func pluginTargetLabel(target string) string {
+	if target == "" {
+		return "skillshare"
+	}
+	return target
 }

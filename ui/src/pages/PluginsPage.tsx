@@ -15,7 +15,7 @@ import { RailLayout, RailLine, SyncBox } from '../components/StatusRail';
 import PluginAddDialog from '../components/plugins/PluginAddDialog';
 import PluginFilesDialog from '../components/plugins/PluginFilesDialog';
 import PluginAgents from '../components/plugins/PluginAgents';
-import PluginList from '../components/plugins/PluginList';
+import PluginList, { VersionChange } from '../components/plugins/PluginList';
 import { useT } from '../i18n';
 import { queryKeys } from '../lib/queryKeys';
 
@@ -30,7 +30,7 @@ export default function PluginsPage() {
   const base = quick.data ?? full.data;
   const data = base && { ...base, hosts: full.data?.hosts ?? [] };
   const error = quick.error ?? full.error;
-  const [adding, setAdding] = useState<{ source?: string; name?: string; bound?: PluginInventory['packages'][string]['bindings'] } | null>(null);
+  const [adding, setAdding] = useState<{ source?: string; name?: string; bound?: PluginInventory['packages'][string]['bindings']; recorded?: PluginInventory['packages'][string] } | null>(null);
   const [importing, setImporting] = useState(false);
   const [browsing, setBrowsing] = useState<{ name: string; source?: string } | null>(null);
   const [review, setReview] = useState<{ request: PluginRequest; plan: PluginPlan } | null>(null);
@@ -38,8 +38,11 @@ export default function PluginsPage() {
   const [working, setWorking] = useState('');
   const [failure, setFailure] = useState('');
   const [result, setResult] = useState<PluginResult | null>(null);
+  // The source version each plugin could update to, from the last check.
+  const [updates, setUpdates] = useState<Record<string, string>>({});
   const [menu, setMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
-  const agentLabel = (target: string) => pluginTargets[target]?.label ?? target;
+  // A change with no Agent is to Skillshare itself: the plugin was only added to it, or removed from it.
+  const agentLabel = (target: string) => pluginTargets[target]?.label ?? (target || t('plugins.skillshareOnly'));
   // The backend keys its fixed sentences; a message it assembled at runtime has no key
   // and is shown as it came, which is also what the CLI prints.
   const message = (key: string | undefined, text: string | undefined) => (key ? t(key, undefined, text) : text ?? '');
@@ -47,7 +50,11 @@ export default function PluginsPage() {
   // `key` names the control that started this, so only it shows a spinner.
   const preview = async (request: PluginRequest, key = '') => {
     setBusy(true); setWorking(key); setFailure(''); setResult(null);
-    try { const plan = await pluginsApi.preview(request); setReview({ request, plan }); setAdding(null); setImporting(false); }
+    try {
+      const plan = await pluginsApi.preview(request);
+      if (request.action === 'check') setUpdates(Object.fromEntries(plan.changes.filter((c) => c.action === 'update-available' && c.binding?.version).map((c) => [c.name, c.binding!.version!])));
+      setReview({ request, plan }); setAdding(null); setImporting(false);
+    }
     catch (e) { setFailure((e as Error).message); throw e; }
     finally { setBusy(false); setWorking(''); }
   };
@@ -73,7 +80,7 @@ export default function PluginsPage() {
   if (!data && !error) return <PageSkeleton />;
   const actionText = (action: string) => t(({
     noop: 'plugins.noChanges', install: 'resources.install', import: 'plugins.import', update: 'plugins.update',
-    remove: 'plugins.remove', uninstall: 'plugins.remove', forget: 'plugins.remove', selection: 'common.save',
+    remove: 'plugins.remove', uninstall: 'plugins.remove', forget: 'plugins.remove', selection: 'common.save', record: 'plugins.record',
     blocked: 'plugins.blocked', 'update-available': 'plugins.update', 'native-check': 'plugins.unverified',
   } as Record<string, string>)[action] ?? 'plugins.pending');
   const pluginTargets = targetMap(data?.targetDefinitions);
@@ -159,12 +166,12 @@ export default function PluginsPage() {
         {packages.length === 0 ? (
           <EmptyState icon={Package} title={t('plugins.empty')} description={t('plugins.emptyHelp')} action={addActions} />
         ) : (
-          <PluginList inventory={data} busy={busy} working={working} onToggle={(name, target, on) => void selectTarget(name, target, on)} onMenu={openMenu} onAdd={begin} onBlocked={(name, source) => setAdding({ name, source, bound: data.packages[name]?.bindings })} />
+          <PluginList inventory={data} updates={updates} busy={busy} working={working} onToggle={(name, target, on) => void selectTarget(name, target, on)} onMenu={openMenu} onAdd={begin} onBlocked={(name, source) => setAdding({ name, source, bound: data.packages[name]?.bindings, recorded: data.packages[name] })} />
         )}
       </RailLayout>}
 
       {browsing && <PluginFilesDialog name={browsing.name} source={browsing.source} onClose={() => setBrowsing(null)} />}
-      {adding && <PluginAddDialog initialName={adding.name} initialSource={adding.source} bound={adding.bound} onClose={() => setAdding(null)} onPreview={preview} />}
+      {adding && <PluginAddDialog initialName={adding.name} initialSource={adding.source} bound={adding.bound} recorded={adding.recorded} onClose={() => setAdding(null)} onPreview={preview} />}
 
       <DialogShell open={importing} onClose={() => setImporting(false)} preventClose={busy} ariaLabel={t('plugins.import')} maxWidth="2xl" padding="none">
         <div className="dh">
@@ -206,10 +213,10 @@ export default function PluginsPage() {
             <div className="ss-list">
               {review?.plan.changes.map((c) => (
                 <div key={`${c.name}:${c.target}`} className="ss-r">
-                  <span className="ss-at"><AgentIcon target={c.target} size={17} /></span>
+                  <span className="ss-at">{c.target ? <AgentIcon target={c.target} size={17} /> : <Package size={15} />}</span>
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="flex items-center gap-2"><span className="font-mono font-semibold">{c.name}</span><span className="text-[13px] text-ink-2">{pluginTargets[c.target]?.label ?? c.target}</span></span>
-                    {(c.message || c.components?.length) && <span className="text-xs text-ink-3">{c.message || c.components!.join(' · ')}</span>}
+                    <span className="flex items-center gap-2"><span className="font-mono font-semibold">{c.name}</span><span className="text-[13px] text-ink-2">{agentLabel(c.target)}</span><VersionChange from={data?.packages[c.name]?.bindings[c.target]?.version} to={c.action.startsWith('update') ? c.binding?.version : undefined} /></span>
+                    {c.action === 'record' ? <span className="text-xs text-ink-3">{t('plugins.recordHelp')}</span> : (c.message || c.components?.length) && <span className="text-xs text-ink-3">{c.message || c.components!.join(' · ')}</span>}
                   </span>
                   <span className={`ss-tag ${actionTone(c.action)}`}>{actionText(c.action)}</span>
                 </div>

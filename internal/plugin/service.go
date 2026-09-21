@@ -52,8 +52,8 @@ func (s *Service) validate(r Request) error {
 		}
 		seen[t] = true
 	}
-	if r.Action == "add" && (r.Source == "" || len(r.Targets) == 0) {
-		return fmt.Errorf("add requires a source and at least one target")
+	if r.Action == "add" && r.Source == "" {
+		return fmt.Errorf("add requires a source")
 	}
 	if r.Action == "import" && (!slices.Contains(Targets, r.From) || !validTargetID(r.From, r.Plugin)) {
 		return fmt.Errorf("import requires --from <target> and a native plugin identifier")
@@ -160,6 +160,26 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 		if name == "" {
 			name = c.Name
 		}
+		pack, exists := d.packages[name]
+		otherSource := pack.Source != "" && (pack.Source != discovered.Source || pack.Plugin != c.Name || pack.SourceRef != discovered.SourceRef)
+		if len(r.Targets) == 0 {
+			// Only record the package; Agents are bound later from the same source.
+			change := Change{Name: name, Action: "record", Components: c.Components, Message: "Add to Skillshare only; choose Agents later.", Binding: Binding{Source: discovered.Source, SourceRef: discovered.SourceRef, Plugin: c.Name, Entry: r.Entry}}
+			if c.Problem != "" || len(c.Targets) == 0 {
+				change.Action = "blocked"
+				change.Message = c.Problem
+				if change.Message == "" {
+					change.Message = "No Agent can use this plugin."
+				}
+			} else if otherSource {
+				change.Action = "blocked"
+				change.Message = "Package already uses a different source; choose another name or remove it first."
+			} else if exists {
+				change.Action = "noop"
+			}
+			p.Blocked = change.Action == "blocked"
+			p.Changes = append(p.Changes, change)
+		}
 		for _, target := range slices.Compact(slices.Sorted(slices.Values(r.Targets))) {
 			market := "skillshare-" + hash([]byte(s.ConfigPath + "\x00" + discovered.Source + "\x00" + c.Name + "\x00" + target))[:16]
 			b := Binding{ID: c.Name + "@" + market, Source: discovered.Source, SourceRef: discovered.SourceRef, Commit: discovered.Commit, Plugin: c.Name, Digest: discovered.Digest, Version: c.TargetInfo[target].Version, Components: c.TargetInfo[target].Components}
@@ -182,6 +202,10 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 				if change.Message == "" {
 					change.Message = "No native manifest for this target; plugin components will not be silently converted or omitted."
 				}
+			}
+			if otherSource && change.Action != "blocked" {
+				change.Action = "blocked"
+				change.Message = "Package already uses a different source; choose another name or remove it first."
 			}
 			if old, ok := d.packages[name].Bindings[target]; ok {
 				if old.Source == b.Source && old.Plugin == b.Plugin && old.SourceRef == b.SourceRef {
@@ -342,6 +366,8 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 					} else if r.Action == "check" {
 						c.Action = "update-available"
 						c.Message = "Source content changed; review an update before applying."
+						// Check is read-only; the binding carries the source's version so the change can show old → new.
+						c.Binding.Version = candidate.TargetInfo[target].Version
 					} else {
 						c.Binding.Digest = disc.Digest
 						c.Binding.Commit = disc.Commit
@@ -360,12 +386,18 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 					appendChange(c)
 				}
 			}
+			if r.Action == "remove" && len(r.Targets) == 0 && len(d.packages[name].Bindings) == 0 {
+				p.Changes = append(p.Changes, Change{Name: name, Action: "forget", Message: "Remove from Skillshare; no Agent has it."})
+			}
 		}
 	}
 
 	// A native installation can have only one owner in this configuration.
 	for i := range p.Changes {
 		c := &p.Changes[i]
+		if c.Target == "" {
+			continue
+		}
 		for name, pack := range d.packages {
 			if name != c.Name && pack.Bindings[c.Target].ID == c.ID {
 				c.Action = "blocked"

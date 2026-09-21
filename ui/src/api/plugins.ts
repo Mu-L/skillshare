@@ -7,9 +7,11 @@ export type PluginAction = 'add' | 'import' | 'sync' | 'check' | 'update' | 'rem
 export interface PluginRequest { action: PluginAction; name?: string; source?: string; sourceRef?: string; entry?: string; plugin?: string; targets?: PluginTarget[]; from?: PluginTarget }
 export interface PluginBinding { id: string; source?: string; sourceRef?: string; commit?: string; entry?: string; plugin?: string; digest?: string; version?: string; pending?: string; sync?: boolean; components?: string[] }
 export interface NativePlugin { id: string; version?: string; enabled: boolean; enabledKnown?: boolean; scope?: string; filtered?: boolean }
+export interface PluginPackage { source?: string; sourceRef?: string; plugin?: string; entry?: string; bindings: Partial<Record<PluginTarget, PluginBinding>> }
 export interface PluginInventory {
   targetDefinitions?: PluginTargetDefinition[];
-  packages: Record<string, { bindings: Partial<Record<PluginTarget, PluginBinding>> }>;
+  /** `source` and the rest are set when the plugin was added, so it stays managed with no Agent bound. */
+  packages: Record<string, PluginPackage>;
   /** `status`: 'ready' | 'missing' (its CLI is not on PATH here) | 'blocked' (deal with it in the Agent). */
   hosts: { target: PluginTarget; version: string; status: string; error?: string; errorKey?: string; note?: string; noteKey?: string; installed: NativePlugin[] }[];
 }
@@ -28,7 +30,7 @@ export const syncAction = (b: PluginBinding, host?: PluginInventory['hosts'][num
 export interface PluginCandidate { name: string; description: string; version: string; targets: PluginTarget[]; components: string[]; problem?: string; problemKey?: string; problemArgs?: Record<string, string>; targetInfo?: Record<string, { manifest: string; version?: string; entry?: string; components: string[]; problem?: string; problemKey?: string; problemArgs?: Record<string, string> }> }
 export interface PluginDiscovery {
   warnings?: string[]; source: string; sourceRef?: string; commit?: string; targetDefinitions?: PluginTargetDefinition[]; digest: string; candidates: PluginCandidate[] }
-export interface PluginPlan { revision: string; blocked: boolean; changes: { name: string; target: PluginTarget; id: string; action: string; message?: string; components?: string[] }[] }
+export interface PluginPlan { revision: string; blocked: boolean; changes: { name: string; target: PluginTarget; id: string; action: string; message?: string; components?: string[]; binding?: PluginBinding }[] }
 export interface PluginOutcome { name: string; target: PluginTarget; status: string; message?: string }
 export interface PluginResult { result: { results: PluginOutcome[] } | null; failure: string }
 const post = <T,>(path: string, body: unknown) => apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body) });

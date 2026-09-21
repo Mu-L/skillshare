@@ -13,6 +13,8 @@ const STACK = 6;
 
 interface Props {
   inventory: PluginInventory;
+  /** The version each plugin's source has, from the last update check. */
+  updates?: Record<string, string>;
   busy: boolean;
   /** `name:target` of the selection being applied right now. */
   working: string;
@@ -33,7 +35,7 @@ export default function PluginList(props: Props) {
   );
 }
 
-function Row({ name, inventory, busy, working, onToggle, onMenu, onAdd, onBlocked }: Props & { name: string }) {
+function Row({ name, inventory, updates, busy, working, onToggle, onMenu, onAdd, onBlocked }: Props & { name: string }) {
   const t = useT();
   const { isProjectMode } = useAppContext();
   const pluginTargets = targetMap(inventory.targetDefinitions);
@@ -44,21 +46,23 @@ function Row({ name, inventory, busy, working, onToggle, onMenu, onAdd, onBlocke
   const versions = [...new Set(bindings.map(([, b]) => b.version).filter(Boolean))];
   const parts = [...new Set(bindings.flatMap(([, b]) => b.components ?? []))];
   const from = bindings.find(([, b]) => b.source)?.[1];
-  const source = from?.source;
-  const entry = bindings.find(([, b]) => b.entry)?.[1].entry;
-  const meta = [versions.length === 1 && versions[0], parts.join(', ')].filter(Boolean).join(' · ');
+  // A plugin with no Agent yet has only what was recorded when it was added.
+  const source = from?.source ?? pack.source;
+  const sourceRef = from?.sourceRef ?? pack.sourceRef;
+  const entry = bindings.find(([, b]) => b.entry)?.[1].entry ?? pack.entry;
+  const meta = parts.join(', ');
   const rowBusy = working === name;
   // Which other Agents can take it is the source's answer, not config's, so it is asked when the
   // row opens. Its own key, outside `plugins`: a toggle must not send it back to the network.
   // ponytail: one discovery per plugin per session; give it a refresh control if sources change under an open dashboard.
   const found = useQuery({
-    queryKey: ['plugin-discover', source, from?.sourceRef, entry],
-    queryFn: () => pluginsApi.discover(source!, from?.sourceRef, entry),
+    queryKey: ['plugin-discover', source, sourceRef, entry],
+    queryFn: () => pluginsApi.discover(source!, sourceRef, entry),
     enabled: expanded && !!source,
     staleTime: Infinity,
     retry: false,
   });
-  const plugin = bindings.find(([, b]) => b.plugin)?.[1].plugin;
+  const plugin = bindings.find(([, b]) => b.plugin)?.[1].plugin ?? pack.plugin;
   const candidate = found.data?.candidates.find((c) => c.name === plugin) ?? (found.data?.candidates.length === 1 ? found.data.candidates[0] : undefined);
   const others = candidate ? agentReasons(candidate, pluginTargets, isProjectMode, t).filter((r) => !pack.bindings[r.target]) : [];
   const blocked = others.filter((r) => r.reason).length;
@@ -70,7 +74,9 @@ function Row({ name, inventory, busy, working, onToggle, onMenu, onAdd, onBlocke
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex items-center gap-2">
             <span title={name} className="truncate font-mono font-semibold">{name}</span>
+            <VersionChange from={versions.length === 1 ? versions[0] : undefined} to={updates?.[name]} />
             {bindings.some(([target, b]) => syncAction(b, inventory.hosts.find((h) => h.target === target))) && <span className="ss-tag warn">{t('plugins.pending')}</span>}
+            {bindings.length === 0 && <span className="ss-tag">{t('plugins.noAgentsYet')}</span>}
           </span>
           {/* One quiet line instead of a tag, a label and a path each asking to be read. */}
           <span className="truncate text-xs text-ink-3" title={source}>
@@ -127,6 +133,13 @@ function Row({ name, inventory, busy, working, onToggle, onMenu, onAdd, onBlocke
       )}
     </>
   );
+}
+
+/** The installed version as a tag, and `old → new` when the source has another one. */
+export function VersionChange({ from, to }: { from?: string; to?: string }) {
+  const next = to && to !== from ? to : undefined;
+  if (!from && !next) return null;
+  return <span className={`ss-tag shrink-0 font-mono ${next ? 'inf' : ''}`}>{from ?? '?'}{next && ` → ${next}`}</span>;
 }
 
 interface ToggleProps { target: PluginTarget; label: string; title?: string; on: boolean; applying: boolean; disabled: boolean; onClick: () => void }

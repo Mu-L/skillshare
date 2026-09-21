@@ -11,6 +11,7 @@ skillshare plugin                         # インタラクティブマネージ
 skillshare plugin add                     # Source → plugin → targets → review
 skillshare plugin discover ./my-plugin --json
 skillshare plugin add ./my-plugin --target claude --target codex --no-tui
+skillshare plugin add ./my-plugin --no-tui   # Skillshare で管理だけして、target は後で選ぶ
 skillshare plugin import review@team --from claude --no-tui
 skillshare plugin list --json
 skillshare plugin inspect review --json
@@ -24,6 +25,8 @@ skillshare plugin remove review --no-tui
 ```
 
 `enable` と `disable` は **Skillshare の sync 選択**を変更するものであり、Agent 側のネイティブな enabled 状態を変更するものではありません。Target の選択を外すとその選択が保存されます。次の `sync plugins` で、定義自体は残したままその管理下インストールが削除されます。再び選択すると、次の sync で再インストールできるようになります。管理外の plugin には影響しません。
+
+`--target` なしの `add`（またはインタラクティブな選択で何も選ばない場合）は、plugin をどこにもインストールせずに Skillshare で管理します。後から同じ source と `--name` で target を追加するか、dashboard でその plugin の行から選べます。その時点の source がインストールされます。このような plugin は最後の target を外しても管理下に残ります。`--target` なしの `remove NAME` で Skillshare から削除します。
 
 ## コマンド
 

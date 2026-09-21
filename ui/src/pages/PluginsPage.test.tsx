@@ -32,6 +32,14 @@ describe('PluginsPage', () => {
     expect(screen.getByText('uninstall')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'plugins.sync' })).toBeEnabled();
   });
+  it('shows the installed version, and old → new once a check finds another', async () => {
+    vi.mocked(pluginsApi.list).mockResolvedValue({ targetDefinitions: [{ target: 'codex', label: 'Codex', project: false, operations: ['add', 'check'] }], packages: { demo: { bindings: { codex: { id: 'demo@market', version: '1.0.0' } } } }, hosts: [] });
+    vi.mocked(pluginsApi.preview).mockResolvedValue({ revision: 'r', blocked: false, changes: [{ name: 'demo', target: 'codex', id: 'demo@market', action: 'update-available', binding: { id: 'demo@market', version: '1.1.0' } }] });
+    mount();
+    expect(await screen.findByText('1.0.0')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'plugins.check' }));
+    expect(await screen.findAllByText('1.0.0 → 1.1.0')).toHaveLength(2);
+  });
   it('saves sync selection independently of native enabled state', async () => {
     mount();
     fireEvent.click(await screen.findByRole('button', { name: 'mcp.chooseAgents' }));

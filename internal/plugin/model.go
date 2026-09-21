@@ -31,8 +31,14 @@ type Binding struct {
 	Pending    string   `json:"pending,omitempty" yaml:"pending,omitempty"`
 }
 
+// Source, SourceRef, Plugin and Entry keep a package managed while no Agent is bound, so
+// Agents can be bound later from the same source.
 type Package struct {
-	Bindings map[string]Binding `json:"bindings" yaml:"bindings"`
+	Source    string             `json:"source,omitempty" yaml:"source,omitempty"`
+	SourceRef string             `json:"sourceRef,omitempty" yaml:"source_ref,omitempty"`
+	Plugin    string             `json:"plugin,omitempty" yaml:"plugin,omitempty"`
+	Entry     string             `json:"entry,omitempty" yaml:"entry,omitempty"`
+	Bindings  map[string]Binding `json:"bindings" yaml:"bindings"`
 }
 
 type Request struct {

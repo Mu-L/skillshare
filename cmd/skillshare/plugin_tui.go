@@ -104,9 +104,13 @@ func pluginWizard(s *plugin.Service, o pluginOptions) error {
 			if len(items) == 0 {
 				return fmt.Errorf("no compatible native clients in this scope")
 			}
-			idx, err := pluginChoose("2/3 · Which tools should receive this plugin?", items, true, "target")
+			// Confirming with nothing selected adds the plugin to Skillshare without installing it.
+			idx, err := runChecklistTUI(checklistConfig{title: "2/3 · Which tools should receive this plugin? (none: add to Skillshare only)", items: items, itemName: "target"})
 			if err != nil {
 				return err
+			}
+			if idx == nil {
+				return errMCPCancelled
 			}
 			for _, i := range idx {
 				r.Targets = append(r.Targets, targets[i])

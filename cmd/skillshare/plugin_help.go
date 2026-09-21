@@ -18,7 +18,8 @@ Commands:
   remove [name]              Uninstall managed bindings; retain shared marketplaces
 
 Options:
-  --target <target>         Receiving client (repeat to select several)
+  --target <target>         Receiving client (repeat to select several; add without
+                            it keeps the plugin in Skillshare only)
   --plugin <name>            Select one plugin from a marketplace
   --name <name>              Logical Skillshare package name
   --from <target>           Import from this native client in the selected scope

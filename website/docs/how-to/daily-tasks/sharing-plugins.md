@@ -67,6 +67,8 @@ sync**, not “enable inside the Agent.”
 - Opening a plugin's row also lists, unticked, the other Agents its source has a package
   for. Ticking one opens the install preview. Agents the source cannot serve are counted
   at the end of the row, and that count opens the reasons.
+- A plugin can be added with no Agent ticked. It is kept in Skillshare, shown as
+  **No Agents yet**, and nothing is installed until you tick an Agent in its row.
 - Uncheck it, then sync to remove that managed installation.
 - The package definition remains, so you can select the target again later.
 - A plugin disabled inside Claude or Codex stays disabled; manage native settings

@@ -266,8 +266,9 @@ func (m *checklistModel) refreshItems() {
 	m.updateTitle()
 }
 
+// collectSelected is non-nil so an empty confirmation is distinct from cancelling.
 func (m checklistModel) collectSelected() []int {
-	var indices []int
+	indices := []int{}
 	for i := 0; i < m.total; i++ {
 		if m.selected[i] {
 			indices = append(indices, i)

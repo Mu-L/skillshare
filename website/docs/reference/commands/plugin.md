@@ -13,6 +13,7 @@ skillshare plugin                         # Interactive manager
 skillshare plugin add                     # Source → plugin → targets → review
 skillshare plugin discover ./my-plugin --json
 skillshare plugin add ./my-plugin --target claude --target codex --no-tui
+skillshare plugin add ./my-plugin --no-tui   # Keep it in Skillshare; choose targets later
 skillshare plugin import review@team --from claude --no-tui
 skillshare plugin list --json
 skillshare plugin inspect review --json
@@ -29,6 +30,12 @@ skillshare plugin remove review --no-tui
 enabled state. Deselecting a target saves the choice. The next `sync plugins`
 removes its managed installation while retaining the definition. Selecting it
 again allows the next sync to reinstall it. Unmanaged plugins are unaffected.
+
+`add` without `--target` (or with nothing selected in the interactive picker) keeps
+the plugin in Skillshare without installing it anywhere. Add targets later with the
+same source and `--name`, or from the plugin's row in the dashboard; that install
+uses the source as it is then. Such a plugin stays managed when its last target is
+removed. `remove NAME` without `--target` removes it from Skillshare.
 
 ## Commands
 

@@ -11,6 +11,7 @@ skillshare plugin                         # 대화형 관리자
 skillshare plugin add                     # Source → plugin → target → 검토
 skillshare plugin discover ./my-plugin --json
 skillshare plugin add ./my-plugin --target claude --target codex --no-tui
+skillshare plugin add ./my-plugin --no-tui   # Skillshare에서 관리만 하고 target은 나중에 선택
 skillshare plugin import review@team --from claude --no-tui
 skillshare plugin list --json
 skillshare plugin inspect review --json
@@ -24,6 +25,8 @@ skillshare plugin remove review --no-tui
 ```
 
 `enable`과 `disable`은 Agent의 네이티브 활성화 상태가 아니라 **Skillshare의 sync 선택**을 변경합니다. target 선택을 해제하면 그 선택이 저장됩니다. 다음 `sync plugins`는 정의는 유지한 채 관리되는 설치를 제거합니다. 다시 선택하면 다음 sync에서 재설치할 수 있습니다. 관리되지 않는 plugin은 영향을 받지 않습니다.
+
+`--target` 없이 `add`하면(또는 대화형 선택에서 아무것도 고르지 않으면) plugin을 어디에도 설치하지 않고 Skillshare에서 관리합니다. 나중에 같은 source와 `--name`으로 target을 추가하거나 dashboard에서 해당 plugin의 행에서 선택할 수 있으며, 그때의 source가 설치됩니다. 이런 plugin은 마지막 target을 제거해도 관리 대상으로 남습니다. `--target` 없는 `remove NAME`은 Skillshare에서 제거합니다.
 
 ## 명령
 
