@@ -97,6 +97,8 @@ Downloading v0.21.4...  3.2 MB / 9.1 MB
 
 若執行檔位於受保護的目錄（例如 `/usr/local/bin`），skillshare 會自動以 `sudo` 重新執行升級 — 不需要手動加上前綴。
 
+沒有終端機可以輸入密碼時（Dashboard 的 **立即更新** 按鈕、CI），升級會立刻停止，並提示你改在終端機執行 `sudo skillshare upgrade`，不會一直等待輸入。已快取的 `sudo` 憑證與 `NOPASSWD` 設定仍會直接升級，不會出現提示。
+
 ### Web UI 資源
 
 升級後，skillshare 會預先下載新版本的 Web UI 前端資源。這些會快取於 `~/.cache/skillshare/ui/<version>/`，並在你執行 `skillshare ui` 時提供服務。

@@ -98,6 +98,8 @@ Downloading v0.21.4...  3.2 MB / 9.1 MB
 
 如果该二进制文件位于受保护的目录中（例如 `/usr/local/bin`），skillshare 会自动使用 `sudo` 重新执行升级——无需手动加前缀。
 
+没有终端可以输入密码时（Dashboard 的 **立即更新** 按钮、CI），升级会立即停止，并提示你改在终端中运行 `sudo skillshare upgrade`，而不是一直等待输入。已缓存的 `sudo` 凭据和 `NOPASSWD` 配置仍会直接升级，不会出现提示。
+
 ### Web UI 资源
 
 升级之后，skillshare 会预先下载新版本的 Web UI 前端资源。这些资源会缓存在 `~/.cache/skillshare/ui/<version>/`，并在你运行 `skillshare ui` 时提供。
