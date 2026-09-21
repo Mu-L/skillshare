@@ -19,6 +19,7 @@
   "mcp.conflictAfterBackup": "Diubah setelah pencadangan; pemulihan menimpa perubahan yang lebih baru",
   "mcp.conflictChanged": "Konfigurasi Agent diubah di luar skillshare",
   "mcp.claudeLocalShadow": "Server bernama sama di local scope pada ~/.claude.json menimpa entri ini di proyek ini. Hapus dengan:",
+  "mcp.conflictOrphaned": "Sisa dari konfigurasi skillshare yang telah dihapus; impor atau ganti dengan sumber",
   "mcp.conflictOtherConfig": "Dikelola oleh konfigurasi skillshare lain",
   "mcp.conflictUnmanaged": "Agent sudah memiliki entri ini, belum dikelola skillshare",
   "mcp.copied": "Disalin",

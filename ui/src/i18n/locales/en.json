@@ -19,6 +19,7 @@
   "mcp.conflictAfterBackup": "Changed after the backup; restoring overwrites newer changes",
   "mcp.conflictChanged": "Agent config was changed outside skillshare",
   "mcp.claudeLocalShadow": "A local scope server of the same name in ~/.claude.json overrides this one in this project. Remove it with:",
+  "mcp.conflictOrphaned": "Left over from a skillshare config that was removed; import it or replace it with the source",
   "mcp.conflictOtherConfig": "Managed by another skillshare config",
   "mcp.conflictUnmanaged": "The Agent already has this entry, not yet managed by skillshare",
   "mcp.copied": "Copied",

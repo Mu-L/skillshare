@@ -53,22 +53,30 @@ const shadowMessage = 'a local scope server of the same name in ~/.claude.json o
 const conflictKeys: Record<string, string> = {
   [shadowMessage]: 'mcp.claudeLocalShadow',
   'managed by another Skillshare config': 'mcp.conflictOtherConfig',
+  'left over from a Skillshare config that was removed; import it or explicitly replace this entry': 'mcp.conflictOrphaned',
   'Agent configuration changed; import it or explicitly replace this entry': 'mcp.conflictChanged',
   'existing entry is not managed; import it to explicitly adopt it': 'mcp.conflictUnmanaged',
   'entry changed after the backup; restore would overwrite newer changes': 'mcp.conflictAfterBackup',
 };
 
+const conflictPrefix = (message: string) => Object.keys(conflictKeys).find((k) => message.startsWith(k)) ?? '';
+
 export const describeMessage = (t: (key: string) => string, message = '') => {
-  const start = Object.keys(conflictKeys).find((k) => message.startsWith(k));
+  const start = conflictPrefix(message);
   return start ? t(conflictKeys[start]) + message.slice(start.length) : message;
 };
 
 /** A synced Claude entry that a local-scope server of the same name hides in this project. */
 export const isShadowed = (change: MCPChange) => change.action !== 'conflict' && Boolean(change.message?.startsWith(shadowMessage));
 
-/** Conflicts the user can settle by importing the Agent entry or replacing it with the source. */
+/**
+ * Conflicts the user can settle by importing the Agent entry or replacing it with the
+ * source. A live owning config is not one of them: it has to release the entry itself,
+ * so a button here would do nothing. One that was removed never can, hence conflictOrphaned.
+ */
 export const isResolvable = (change: MCPChange) =>
-  change.action === 'conflict' && ['mcp.conflictChanged', 'mcp.conflictUnmanaged'].includes(conflictKeys[change.message ?? '']);
+  change.action === 'conflict' &&
+  ['mcp.conflictChanged', 'mcp.conflictUnmanaged', 'mcp.conflictOrphaned'].includes(conflictKeys[conflictPrefix(change.message ?? '')]);
 
 /** Display names for the MCP clients, as in their own docs. */
 export const targetLabel = (target: string) =>

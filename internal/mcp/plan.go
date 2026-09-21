@@ -63,6 +63,20 @@ type ledger struct {
 	Entries map[string]ownership `json:"entries"`
 }
 
+// orphanedMessage leads a conflict whose owning config is gone. The dashboard matches
+// conflicts on how the message starts, so the path stays last and nothing else may.
+const orphanedMessage = "left over from a Skillshare config that was removed; import it or explicitly replace this entry"
+
+// ownerGone reports whether an owning config is missing, the one case where it can never
+// release its entries itself and another config may take them over. Only a missing file
+// counts: an unreadable one may sit on a drive that is not mounted, where the owner is
+// still there. What the conflict says and what a resolution may do both rest on this, so
+// they read it from here rather than each testing the path their own way.
+func ownerGone(path string) bool {
+	_, err := os.Lstat(path)
+	return os.IsNotExist(err)
+}
+
 type filePlan struct {
 	path, target  string
 	before, after []byte
@@ -387,12 +401,10 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 					continue
 				}
 				matched[resolution.Target+"\x00"+name] = true
-				if managed && owned.Owner != source.ConfigPath {
-					// An owner that still exists must release the entry itself. One that was
-					// moved or deleted never can, so an explicit resolution may take over.
-					if _, err := os.Lstat(owned.Owner); err == nil {
-						break
-					}
+				// An owner that still exists must release the entry itself. One that was
+				// moved or deleted never can, so an explicit resolution may take over.
+				if managed && owned.Owner != source.ConfigPath && !ownerGone(owned.Owner) {
+					break
 				}
 				// adopt claims only an entry that already matches; anything else
 				// stays a conflict for an explicit replace.
@@ -407,6 +419,12 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 			switch {
 			case managed && owned.Owner != source.ConfigPath:
 				change.Action, change.Message = "conflict", "managed by another Skillshare config: "+owned.Owner
+				// A config that is gone can never release the entry, so an explicit resolution
+				// is the only way out and the message has to offer it. Saying it is managed
+				// sends the user looking for a file that is not there. Refs: #288.
+				if ownerGone(owned.Owner) {
+					change.Message = orphanedMessage + ": " + owned.Owner
+				}
 			case currentHash == wantHash && managed && want != nil && native.cramped(name):
 				// The content is right but it is all on one line. Sync owns this entry, so it
 				// writes it again, laid out; the person pressing Sync expects a file they can read.

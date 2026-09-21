@@ -19,6 +19,7 @@
   "mcp.conflictAfterBackup": "Modifié après la sauvegarde ; la restauration écrase les changements plus récents",
   "mcp.conflictChanged": "La configuration de l'Agent a été modifiée en dehors de skillshare",
   "mcp.claudeLocalShadow": "Un serveur du même nom en local scope dans ~/.claude.json prend le dessus dans ce projet. Supprimez-le avec :",
+  "mcp.conflictOrphaned": "Vestige d'une configuration skillshare supprimée ; importez-la ou remplacez-la par la source",
   "mcp.conflictOtherConfig": "Géré par une autre configuration skillshare",
   "mcp.conflictUnmanaged": "L'Agent contient déjà cette entrée, pas encore gérée par skillshare",
   "mcp.copied": "Copié",

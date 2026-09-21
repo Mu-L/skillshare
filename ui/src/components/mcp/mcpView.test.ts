@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MCPPlan } from '../../api/mcp';
-import { buildMatrix, isResolvable, joinCommand, splitCommand, targetLabel } from './mcpView';
+import { buildMatrix, describeMessage, isResolvable, joinCommand, splitCommand, targetLabel } from './mcpView';
 import { mcpTargets } from '../../api/mcp';
 
 const change = (name: string, target: string, action: string, message?: string) => ({ name, target, action, message, path: `/${target}.json` });
@@ -16,12 +16,25 @@ describe('MCP view helpers', () => {
     expect(rows.map(row => [row.name, Boolean(row.server), Object.keys(row.cells)])).toEqual([['docs', true, ['claude']], ['old', false, ['codex']]]);
   });
 
+  // A key that stops short of the whole sentence leaves the rest of the English message
+  // appended to its translation, which only shows up in a locale that is not English.
+  it('translates all of a conflict message and keeps only the path', () => {
+    const t = (key: string) => `[${key}]`;
+    expect(describeMessage(t, 'left over from a Skillshare config that was removed; import it or explicitly replace this entry: /gone/config.yaml'))
+      .toBe('[mcp.conflictOrphaned]: /gone/config.yaml');
+    expect(describeMessage(t, 'managed by another Skillshare config: /live/config.yaml'))
+      .toBe('[mcp.conflictOtherConfig]: /live/config.yaml');
+  });
+
+  // The owner messages end in a path, so matching them needs the same prefix search
+  // describeMessage uses. A live owner keeps no buttons: only it can release the entry.
   it('only offers import or replace for conflicts the source can take over', () => {
     expect([
       change('a', 'claude', 'conflict', 'Agent configuration changed; import it or explicitly replace this entry'),
       change('a', 'claude', 'conflict', 'existing entry is not managed; import it to explicitly adopt it'),
-      change('a', 'claude', 'conflict', 'managed by another Skillshare config'),
-    ].map(isResolvable)).toEqual([true, true, false]);
+      change('a', 'claude', 'conflict', 'left over from a Skillshare config that was removed; import it or explicitly replace this entry: /gone/.skillshare/config.yaml'),
+      change('a', 'claude', 'conflict', 'managed by another Skillshare config: /live/.skillshare/config.yaml'),
+    ].map(isResolvable)).toEqual([true, true, true, false]);
   });
 
   it('round-trips quoted command arguments', () => {

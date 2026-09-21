@@ -19,6 +19,7 @@
   "mcp.conflictAfterBackup": "备份后条目又被修改过，还原会覆盖较新的更改",
   "mcp.conflictChanged": "Agent 配置在 skillshare 之外被修改过",
   "mcp.claudeLocalShadow": "~/.claude.json 里有同名的 local scope 服务器，在这个项目会覆盖这一条。用这个命令移除：",
+  "mcp.conflictOrphaned": "残留自一份已被移除的 skillshare 配置；请导入或使用来源覆盖",
   "mcp.conflictOtherConfig": "由另一份 skillshare 配置管理",
   "mcp.conflictUnmanaged": "Agent 已有同名条目，尚未交由 skillshare 管理",
   "mcp.copied": "已复制",

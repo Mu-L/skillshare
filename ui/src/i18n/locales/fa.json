@@ -19,6 +19,7 @@
   "mcp.conflictAfterBackup": "پس از پشتیبان‌گیری تغییر کرده است؛ بازیابی تغییرات جدیدتر را بازنویسی می‌کند",
   "mcp.conflictChanged": "پیکربندی Agent خارج از skillshare تغییر کرده است",
   "mcp.claudeLocalShadow": "سروری با همین نام در local scope فایل ~/.claude.json در این پروژه جای این مورد را می‌گیرد. با این فرمان حذفش کنید:",
+  "mcp.conflictOrphaned": "باقی‌مانده از یک پیکربندی skillshare حذف‌شده؛ آن را وارد کنید یا با مبدأ جایگزین کنید",
   "mcp.conflictOtherConfig": "توسط پیکربندی دیگری از skillshare مدیریت می‌شود",
   "mcp.conflictUnmanaged": "Agent از قبل این مورد را دارد که هنوز توسط skillshare مدیریت نمی‌شود",
   "mcp.copied": "کپی شد",
