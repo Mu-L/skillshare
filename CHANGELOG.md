@@ -1,5 +1,62 @@
 # Changelog
 
+## [0.21.4] - 2026-09-22
+
+### New Features
+
+#### Plugins
+
+- **Add a plugin without choosing Agents yet** — leave every Agent unticked in **Add plugin** to keep the plugin in Skillshare without installing it anywhere. Its row shows **No Agents yet**; tick an Agent there when you want it, and the install preview uses the source as it is then. In the terminal, leave out `--target`, or confirm the picker with nothing selected:
+  ```bash
+  skillshare plugin add ./my-plugin --no-tui    # keep it in Skillshare; choose targets later
+  ```
+  A plugin added this way stays managed when its last Agent is removed. `skillshare plugin remove NAME` without `--target` removes it from Skillshare.
+- **Versions are easier to see** — each plugin's version is now a tag next to its name. After **Check updates**, a plugin whose source has a new version shows `1.0.0 → 1.1.0` in the list and in the preview.
+
+#### MCP connections
+
+- **Keep a server without sending it to any Agent** — untick every Agent in the server dialog to keep a server in Skillshare while no Agent receives it, for example to take it out of use for a while without losing its settings. The next sync removes the entries it had, and ticking an Agent brings it back. Project servers work the same way. In the terminal, use `--target none`; in `config.yaml`, an empty list:
+  ```bash
+  skillshare mcp edit context7 --target none    # stays in Skillshare, written to no Agent
+  ```
+  Refs: #289.
+- **Set other `pi-mcp-adapter` fields from Skillshare** — the adapter has per-server fields that Skillshare has no setting for, such as `excludeTools` and `approveTools`. Put them under `piOptions` and they are written into the server's entry in Pi's file as given. The server dialog has a JSON box for them under **Direct tools**, which checks that the text is a JSON object before saving. In the terminal:
+  ```bash
+  skillshare mcp edit github --pi-options '{"excludeTools":["*emulator*"]}'
+  ```
+  A field removed from `piOptions` stays in Pi's file until you delete it there. Refs: #289.
+
+#### Upgrade
+
+- **`skillshare upgrade` shows download progress** — on a slow connection the release download can take minutes, and the spinner alone made the upgrade look stuck. In a terminal it now shows how much has been downloaded, for the CLI and for the dashboard assets:
+  ```
+  Downloading v0.21.4...  3.2 MB / 9.1 MB
+  ```
+
+### Bug Fixes
+
+#### Plugins
+
+- **Pi and OpenCode are no longer blocked by a scoped npm name** — a `package.json` named like `@owner/pkg` made both Agents show the plugin as blocked, although they install it by path.
+- **Pi packages whose `package.json` has no name can be installed** — they were blocked for Pi even when another manifest named the plugin.
+
+#### Config
+
+- **Installing a plugin no longer reindents `config.yaml`** — saving a plugin rewrote the whole file with 4-space indentation. Every YAML file Skillshare writes, including skill and agent frontmatter and `audit-rules.yaml`, now uses 2 spaces.
+
+#### MCP connections
+
+- **An entry left behind by a deleted configuration can be taken over** — when the Skillshare configuration that owned an Agent's MCP entry was moved or deleted, the conflict still said the entry was managed by another configuration and named a file that is no longer there, leaving no way forward in the dashboard. Such a conflict now reports the entry as left over, and **Import from** the Agent or **Replace with source** takes it over, in the terminal and from the conflict in the dashboard. A configuration that only cannot be read, such as one on a drive that is not mounted, still counts as present. Refs: #288.
+- **OpenCode project settings kept in `.opencode/` are used** — OpenCode also reads `opencode.json` and `opencode.jsonc` from a project's `.opencode/` folder. A file kept there was ignored, and sync created a second one at the project root. It is now the file Skillshare writes to; a new file is still created at the root. Refs: #289.
+- **Turning a global server off in a project follows the project's Agents** — the dashboard saved the switch with every Agent the global server reaches, including Agents the project does not use, and the list went stale when the project's targets changed. The switch now stores no Agent list and applies to the Agents the project uses that have a per-project switch. The row shows those Agents as logos and says which of the project's Agents still load the server. An entry saved by an earlier version shows **Match the project** to update it. Refs: #289.
+- **The Sync page says when a change only turns a server off** — a project's switch for Claude Code is kept in `~/.claude.json`, and it read like the global server being added or removed there. Such a change now says it turns the server off or back on, and names the project. A conflict on a switch offers only **Replace with source**, since importing reads the Agent's global file. Refs: #289.
+
+#### Dashboard
+
+- **Agent logos show on Windows machines that report the wrong type for SVG files** — a few larger logos, Antigravity among them, appeared as broken images on some Windows machines while every other logo was fine. Refs: #289.
+- **Going back to the global targets asks first** — switching a project's MCP targets back to **Same as global** saved at once and dropped the project's own list.
+- **Status labels and Kilo Code messages follow the dashboard language** — **enabled** on the Skills page, **In sync** on the Extras page, the Kilo Code project warning and the error for an unreadable pasted snippet stayed in English. Refs: #289.
+
 ## [0.21.3] - 2026-09-21
 
 ### New Features
