@@ -290,3 +290,35 @@ func TestPlanMarksSwitchOnlyChanges(t *testing.T) {
 		t.Fatalf("remove: got %v want %v", removed, want)
 	}
 }
+
+// A switch that names no targets follows the project: it goes to the Agents the project uses,
+// that the global server reaches and that have a switch. Storing the list instead left it
+// stale as soon as the project's targets changed.
+func TestSwitchWithoutTargetsFollowsTheProject(t *testing.T) {
+	for name, tc := range map[string]struct {
+		global, project string
+		want            []string
+	}{
+		"only what the project uses":    {"claude, opencode, kilocode, pi", "opencode, pi", []string{"opencode", "pi"}},
+		"only what the server reaches":  {"claude, codex, pi", "claude, opencode", []string{"claude"}},
+		"skips an Agent with no switch": {"cursor, opencode", "cursor, opencode", []string{"opencode"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s, tmp := projectsService(t, "mcp:\n  servers:\n    docs:\n      command: tool\n      piExtension: pi-mcp-adapter\n      targets: ["+tc.global+"]\n  projects:\n    $TMP/p1:\n      targets: ["+tc.project+"]\n      servers:\n        docs:\n          disabled: true\n")
+			plan, err := s.Preview()
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got []string
+			for _, c := range plan.Changes {
+				if c.Root == filepath.Join(tmp, "p1") {
+					got = append(got, c.Target)
+				}
+			}
+			slices.Sort(got)
+			if !slices.Equal(got, tc.want) {
+				t.Fatalf("got %v want %v", got, tc.want)
+			}
+		})
+	}
+}

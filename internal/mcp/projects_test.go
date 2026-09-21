@@ -39,7 +39,7 @@ const projectsConfig = `mcp:
   servers:
     shared:
       command: echo
-      targets: [cursor]
+      targets: [cursor, opencode]
   projects:
     $TMP/projA:
       servers:

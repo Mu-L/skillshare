@@ -77,10 +77,9 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
   /** Agents where this global server can be turned off from here. */
   const switchable = (server: MCPServer) => switchTargets(server, defaults, targets);
 
-  const toggleGlobal = (n: string, on: boolean) => {
-    const to = switchable(globals[n]);
-    return save(on ? { name: n, remove: true } : { name: n, replace: true, server: { disabled: true, targets: to, ...(to.includes('pi') && { piExtension: 'pi-mcp-adapter' }) } });
-  };
+  // The switch names no targets: sync works out where it goes from the project's targets at
+  // that moment. A stored list went stale as soon as those changed.
+  const toggleGlobal = (n: string, on: boolean) => save(on ? { name: n, remove: true } : { name: n, replace: true, server: { disabled: true } });
 
   const toggleOwn = (n: string, target: string, on: boolean) => {
     const next = mcpTargets.filter((x) => (x === target ? on : targetsOf(n).includes(x)));
@@ -141,7 +140,8 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
                 const off = Boolean(entry?.disabled);
                 const to = switchable(server);
                 const hint = entry && !off ? t('mcp.projects.overridden')
-                  : off ? (entry.targets ?? to).filter((x) => switchField[x]).map((x) => t('mcp.projects.writesSwitch', { target: targetLabel(x), field: switchField[x] })).join(', ')
+                  // Off, yet the project no longer uses an Agent the switch can reach: nothing is written.
+                  : off ? (entry.targets ?? to).filter((x) => switchField[x]).map((x) => t('mcp.projects.writesSwitch', { target: targetLabel(x), field: switchField[x] })).join(', ') || t('mcp.projects.noSwitchHere')
                   : to.length > 0 ? t('mcp.projects.followsGlobal')
                   // Some Agent could turn it off, just none this project uses.
                   : switchTargets(server, defaults, mcpOffTargets).length > 0 ? t('mcp.projects.noSwitchHere') : t('mcp.projects.noSwitch');

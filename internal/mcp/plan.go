@@ -3,6 +3,7 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -175,7 +176,12 @@ func (s *Service) render(source *Source) (map[fileKey]map[string]map[string]any,
 	if s.ProjectRoot != "" && len(source.Projects) > 0 {
 		return nil, fmt.Errorf("mcp.projects belongs in the global config; this project already syncs its own mcp.servers")
 	}
-	if err := s.renderScope(desired, source.Servers, source.Targets, source.DirectTools); err != nil {
+	servers := source.Servers
+	if s.ProjectRoot != "" {
+		// A project's own config cannot see the global one, so only the Agents' limits apply.
+		servers = followingSwitches(servers, source.Targets, nil)
+	}
+	if err := s.renderScope(desired, servers, source.Targets, source.DirectTools); err != nil {
 		return nil, err
 	}
 	for _, root := range sortedKeys(source.Projects) {
@@ -190,11 +196,45 @@ func (s *Service) render(source *Source) (map[fileKey]map[string]map[string]any,
 		if directTools == nil {
 			directTools = source.DirectTools
 		}
-		if err := scoped.renderScope(desired, project.Servers, defaults, directTools); err != nil {
+		if err := scoped.renderScope(desired, followingSwitches(project.Servers, defaults, source), defaults, directTools); err != nil {
 			return nil, fmt.Errorf("%s: %w", root, err)
 		}
 	}
 	return desired, nil
+}
+
+// followingSwitches gives each switch-only entry that names no targets the Agents where it has
+// something to do: those the project uses, that have a per-project switch and, when global
+// says where the server of that name goes, that receive it. The list is worked out on every
+// plan rather than stored, so it cannot go stale when the project's targets change. An entry
+// that names its targets is left alone, and an Agent without a switch there is still an error.
+func followingSwitches(servers map[string]Server, defaults []string, global *Source) map[string]Server {
+	out := maps.Clone(servers)
+	for name, server := range servers {
+		if !server.Disabled || server.Targets != nil {
+			continue
+		}
+		var reached []string
+		if global != nil {
+			if shared, ok := global.Servers[name]; ok {
+				if reached = shared.Targets; reached == nil {
+					reached = global.Targets
+				}
+				// Pi has a switch only with pi-mcp-adapter, which the global server already says.
+				if server.PiExtension == "" {
+					server.PiExtension = shared.PiExtension
+				}
+			}
+		}
+		server.Targets = TargetList{}
+		for _, target := range defaults {
+			if _, err := renderDisabled(target, server); err == nil && (reached == nil || slices.Contains(reached, target)) {
+				server.Targets = append(server.Targets, target)
+			}
+		}
+		out[name] = server
+	}
+	return out
 }
 
 // renderScope adds one scope's servers: the global one, or a single project root.
