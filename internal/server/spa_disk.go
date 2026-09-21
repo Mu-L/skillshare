@@ -68,6 +68,11 @@ func spaHandlerFromDisk(dir, basePath string) http.Handler {
 				w.Write(cachedIndex)
 				return
 			}
+			// The file server takes a type from the system, and on Windows the registry
+			// can get .svg wrong. The browser then refuses to draw the image.
+			if strings.HasSuffix(path, ".svg") {
+				w.Header().Set("Content-Type", "image/svg+xml")
+			}
 			fileServer.ServeHTTP(w, r)
 			return
 		}
