@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pencil, Plug, Plus, PowerOff, Trash2 } from 'lucide-react';
 import { mcpApi, mcpOffTargets, mcpTargets, type MCPMutation, type MCPServer } from '../../api/mcp';
+import AgentIcon from '../AgentIcon';
 import Button from '../Button';
 import ConfirmDialog from '../ConfirmDialog';
 import { RailLayout } from '../StatusRail';
@@ -19,9 +20,6 @@ import { buildMatrix, describeEndpoint, describeError, projectOf, switchTargets,
 
 type MCPList = Awaited<ReturnType<typeof mcpApi.list>>;
 
-// What each Agent gets for a switch, as its docs spell it. Claude Code is the one that
-// takes a name rather than a field, in the per-project off list inside ~/.claude.json.
-const switchField: Record<string, string> = { claude: 'disabledMcpServers', opencode: 'enabled: false', kilocode: 'enabled: false', pi: 'disabled: true' };
 
 interface Props {
   data: MCPList;
@@ -142,15 +140,15 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
                 const entry = servers[n];
                 const off = Boolean(entry?.disabled);
                 const to = switchable(server);
-                const hint = entry && !off ? t('mcp.projects.overridden')
-                  // Off, yet the project no longer uses an Agent the switch can reach: nothing is written.
-                  : off ? (entry.targets ?? to).filter((x) => switchField[x]).map((x) => t('mcp.projects.writesSwitch', { target: targetLabel(x), field: switchField[x] })).join(', ') || t('mcp.projects.noSwitchHere')
-                  : to.length > 0 ? t('mcp.projects.followsGlobal')
+                // Off shows as Agent logos. A sentence is kept for the switch that cannot be used, which needs a reason.
+                const written = (entry?.targets ?? to).filter((x) => mcpOffTargets.includes(x));
+                const reason = entry && !off ? t('mcp.projects.overridden')
+                  : off ? (written.length === 0 ? t('mcp.projects.noSwitchHere') : '')
+                  : to.length > 0 ? ''
                   // Some Agent could turn it off, just none this project uses.
                   : switchTargets(server, defaults, mcpOffTargets).length > 0 ? t('mcp.projects.noSwitchHere') : t('mcp.projects.noSwitch');
                 // What the page has to admit: the badge says off, yet an Agent without a switch keeps
                 // loading the server here, and a list saved with the entry does not follow the project.
-                const written = entry?.targets ?? to;
                 const stillOn = off ? targets.filter((x) => (server.targets ?? defaults).includes(x) && !written.includes(x)) : [];
                 const stale = off && entry.targets && [...entry.targets].sort().join() !== [...to].sort().join();
                 return (
@@ -163,12 +161,17 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
                         {changes.some((c) => c.name === n && ['add', 'update', 'remove'].includes(c.action)) && <span className="ss-tag warn">{t('plugins.pending')}</span>}
                       </span>
                       <span className="truncate text-xs text-ink-3">{server.url ? 'http' : 'stdio'} · <span className="font-mono">{describeEndpoint(server)}</span></span>
+                      <span id={`mcp-sw-${n}`} className="flex flex-col text-xs">
+                        {reason && <span className="text-ink-3">{reason}</span>}
+                        {stillOn.length > 0 && <span className="text-warn">{t('mcp.projects.stillOn', { targets: stillOn.map(targetLabel).join(', ') })}</span>}
+                        {stale && <span className="text-warn">{t('mcp.projects.staleSwitch')} <button type="button" className="underline disabled:opacity-50" disabled={busy} onClick={() => void toggleGlobal(n, false)}>{t('mcp.projects.matchProject')}</button></span>}
+                      </span>
                     </span>
-                    <span id={`mcp-sw-${n}`} className="flex max-w-[280px] flex-col gap-0.5 text-right text-xs text-ink-2">
-                      <span>{hint}</span>
-                      {stillOn.length > 0 && <span className="text-warn">{t('mcp.projects.stillOn', { targets: stillOn.map(targetLabel).join(', ') })}</span>}
-                      {stale && <span className="text-warn">{t('mcp.projects.staleSwitch')}</span>}
-                    </span>
+                    {off && written.length > 0 && (
+                      <span className="ss-stack" role="img" aria-label={t('mcp.projects.offIn', { targets: written.map(targetLabel).join(', ') })} title={t('mcp.projects.offIn', { targets: written.map(targetLabel).join(', ') })}>
+                        {written.map((x) => <span key={x} className="ss-at"><AgentIcon target={x} size={13} /></span>)}
+                      </span>
+                    )}
                     <button type="button" role="switch" aria-checked={!off} aria-label={n} aria-describedby={`mcp-sw-${n}`} className={`ss-sw ${off ? '' : 'on'} disabled:opacity-50`} disabled={busy || (!off && to.length === 0) || Boolean(entry && !off)} onClick={() => void toggleGlobal(n, off)}><i /></button>
                   </div>
                 );

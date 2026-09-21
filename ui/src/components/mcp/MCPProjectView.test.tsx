@@ -31,17 +31,26 @@ describe('MCP project view', () => {
 
   it('names the Agents that keep loading a server turned off here', () => {
     view({ context7 }, { targets: ['claude', 'cursor'], servers: { context7: { disabled: true } } });
-    expect(screen.getByText(/No per-project switch in Cursor/)).toBeInTheDocument();
+    expect(screen.getByText('Still loads in Cursor, which has no per-project switch.')).toBeInTheDocument();
   });
 
-  it('says when a switch saved with its own targets no longer matches the project', () => {
+  it('shows where a server is off as Agents, not as the fields written', () => {
+    view({ context7 }, { targets: ['claude', 'opencode'], servers: { context7: { disabled: true } } });
+    expect(screen.getByRole('img', { name: 'Off in Claude, OpenCode' })).toBeInTheDocument();
+    expect(screen.queryByText(/disabledMcpServers/)).not.toBeInTheDocument();
+  });
+
+  it('offers to make a switch saved with its own Agents follow the project again', async () => {
+    const user = userEvent.setup();
     view({ context7 }, { targets: ['opencode'], servers: { context7: { disabled: true, targets: ['claude', 'opencode'] } } });
-    expect(screen.getByText(/Saved with its own Agents/)).toBeInTheDocument();
+    expect(screen.getByText('Off for other Agents than this project uses.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Match the project' }));
+    await waitFor(() => expect(mcpApi.save).toHaveBeenLastCalledWith({ name: 'context7', replace: true, server: { disabled: true }, project: '/work/app' }));
   });
 
   it("leaves Pi out where the project's own servers use another Pi extension", () => {
     view({ docs: { command: 'npx', piExtension: 'pi-mcp-adapter', targets: ['opencode', 'pi'] } }, { targets: ['opencode', 'pi'], servers: { docs: { disabled: true }, mine: { command: 'npx', piExtension: 'pi-mcp-extension', targets: ['pi'] } } });
-    expect(screen.getByText(/No per-project switch in Pi/)).toBeInTheDocument();
+    expect(screen.getByText('Still loads in Pi, which has no per-project switch.')).toBeInTheDocument();
   });
 
   it('counts Pi for a switch only with pi-mcp-adapter, as sync does', () => {
