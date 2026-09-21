@@ -6,6 +6,7 @@ import Button from '../Button';
 import CopyButton from '../CopyButton';
 import DialogShell from '../DialogShell';
 import IconButton from '../IconButton';
+import Spinner from '../Spinner';
 import { Select } from '../Input';
 import { useT } from '../../i18n';
 import { targetLabel } from './mcpView';
@@ -31,6 +32,7 @@ export default function MCPConfigView({ mutation }: { mutation: MCPMutation }) {
         {rendered && <span className="min-w-0 flex-1 truncate font-mono text-xs text-ink-3" title={rendered.path}>{shortenHome(rendered.path)}</span>}
         {rendered?.content && <CopyButton value={rendered.content} />}
       </div>
+      {view.isPending && <Spinner size="sm" />}
       {view.error && <div className="ss-note bad"><span className="flex-1">{(view.error as Error).message}</span></div>}
       {rendered?.error && <div className="ss-note warn"><span className="flex-1">{rendered.error}</span></div>}
       {rendered?.content && <div className="ss-pre"><pre>{rendered.content}</pre></div>}
