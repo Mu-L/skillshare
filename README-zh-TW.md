@@ -44,7 +44,7 @@
 </p>
 
 > [!NOTE]
-> **最新版本**：每一版的新功能與修正都列在 [Releases](https://github.com/runkids/skillshare/releases) 和[更新紀錄](https://skillshare.runkids.cc/changelog)。近期重點是 **MCP 連線**、**完整 plugin** 的安裝與同步，以及**重新設計的網頁儀表板**。
+> **最新版本**：v0.21.* — 每一版的新功能與修正都列在 [Releases](https://github.com/runkids/skillshare/releases) 和[更新紀錄](https://skillshare.runkids.cc/changelog)。近期重點是用 `projects:` 從一份 global 設定管理**多個專案資料夾**、用**專案 lockfile** 讓每位隊友裝到相同的 commit、**MCP 連線**只定義一次就同步進每個 Agent 自己的設定格式，以及把**完整 plugin** 安裝與同步到 Claude、Codex、Cursor 等工具。
 
 ## 為什麼用 skillshare
 

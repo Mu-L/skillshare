@@ -44,7 +44,7 @@
 </p>
 
 > [!NOTE]
-> **Latest**: [v0.21.0](https://github.com/runkids/skillshare/releases/tag/v0.21.0) — define **MCP connections** once and sync them into each Agent's native config; install and sync **complete plugins** across Claude, Codex, Cursor and more; and a **redesigned web dashboard** with Clean and Playful styles. [All releases →](https://github.com/runkids/skillshare/releases)
+> **Latest**: v0.21.* — manage **many project folders** from one global config with `projects:`; keep every teammate on the same commits with a **project lockfile**; define **MCP connections** once and sync them into each Agent's native config; and install and sync **complete plugins** across Claude, Codex, Cursor and more. [All releases →](https://github.com/runkids/skillshare/releases)
 
 ## Why skillshare
 

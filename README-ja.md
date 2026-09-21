@@ -44,7 +44,7 @@
 </p>
 
 > [!NOTE]
-> **最新バージョン**：各リリースの新機能と修正は [Releases](https://github.com/runkids/skillshare/releases) と[変更履歴](https://skillshare.runkids.cc/changelog)にまとめています。最近の主な追加は **MCP 接続**、**plugin 一式**のインストールと同期、そして**刷新した Web ダッシュボード**です。
+> **最新バージョン**：v0.21.* — 各リリースの新機能と修正は [Releases](https://github.com/runkids/skillshare/releases) と[変更履歴](https://skillshare.runkids.cc/changelog)にまとめています。最近の主な追加は、`projects:` でひとつの global 設定から**複数のプロジェクトフォルダー**を管理できること、**プロジェクト lockfile** でチームメイト全員を同じ commit に揃えられること、一度定義すれば各 Agent 固有の設定形式に同期できる **MCP 接続**、そして Claude、Codex、Cursor などへの **plugin 一式**のインストールと同期です。
 
 ## skillshare を使う理由
 

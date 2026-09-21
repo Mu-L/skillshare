@@ -44,7 +44,7 @@
 </p>
 
 > [!NOTE]
-> **최신 버전**: 각 릴리스의 새 기능과 수정 사항은 [Releases](https://github.com/runkids/skillshare/releases)와 [변경 내역](https://skillshare.runkids.cc/changelog)에 정리되어 있습니다. 최근의 주요 추가 사항은 **MCP 연결**, **완전한 plugin**의 설치와 동기화, 그리고 **새로 디자인한 웹 대시보드**입니다.
+> **최신 버전**: v0.21.* — 각 릴리스의 새 기능과 수정 사항은 [Releases](https://github.com/runkids/skillshare/releases)와 [변경 내역](https://skillshare.runkids.cc/changelog)에 정리되어 있습니다. 최근의 주요 추가 사항은 `projects:`로 하나의 global 설정에서 **여러 프로젝트 폴더**를 관리하고, **프로젝트 lockfile**로 모든 팀원이 같은 커밋을 설치하도록 맞추고, **MCP 연결**을 한 번만 정의해 각 Agent 고유의 설정 형식에 동기화하고, **완전한 plugin**을 Claude, Codex, Cursor 등에 설치·동기화하는 것입니다.
 
 ## skillshare를 쓰는 이유
 
