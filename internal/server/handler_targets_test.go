@@ -437,3 +437,18 @@ func TestHandleUpdateTarget_AgentExtension_Clear(t *testing.T) {
 		t.Errorf("extension = %q, want cleared", ext)
 	}
 }
+
+func TestHandleUpdateTarget_RejectedRequestChangesNothing(t *testing.T) {
+	tgtPath := filepath.Join(t.TempDir(), "claude-skills")
+	s, _ := newTestServerWithTargets(t, map[string]string{"claude": tgtPath})
+	patchTarget(t, s, `{"mode":"merge","agent_mode":"merge"}`) // skills and agents blocks now exist
+
+	rr := patchTarget(t, s, `{"mode":"copy","agent_mode":"copy","agent_include":["["]}`)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rr.Code, rr.Body.String())
+	}
+	memTgt := s.cfg.Targets["claude"]
+	if got := memTgt.SkillsConfig().Mode + "/" + memTgt.AgentsConfig().Mode; got != "merge/merge" {
+		t.Errorf("modes = %s, want merge/merge after a rejected request", got)
+	}
+}

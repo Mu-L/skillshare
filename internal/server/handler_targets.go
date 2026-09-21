@@ -327,6 +327,16 @@ func (s *Server) handleUpdateTarget(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, name+" belongs to a project; edit the project instead")
 		return
 	}
+	// Skills and Agents are pointers shared with s.cfg; edit copies so a
+	// request rejected halfway leaves the config untouched.
+	if target.Skills != nil {
+		sk := *target.Skills
+		target.Skills = &sk
+	}
+	if target.Agents != nil {
+		ag := *target.Agents
+		target.Agents = &ag
+	}
 
 	var body struct {
 		Include        *[]string `json:"include"` // null = no change, [] = clear
