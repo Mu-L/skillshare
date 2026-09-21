@@ -12,7 +12,7 @@ import { Checkbox, Select } from '../Input';
 import { useToast } from '../Toast';
 import { useT } from '../../i18n';
 import { shortenHome } from '../../lib/paths';
-import { describeEndpoint, targetLabel } from './mcpView';
+import { describeEndpoint, describeError, targetLabel } from './mcpView';
 
 /** Where the configuration comes from. Each entry point fixes one; the dialog never switches. */
 type Source = 'target' | 'paste';
@@ -202,7 +202,7 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
             {pasted && (
               <div className="flex items-center justify-between gap-4 text-[13px]">
                 {query.error ? (
-                  <span className="ss-st bad wrap min-w-0">{query.error.message}</span>
+                  <span className="ss-st bad wrap min-w-0">{describeError(t, query.error.message)}</span>
                 ) : query.data ? (
                   <span className="ss-st ok">{t(candidates.length === 1 ? 'mcp.detected.one' : 'mcp.detected.other', { format: toml ? 'TOML' : GOOSE_YAML.test(pasted) ? 'YAML' : 'JSON', count: candidates.length })}</span>
                 ) : (
@@ -235,7 +235,7 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
               </span>
               <span>{t('mcp.transport')}</span>
             </div>
-            {tab === 'target' && query.error && <div className="ss-r text-[13px] text-bad">{query.error.message}</div>}
+            {tab === 'target' && query.error && <div className="ss-r text-[13px] text-bad">{describeError(t, query.error.message)}</div>}
             {candidates.map((c) => {
               const blocked = c.problems.length > 0 || exists(c);
               const on = selected.includes(c.name) && !blocked;

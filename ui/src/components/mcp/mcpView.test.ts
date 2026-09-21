@@ -32,6 +32,15 @@ describe('MCP view helpers', () => {
       .toBe('D:\\project: [mcp.kilocodeProjectEnv:mcp-test]');
   });
 
+  // A pasted snippet is parsed by the server, whose errors are English and talk about a target file.
+  it('translates what the server says about a snippet it cannot read', () => {
+    const t = (key: string) => `[${key}]`;
+    expect(describeError(t, 'invalid JSON/JSONC; target was not changed')).toBe('[mcp.importError.json]');
+    expect(describeError(t, 'invalid TOML; target was not changed')).toBe('[mcp.importError.toml]');
+    expect(describeError(t, 'no MCP entries found; select the matching client format')).toBe('[mcp.importError.noEntries]');
+    expect(describeError(t, 'something else')).toBe('something else');
+  });
+
   // The owner messages end in a path, so matching them needs the same prefix search
   // describeMessage uses. A live owner keeps no buttons: only it can release the entry.
   it('only offers import or replace for conflicts the source can take over', () => {

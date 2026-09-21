@@ -66,11 +66,22 @@ export const describeMessage = (t: (key: string) => string, message = '') => {
   return start ? t(conflictKeys[start]) + message.slice(start.length) : message;
 };
 
+// What the server says about a snippet or file it cannot read. It words them for a sync,
+// where "target was not changed" matters; a paste has no target to change.
+const importErrorKeys: Record<string, string> = {
+  'invalid JSON/JSONC; target was not changed': 'mcp.importError.json',
+  'invalid server JSON': 'mcp.importError.json',
+  'invalid TOML; target was not changed': 'mcp.importError.toml',
+  'no MCP entries found': 'mcp.importError.noEntries',
+  'no MCP entries found; select the matching client format': 'mcp.importError.noEntries',
+};
+
 const kiloProjectEnvPrefix = 'Kilo Code MCP ';
 const kiloProjectEnvSuffix = ': Kilo does not allow environment references in project config and ignores the whole file when it finds one; remove fromEnv here or define this server in global mode';
 
-/** Localizes the actionable Kilo project error while preserving a leading project path. */
+/** Localizes the errors people can act on: an unreadable snippet, and the Kilo project error, whose leading project path is kept. */
 export const describeError = (t: (key: string, params?: Record<string, string>) => string, message = '') => {
+  if (importErrorKeys[message]) return t(importErrorKeys[message]);
   const start = message.indexOf(kiloProjectEnvPrefix);
   if (start < 0) return message;
   const nameStart = start + kiloProjectEnvPrefix.length;

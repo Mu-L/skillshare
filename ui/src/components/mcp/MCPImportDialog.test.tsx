@@ -100,6 +100,15 @@ describe('MCP import dialog', () => {
     })));
   });
 
+  it('says in the dashboard language that a pasted snippet is not valid JSON', async () => {
+    vi.mocked(mcpApi.import).mockRejectedValue(new Error('invalid JSON/JSONC; target was not changed'));
+    const user = userEvent.setup();
+    renderDialog({ source: 'paste' });
+    await user.click(screen.getByLabelText('Server snippet'));
+    await user.paste('ready (global mode, hot-reload)');
+    expect(await screen.findByText('Not valid JSON or JSONC. Check the syntax.')).toBeInTheDocument();
+  });
+
   it('reads a picked file into the snippet editor', async () => {
     vi.mocked(mcpApi.import).mockResolvedValue({ candidates: [{ name: 'docs', server: { url: 'https://example.com/mcp' }, problems: [], warnings: [] }] });
     const user = userEvent.setup();
