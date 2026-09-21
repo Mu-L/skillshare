@@ -25,7 +25,7 @@ func fixture(t *testing.T) string {
 	return root
 }
 
-func TestDiscoverPreservesComponentsAndRejectsEscapes(t *testing.T) {
+func TestDiscoverPreservesComponentsAndLeavesOutEscapes(t *testing.T) {
 	root := fixture(t)
 	d, err := Discover(context.Background(), root)
 	if err != nil {
@@ -37,8 +37,8 @@ func TestDiscoverPreservesComponentsAndRejectsEscapes(t *testing.T) {
 	if err := os.Symlink("/etc/passwd", filepath.Join(root, "escape")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Discover(context.Background(), root); err == nil {
-		t.Fatal("external symlink accepted")
+	if escaped, err := Discover(context.Background(), root); err != nil || escaped.Digest != d.Digest || len(escaped.Warnings) != 1 {
+		t.Fatalf("external symlink not left out: %+v %v", escaped, err)
 	}
 }
 

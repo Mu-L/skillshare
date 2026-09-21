@@ -49,19 +49,28 @@ func TestSourceInternalLinksSurviveSnapshot(t *testing.T) {
 	}
 }
 
-func TestSourceRejectsUnsafeLinks(t *testing.T) {
+func TestSourceLeavesOutUnsafeLinks(t *testing.T) {
 	for _, target := range []string{"/etc/passwd", "../outside", "missing", "link", ".git/config", "."} {
 		t.Run(target, func(t *testing.T) {
 			root := fixture(t)
 			writeFile(t, root, ".git/config", "private")
+			want, err := treeDigest(root)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if err := os.Symlink(target, filepath.Join(root, "link")); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := treeDigest(root); err == nil {
-				t.Fatal("unsafe link accepted")
+			d, err := Discover(context.Background(), root)
+			if err != nil || d.Digest != want || len(d.Warnings) != 1 {
+				t.Fatalf("unsafe link not left out with a warning: %+v %v", d, err)
 			}
-			if err := copyTree(root, filepath.Join(t.TempDir(), "copy")); err == nil {
-				t.Fatal("unsafe copy accepted")
+			dest := filepath.Join(t.TempDir(), "copy")
+			if err := copyTree(root, dest); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Lstat(filepath.Join(dest, "link")); !os.IsNotExist(err) {
+				t.Fatalf("unsafe link copied: %v", err)
 			}
 		})
 	}
@@ -186,7 +195,7 @@ func TestDiscoverUsesEachAgentsOwnCatalogPath(t *testing.T) {
 	}
 }
 
-func TestSourceRejectsCrossDirectoryLinkCycle(t *testing.T) {
+func TestSourceBreaksCrossDirectoryLinkCycle(t *testing.T) {
 	root := fixture(t)
 	for _, dir := range []string{"a", "b"} {
 		if err := os.MkdirAll(filepath.Join(root, dir), 0755); err != nil {
@@ -199,8 +208,14 @@ func TestSourceRejectsCrossDirectoryLinkCycle(t *testing.T) {
 	if err := os.Symlink("../a", filepath.Join(root, "b", "next")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := treeDigest(root); err == nil {
-		t.Fatal("directory cycle accepted")
+	dest := filepath.Join(t.TempDir(), "copy")
+	if err := copyTree(root, dest); err != nil {
+		t.Fatal(err)
+	}
+	for _, link := range []string{"a/next", "b/next"} {
+		if _, err := os.Lstat(filepath.Join(dest, link)); !os.IsNotExist(err) {
+			t.Fatalf("cyclic link %s copied: %v", link, err)
+		}
 	}
 }
 

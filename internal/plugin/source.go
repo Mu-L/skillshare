@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -72,16 +74,23 @@ func acquireRef(ctx context.Context, source, ref string) (string, string, func()
 	return root, source, cleanup, nil
 }
 
-// treeDigest includes safe relative links and rejects escapes and special files.
+// treeDigest includes safe relative links, leaves out unsafe ones and rejects special files.
 // The entire package tree is retained, including scripts and referenced assets.
 func treeDigest(root string) (string, error) {
-	if err := validateSourceLinks(root); err != nil {
-		return "", err
+	digest, _, err := hashTree(root)
+	return digest, err
+}
+
+// hashTree is treeDigest plus the links it left out, relative to root.
+func hashTree(root string) (string, map[string]bool, error) {
+	skipped, err := validateSourceLinks(root)
+	if err != nil {
+		return "", nil, err
 	}
 	h := sha256.New()
 	var size int64
 	count := 0
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -90,6 +99,9 @@ func treeDigest(root string) (string, error) {
 			if d.Name() == ".git" {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+		if skipped[rel] {
 			return nil
 		}
 		info, err := d.Info()
@@ -121,7 +133,7 @@ func treeDigest(root string) (string, error) {
 		_ = f.Close()
 		return err
 	})
-	return hex.EncodeToString(h.Sum(nil)), err
+	return hex.EncodeToString(h.Sum(nil)), skipped, err
 }
 
 func Discover(ctx context.Context, source string) (*Discovery, error) {
@@ -153,11 +165,18 @@ func DiscoverOptions(ctx context.Context, source, ref, entry string) (*Discovery
 }
 
 func discoverRoot(root, source string, explicit ...string) (*Discovery, error) {
-	digest, err := treeDigest(root)
+	digest, skipped, err := hashTree(root)
 	if err != nil {
 		return nil, err
 	}
 	result := &Discovery{TargetDefinitions: TargetDefinitions(), Source: source, Digest: digest, Candidates: []Candidate{}}
+	if len(skipped) > 0 {
+		links := slices.Sorted(maps.Keys(skipped))
+		if len(links) > 3 {
+			links = append(links[:3], "...")
+		}
+		result.Warnings = append(result.Warnings, fmt.Sprintf("Skipped %d broken or unsafe links; they are left out of the install: %s", len(skipped), strings.Join(links, ", ")))
+	}
 	seenAt := map[string]int{}
 	// Read all native catalogs; the same package may be advertised more than once.
 	for _, path := range []string{".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json", ".cursor-plugin/marketplace.json", ".github/plugin/marketplace.json", ".plugin/marketplace.json", "marketplace.json"} {
@@ -292,7 +311,8 @@ func mergeCatalogPath(kept *Candidate, c Candidate, owner string) {
 }
 
 func copyTree(root, dest string) error {
-	if _, err := treeDigest(root); err != nil {
+	_, skipped, err := hashTree(root)
+	if err != nil {
 		return err
 	}
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -306,6 +326,9 @@ func copyTree(root, dest string) error {
 				return filepath.SkipDir
 			}
 			return os.MkdirAll(to, 0755)
+		}
+		if skipped[rel] {
+			return nil
 		}
 		info, err := d.Info()
 		if err != nil {

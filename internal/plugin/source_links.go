@@ -65,15 +65,19 @@ func resolveSourcePath(root, path string) (string, error) {
 	return current, nil
 }
 
-func validateSourceLinks(root string) error {
+// validateSourceLinks returns the links, relative to root, that are broken, point outside the
+// source or into .git, or close a cycle. Callers leave them out of digests and snapshots, so an
+// unrelated bad link does not block the rest of a source and is never followed.
+func validateSourceLinks(root string) (map[string]bool, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	root, err = filepath.EvalSymlinks(root)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	skipped := map[string]bool{}
 	active := map[string]bool{}
 	count := 0
 	var visit func(string) error
@@ -82,13 +86,22 @@ func validateSourceLinks(root string) error {
 		if count > 20000 {
 			return fmt.Errorf("plugin source exceeds 20,000 entries including links")
 		}
+		// path always sits in a real directory, so only its last component can be a link.
+		skip := func(err error) error {
+			if info, e := os.Lstat(path); e == nil && info.Mode()&os.ModeSymlink != 0 {
+				rel, _ := filepath.Rel(root, path)
+				skipped[rel] = true
+				return nil
+			}
+			return err
+		}
 		resolved, err := resolveSourcePath(root, path)
 		if err != nil {
-			return err
+			return skip(err)
 		}
 		info, err := os.Stat(resolved)
 		if err != nil {
-			return err
+			return skip(err)
 		}
 		if info.Mode().IsRegular() {
 			return nil
@@ -97,7 +110,7 @@ func validateSourceLinks(root string) error {
 			return fmt.Errorf("unsupported special file: %s", path)
 		}
 		if active[resolved] {
-			return fmt.Errorf("cyclic plugin directory link: %s", path)
+			return skip(fmt.Errorf("cyclic plugin directory link: %s", path))
 		}
 		active[resolved] = true
 		defer delete(active, resolved)
@@ -115,5 +128,5 @@ func validateSourceLinks(root string) error {
 		}
 		return nil
 	}
-	return visit(root)
+	return skipped, visit(root)
 }
