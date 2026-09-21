@@ -34,6 +34,7 @@ skillshare sync --all
 | `--disabled` | project mode で `add` と併用: Agent の global config が定義するサーバーをオフにする。[下記](#turn-off-a-global-server-in-one-project)を参照 |
 | `--pi-extension PACKAGE` | target に Pi を含む場合は必須。`add`、`edit`、`import` と併用: `pi-mcp-adapter` または `pi-mcp-extension` のうち、Pi にインストールした方。[下記](#pi-choose-your-mcp-extension)を参照 |
 | `--direct-tools VALUE` | `pi-mcp-adapter` を使う Pi で `add` または `edit` と併用: `true`、`false`、`search`、またはカンマ区切りのツール名。[下記](#pi-direct-tools)を参照 |
+| `--pi-options JSON` | `pi-mcp-adapter` を使う Pi で `add` または `edit` と併用: その他の adapter フィールドを JSON オブジェクトで指定する。`{}` でクリアする。[下記](#pi-options)を参照 |
 | `--from CLIENT` | インポート元の既存クライアント、または `--file` のフォーマット |
 | `--file PATH` | ネイティブの JSON/JSONC、TOML、または Goose の YAML。`.toml` はデフォルトで Codex とみなされ、他のフォーマットはその MCP セクションから検出される。明示的な方言を指定するには `--from` を使う |
 | `--sync` | 保存して同期する。非インタラクティブな add/import/remove ではそうしない限り保存のみ |
@@ -88,6 +89,7 @@ Add、edit、remove、import では、**Save and sync** または **Save only** 
 | `transport` | 任意の `stdio` または `streamable-http`。省略時は推測される |
 | `targets` | 任意の受け取り側クライアント。`mcp.targets` を上書きする。空のリストにすると、サーバーは Skillshare 内にのみ保持される。[下記](#keep-a-server-without-syncing-it)を参照 |
 | `directTools` | `pi-mcp-adapter` を使う Pi 限定: `true`、`false`、`"search"`、またはツール名のリスト。[下記](#pi-direct-tools)を参照 |
+| `piOptions` | `pi-mcp-adapter` を使う Pi 限定: その他の adapter フィールド。Pi のエントリにそのまま書き込まれる。[下記](#pi-options)を参照 |
 | `disabled` | `true` のみ、他の接続フィールドを伴わない、かつ project がスコープ内にあること: project mode、または `mcp.projects` 配下の root。[下記](#turn-off-a-global-server-in-one-project)を参照 |
 
 クライアント ID は `claude`、`codex`、`cursor`、`vscode`、`opencode`、`kilocode`、
@@ -585,3 +587,40 @@ mcp:
 `--pi-extension` を選択してください。ファイル単体では、どちらの package がインストールされているかを識別できません。非対応のレガシー SSE は引き続きブロックされます。OAuth と package 固有のオプションは
 Pi 側で管理されたままになります。sync の成功は、設定が書き込まれたことを意味するだけであり、
 extension がインストールされていることやサーバーが接続されたことを意味しません。
+
+### その他の adapter 設定 {#pi-options}
+
+`pi-mcp-adapter` には、`excludeTools` や `approveTools` のように、Skillshare に設定項目がない
+サーバーごとのフィールドがほかにもあります。それらを `piOptions` の下に置くと、Pi のファイルにある
+そのサーバーのエントリにそのまま書き込まれます。
+
+```yaml
+mcp:
+  servers:
+    github:
+      command: npx
+      args: [-y, "@modelcontextprotocol/server-github"]
+      piExtension: pi-mcp-adapter
+      targets: [pi]
+      piOptions:
+        excludeTools: ["*emulator*"]
+        approveTools: ["delete_*", "merge_pull_request"]
+```
+
+コマンドラインからは、`mcp add` または `mcp edit` に JSON オブジェクトを渡します。これは
+`piOptions` 全体を置き換え、`{}` でクリアします。ダッシュボードでは、サーバーのダイアログの
+**Direct tools** の下に同じ入力欄があり、保存する前にテキストが JSON オブジェクトであることを確認します。
+
+```bash
+skillshare mcp edit github --pi-options '{"excludeTools":["*emulator*"]}'
+```
+
+- Skillshare はフィールド名や値をチェックしません。それらを知っているのは adapter だけです。
+- Skillshare 自身が書き込むフィールドは、ここでは拒否されます: `command`、`args`、`env`、`url`、
+  `headers`、`transport`、`enabled`、`disabled`、`directTools`。
+- 値はそのままコピーされます。認証情報はここではなく、`fromEnv` を使って `env` または `headers` に
+  置いてください。
+- `directTools` と同様に、`piOptions` から削除したフィールドは Pi のファイルに残ります。そちらで
+  削除してください。
+- これには `piExtension: pi-mcp-adapter` が必要で、`disabled` とは併用できません。他の Agent が
+  これを受け取ることはなく、`import --from pi` はこれらのフィールドを読み戻しません。

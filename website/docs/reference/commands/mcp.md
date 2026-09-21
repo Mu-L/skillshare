@@ -34,6 +34,7 @@ skillshare sync --all
 | `--disabled` | Project mode, with `add`: turn off a server the Agent's global config defines. See [below](#turn-off-a-global-server-in-one-project) |
 | `--pi-extension PACKAGE` | Required when Pi is a target, with `add`, `edit` or `import`: `pi-mcp-adapter` or `pi-mcp-extension`, the one installed in Pi. See [below](#pi-choose-your-mcp-extension) |
 | `--direct-tools VALUE` | Pi with `pi-mcp-adapter`, with `add` or `edit`: `true`, `false`, `search`, or tool names separated by commas. See [below](#pi-direct-tools) |
+| `--pi-options JSON` | Pi with `pi-mcp-adapter`, with `add` or `edit`: other adapter fields as a JSON object; `{}` clears them. See [below](#pi-options) |
 | `--from CLIENT` | Existing client to import, or the format of `--file` |
 | `--file PATH` | Native JSON/JSONC, TOML or Goose YAML; `.toml` defaults to Codex, other formats are detected from their MCP section; use `--from` for an explicit dialect |
 | `--sync` | Save and synchronize; noninteractive add/import/remove otherwise save only |
@@ -116,6 +117,7 @@ Skillshare config. The schema is `schemas/mcp.schema.json` in the repository.
 | `transport` | Optional `stdio` or `streamable-http`; inferred when omitted |
 | `targets` | Optional receiving clients; overrides `mcp.targets`. An empty list keeps the server in Skillshare only. See [below](#keep-a-server-without-syncing-it) |
 | `directTools` | Pi with `pi-mcp-adapter` only: `true`, `false`, `"search"` or a list of tool names. See [below](#pi-direct-tools) |
+| `piOptions` | Pi with `pi-mcp-adapter` only: other adapter fields, written into Pi's entry as given. See [below](#pi-options) |
 | `disabled` | `true` only, no other connection fields, and a project must be in scope: project mode, or a root under `mcp.projects`. See [below](#turn-off-a-global-server-in-one-project) |
 
 Client IDs are `claude`, `codex`, `cursor`, `vscode`, `opencode`, `kilocode`,
@@ -704,3 +706,40 @@ saving an imported connection; a file alone cannot identify which package is
 installed. Unsupported legacy SSE remains blocked. OAuth and package-only options
 stay managed in Pi. Sync success means the configuration was written, not that
 an extension is installed or a server has connected.
+
+### Other adapter settings {#pi-options}
+
+`pi-mcp-adapter` has more per-server fields than Skillshare has settings for, such as
+`excludeTools` and `approveTools`. Put them under `piOptions` and they are written into
+the server's entry in Pi's file as given:
+
+```yaml
+mcp:
+  servers:
+    github:
+      command: npx
+      args: [-y, "@modelcontextprotocol/server-github"]
+      piExtension: pi-mcp-adapter
+      targets: [pi]
+      piOptions:
+        excludeTools: ["*emulator*"]
+        approveTools: ["delete_*", "merge_pull_request"]
+```
+
+From the command line, pass a JSON object to `mcp add` or `mcp edit`. It replaces the
+whole of `piOptions`, and `{}` clears it. The dashboard has the same box in the server
+dialog, under **Direct tools**, and checks that the text is a JSON object before saving.
+
+```bash
+skillshare mcp edit github --pi-options '{"excludeTools":["*emulator*"]}'
+```
+
+- Skillshare does not check the field names or values. Only the adapter knows them.
+- Fields Skillshare writes itself are refused here: `command`, `args`, `env`, `url`,
+  `headers`, `transport`, `enabled`, `disabled` and `directTools`.
+- The values are copied literally. Keep credentials in `env` or `headers` with
+  `fromEnv`, not here.
+- Like `directTools`, a field removed from `piOptions` stays in Pi's file. Delete it
+  there.
+- It needs `piExtension: pi-mcp-adapter` and cannot be combined with `disabled`. No
+  other Agent receives it, and `import --from pi` does not read these fields back.

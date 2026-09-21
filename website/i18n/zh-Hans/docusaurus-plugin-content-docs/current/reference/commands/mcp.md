@@ -34,6 +34,7 @@ skillshare sync --all
 | `--disabled` | Project mode，配合 `add` 使用：关闭一个由 Agent 全局配置定义的 server。参见[下文](#turn-off-a-global-server-in-one-project) |
 | `--pi-extension PACKAGE` | target 包含 Pi 时必填，用于 `add`、`edit` 或 `import`：`pi-mcp-adapter` 或 `pi-mcp-extension`，填你在 Pi 里安装的那一个。参见[下文](#pi-choose-your-mcp-extension) |
 | `--direct-tools VALUE` | 配合 `pi-mcp-adapter` 使用的 Pi，用于 `add` 或 `edit`：`true`、`false`、`search`，或用逗号分隔的工具名称。参见[下文](#pi-direct-tools) |
+| `--pi-options JSON` | 配合 `pi-mcp-adapter` 使用的 Pi，用于 `add` 或 `edit`：以 JSON 对象传入 adapter 的其他字段；`{}` 会清空它们。参见[下文](#pi-options) |
 | `--from CLIENT` | 要导入的现有 client，或 `--file` 的格式 |
 | `--file PATH` | 原生 JSON/JSONC、TOML 或 Goose YAML；`.toml` 默认对应 Codex，其他格式会根据其 MCP 区块自动检测；如需明确指定方言请使用 `--from` |
 | `--sync` | 保存并同步；非交互式的 add/import/remove 默认仅保存 |
@@ -115,6 +116,7 @@ Skillshare 配置中。schema 是仓库中的 `schemas/mcp.schema.json`。
 | `transport` | 可选的 `stdio` 或 `streamable-http`；省略时会自动推断 |
 | `targets` | 可选的接收方 client；覆盖 `mcp.targets`。空列表会让该 server 只保留在 Skillshare 中。参见[下文](#keep-a-server-without-syncing-it) |
 | `directTools` | 仅限使用 `pi-mcp-adapter` 的 Pi：`true`、`false`、`"search"` 或工具名称列表。参见[下文](#pi-direct-tools) |
+| `piOptions` | 仅限使用 `pi-mcp-adapter` 的 Pi：adapter 的其他字段，会原样写入 Pi 中的条目。参见[下文](#pi-options) |
 | `disabled` | 仅限 `true`，不能有其他连接字段，且必须有 project 在作用范围内：project mode，或 `mcp.projects` 下的某个项目根目录。参见[下文](#turn-off-a-global-server-in-one-project) |
 
 Client ID 有 `claude`、`codex`、`cursor`、`vscode`、`opencode`、`kilocode`、
@@ -693,3 +695,40 @@ mcp:
 仍不支持旧版 SSE。OAuth 和仅限软件包内的选项
 仍由 Pi 自身管理。同步成功只代表配置已被写入，并不代表
 某个 extension 已安装，或某个 server 已建立连接。
+
+### 其他 adapter 设置 {#pi-options}
+
+`pi-mcp-adapter` 的每个 server 字段比 Skillshare 提供的设置更多，例如
+`excludeTools` 和 `approveTools`。把它们放在 `piOptions` 下，它们会原样写入
+Pi 文件中该 server 的条目：
+
+```yaml
+mcp:
+  servers:
+    github:
+      command: npx
+      args: [-y, "@modelcontextprotocol/server-github"]
+      piExtension: pi-mcp-adapter
+      targets: [pi]
+      piOptions:
+        excludeTools: ["*emulator*"]
+        approveTools: ["delete_*", "merge_pull_request"]
+```
+
+在命令行中，可以将一个 JSON 对象传给 `mcp add` 或 `mcp edit`。它会替换整个
+`piOptions`，而 `{}` 会将其清空。仪表盘的 server 对话框中，**Direct tools**
+下方也有相同的输入框，保存前会检查内容是否为 JSON 对象。
+
+```bash
+skillshare mcp edit github --pi-options '{"excludeTools":["*emulator*"]}'
+```
+
+- Skillshare 不会检查字段名称或值。只有 adapter 才了解它们。
+- 由 Skillshare 自己写入的字段在这里会被拒绝：`command`、`args`、`env`、`url`、
+  `headers`、`transport`、`enabled`、`disabled` 和 `directTools`。
+- 这些值会按字面原样复制。凭据请通过 `fromEnv` 放在 `env` 或 `headers` 中，
+  不要放在这里。
+- 与 `directTools` 一样，从 `piOptions` 中移除的字段仍会留在 Pi 的文件中。请到
+  那里自行删除。
+- 它需要 `piExtension: pi-mcp-adapter`，并且不能与 `disabled` 同时使用。其他
+  Agent 都不会收到它，`import --from pi` 也不会读回这些字段。

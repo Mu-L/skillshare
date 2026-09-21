@@ -31,8 +31,8 @@ skillshare mcp restore BACKUP_ID --no-tui            # Apply restoration; source
   `mcp.targets` instead, and fails when that is empty. Not valid with `--disabled`.
 - `add`, `edit`, `import` and `remove` save the source only. Add `--sync` to write the
   Agent files too. `sync --all` includes MCP along with skills, agents and extras.
-- Scripted `edit` accepts `--url`, repeated `--target`, `--pi-extension`, `--direct-tools`
-  or `-- command args`. Switching transport clears the fields of the other one.
+- Scripted `edit` accepts `--url`, repeated `--target`, `--pi-extension`, `--direct-tools`,
+  `--pi-options` or `-- command args`. Switching transport clears the fields of the other one.
 - Preview with `skillshare sync mcp --dry-run --json`, then apply with
   `skillshare sync mcp --revision <revision>` to reject a stale plan.
 - Noninteractive `import` without a name only lists candidates. Use `--replace` only
@@ -68,7 +68,7 @@ mcp:
 | `url`, `headers`, `bearerToken` | Streamable HTTP server. `bearerToken` is `{fromEnv: VARIABLE}` and cannot coexist with an Authorization header |
 | `transport` | Optional `stdio` or `streamable-http`; inferred when omitted. Legacy SSE is not supported |
 | `targets` | Receiving clients for this server. `[]` keeps it in Skillshare only |
-| `piExtension`, `directTools` | Pi only. See [Pi](#pi) |
+| `piExtension`, `directTools`, `piOptions` | Pi only. See [Pi](#pi) |
 | `disabled` | `true` only, no connection fields, and a project must be in scope: project mode, or a root under `mcp.projects`. See [Turn off a global server in one project](#turn-off-a-global-server-in-one-project) |
 
 Client IDs: `claude`, `codex`, `cursor`, `vscode`, `opencode`, `kilocode`, `grok`,
@@ -210,6 +210,21 @@ skillshare mcp edit context7 --direct-tools resolve-library-id,get-library-docs 
 - It cannot be combined with `disabled`, and it is an error without
   `piExtension: pi-mcp-adapter`.
 - `import --from pi` keeps an entry's `directTools` and selects `pi-mcp-adapter` for it.
+
+`piOptions` (adapter only) holds adapter fields Skillshare has no setting for, such as
+`excludeTools` or `approveTools`. They are written into Pi's entry as given.
+
+```bash
+skillshare mcp edit github --pi-options '{"excludeTools":["*emulator*"]}' --no-tui
+```
+
+- The flag takes a JSON object and replaces the whole of `piOptions`; `{}` clears it.
+- Field names and values are not checked. Fields Skillshare writes itself (`command`,
+  `args`, `env`, `url`, `headers`, `transport`, `enabled`, `disabled`, `directTools`)
+  are an error.
+- Values are literal: no `fromEnv`, so keep credentials out.
+- A field removed from `piOptions` stays in Pi's file, and import does not read these
+  fields back.
 
 ## Turn off a global server in one project
 
