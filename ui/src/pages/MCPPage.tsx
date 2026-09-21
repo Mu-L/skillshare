@@ -22,7 +22,7 @@ import { MCPConfigDialog } from '../components/mcp/MCPConfigView';
 import MCPRemoveDialog from '../components/mcp/MCPRemoveDialog';
 import MCPRestoreDialog from '../components/mcp/MCPRestoreDialog';
 import MCPServerDialog from '../components/mcp/MCPServerDialog';
-import { buildMatrix, describeMessage, isShadowed, isResolvable, targetLabel, type MCPChange } from '../components/mcp/mcpView';
+import { buildMatrix, describeError, describeMessage, isShadowed, isResolvable, targetLabel, type MCPChange } from '../components/mcp/mcpView';
 import { useT } from '../i18n';
 import { shortenHome } from '../lib/paths';
 import { queryKeys } from '../lib/queryKeys';
@@ -97,7 +97,7 @@ export default function MCPPage() {
       await mcpApi.save({ name, server, replace: true });
     } catch (e) {
       if (prev) cache.setQueryData(queryKeys.mcp, prev);
-      toast((e as Error).message, 'error');
+      toast(describeError(t, (e as Error).message), 'error');
     }
     refresh();
   };
@@ -106,7 +106,7 @@ export default function MCPPage() {
     try {
       await mcpApi.save({ settings, replace: true });
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(describeError(t, (e as Error).message), 'error');
     }
     refresh();
   };
@@ -121,7 +121,7 @@ export default function MCPPage() {
     try {
       setReplace({ plan: await mcpApi.preview(mutation), mutation });
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(describeError(t, (e as Error).message), 'error');
     } finally {
       setBusy(false);
     }
@@ -134,7 +134,7 @@ export default function MCPPage() {
       await mcpApi.configure(replace.mutation, replace.plan.revision, true);
       done(t('mcp.toast.replaced'));
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(describeError(t, (e as Error).message), 'error');
     } finally {
       setBusy(false);
     }
@@ -180,7 +180,7 @@ export default function MCPPage() {
       />
 
       {error && <div className="ss-note bad mb-4"><span className="flex-1">{error.message}</span></div>}
-      {data?.previewError && <div className="ss-note bad mb-4"><AlertCircle size={16} /><span className="flex-1">{data.previewError}</span></div>}
+      {data?.previewError && <div className="ss-note bad mb-4"><AlertCircle size={16} /><span className="flex-1">{describeError(t, data.previewError)}</span></div>}
 
       {data && (
         <RailLayout rail={<>

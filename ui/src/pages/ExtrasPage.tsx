@@ -22,12 +22,11 @@ import { shortenHome } from '../lib/paths';
 
 const MODES = ['merge', 'copy', 'symlink'] as const;
 
-// Status and mode labels stay in English, like the CLI
-const STATUS: Record<string, { tone: string; label: string }> = {
-  synced: { tone: 'ok', label: 'In sync' },
-  drift: { tone: 'warn', label: 'Drift' },
-  'not synced': { tone: 'warn', label: 'Not synced' },
-  'no source': { tone: 'bad', label: 'Source missing' },
+const STATUS: Record<string, { tone: string; labelKey: string }> = {
+  synced: { tone: 'ok', labelKey: 'extras.status.synced' },
+  drift: { tone: 'warn', labelKey: 'extras.status.drift' },
+  'not synced': { tone: 'warn', labelKey: 'extras.status.notSynced' },
+  'no source': { tone: 'bad', labelKey: 'extras.status.sourceMissing' },
 };
 
 /** The tool a target folder belongs to: the known target whose home folder (e.g. ~/.claude) holds the path. */
@@ -451,7 +450,7 @@ export default function ExtrasPage() {
                       <span className="min-w-0 flex-1 truncate font-mono text-[13px]" title={tg.path}>{shortenHome(tg.path)}</span>
                       <TargetTags target={tg} />
                       <span className="w-[120px] shrink-0">
-                        <span className={`ss-st ${status?.tone ?? ''}`}>{status?.label ?? tg.status}</span>
+                        <span className={`ss-st ${status?.tone ?? ''}`}>{status ? t(status.labelKey) : tg.status}</span>
                       </span>
                       <button type="button" className="ss-ib" aria-label={t('extras.targetActions', { path: tg.path })} onClick={(e) => openMenu(e, targetMenu(extra, tg))}>
                         <Ellipsis size={16} />

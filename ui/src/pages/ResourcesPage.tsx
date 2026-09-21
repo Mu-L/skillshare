@@ -81,8 +81,6 @@ const SOURCE_ORDER: SourceType[] = ['tracked', 'github', 'remote', 'local'];
 // Source names stay in English, like the CLI.
 const SOURCE_LABEL: Record<SourceFilter, string> = { all: 'All', tracked: 'Tracked', github: 'GitHub', remote: 'Remote', local: 'Local' };
 const SOURCE_ICON = { tracked: GitBranch, github: Github, remote: Globe, local: Folder };
-// Status labels stay in English too.
-const STATUS_LABEL: Record<StatusFilter, string> = { all: 'All', enabled: 'Enabled', disabled: 'Disabled' };
 const VIEW_KEY = 'skillshare:skills-view';
 const COLLAPSED_KEY = 'skillshare:folder-collapsed';
 
@@ -406,10 +404,10 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     const entries = getSkillTargets(s.flatName);
     const synced = entries.filter((e) => e.status === 'synced').map((e) => e.target).sort();
     const applicable = entries.some((e) => e.status !== 'na');
-    if (s.disabled) return { synced, tone: 'off', label: STATUS_LABEL.disabled };
+    if (s.disabled) return { synced, tone: 'off', label: t('resources.status.disabled') };
     if (entries.length > 0 && !applicable) return { synced, tone: 'off', label: t('resources.tree.noAgentTargets.label') };
     if (applicable && synced.length === 0) return { synced, tone: 'off', label: t('resources.tree.filteredOut.label') };
-    return { synced, tone: 'ok', label: STATUS_LABEL.enabled };
+    return { synced, tone: 'ok', label: t('resources.status.enabled') };
   };
 
   /* -- Mutations -- */
@@ -819,7 +817,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
               prefix={t('resources.toolbar.status')}
               value={status}
               onChange={(v) => resetting(setStatus)(v as StatusFilter)}
-              options={(['all', 'enabled', 'disabled'] as StatusFilter[]).map((v) => ({ value: v, label: STATUS_LABEL[v] }))}
+              options={(['all', 'enabled', 'disabled'] as StatusFilter[]).map((v) => ({ value: v, label: t(`resources.status.${v}`) }))}
             />
             {targetIndex.size > 1 && (
               <Select

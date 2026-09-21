@@ -10,7 +10,7 @@ import { useT } from '../../i18n';
 import PiExtensionField from './PiExtensionField';
 import DirectToolsField, { directToolsComplete, directToolsDraft, directToolsValue } from './DirectToolsField';
 import MCPConfigView from './MCPConfigView';
-import { joinCommand, splitCommand, targetLabel } from './mcpView';
+import { describeError, joinCommand, splitCommand, targetLabel } from './mcpView';
 
 // Mirrors mcp.serverName
 const NAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
@@ -146,7 +146,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
       await mcpApi.save({ project, name: trimmed, server: next, replace: Boolean(initial) });
       onSaved();
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(t, (e as Error).message));
       setSaving(false);
     }
   };

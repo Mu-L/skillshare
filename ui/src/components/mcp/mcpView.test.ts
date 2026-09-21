@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MCPPlan } from '../../api/mcp';
-import { buildMatrix, describeMessage, isResolvable, joinCommand, splitCommand, targetLabel } from './mcpView';
+import { buildMatrix, describeError, describeMessage, isResolvable, joinCommand, splitCommand, targetLabel } from './mcpView';
 import { mcpTargets } from '../../api/mcp';
 
 const change = (name: string, target: string, action: string, message?: string) => ({ name, target, action, message, path: `/${target}.json` });
@@ -24,6 +24,12 @@ describe('MCP view helpers', () => {
       .toBe('[mcp.conflictOrphaned]: /gone/config.yaml');
     expect(describeMessage(t, 'managed by another Skillshare config: /live/config.yaml'))
       .toBe('[mcp.conflictOtherConfig]: /live/config.yaml');
+  });
+
+  it('translates the Kilo project environment error and preserves its project path', () => {
+    const t = (key: string, params?: Record<string, string>) => `[${key}:${params?.name}]`;
+    expect(describeError(t, 'D:\\project: Kilo Code MCP mcp-test: Kilo does not allow environment references in project config and ignores the whole file when it finds one; remove fromEnv here or define this server in global mode'))
+      .toBe('D:\\project: [mcp.kilocodeProjectEnv:mcp-test]');
   });
 
   // The owner messages end in a path, so matching them needs the same prefix search

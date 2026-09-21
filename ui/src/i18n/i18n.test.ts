@@ -71,4 +71,11 @@ describe('i18n dictionaries', () => {
     expect(translate('zh-TW', 'theme.settings')).toBe('主題');
     expect(translate('zh-TW', 'missing.key', undefined, 'Fallback')).toBe('Fallback');
   });
+
+  it('localizes resource, extra, and Kilo project status copy', () => {
+    expect(translate('zh-TW', 'resources.status.enabled')).toBe('已啟用');
+    expect(translate('zh-TW', 'extras.status.synced')).toBe('已同步');
+    expect(translate('zh-TW', 'mcp.kilocodeProjectEnv', { name: 'mcp-test' }))
+      .toContain('Kilo Code MCP mcp-test：Kilo 不允許');
+  });
 });

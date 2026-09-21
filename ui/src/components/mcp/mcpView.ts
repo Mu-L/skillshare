@@ -66,6 +66,19 @@ export const describeMessage = (t: (key: string) => string, message = '') => {
   return start ? t(conflictKeys[start]) + message.slice(start.length) : message;
 };
 
+const kiloProjectEnvPrefix = 'Kilo Code MCP ';
+const kiloProjectEnvSuffix = ': Kilo does not allow environment references in project config and ignores the whole file when it finds one; remove fromEnv here or define this server in global mode';
+
+/** Localizes the actionable Kilo project error while preserving a leading project path. */
+export const describeError = (t: (key: string, params?: Record<string, string>) => string, message = '') => {
+  const start = message.indexOf(kiloProjectEnvPrefix);
+  if (start < 0) return message;
+  const nameStart = start + kiloProjectEnvPrefix.length;
+  const end = message.indexOf(kiloProjectEnvSuffix, nameStart);
+  if (end < 0) return message;
+  return message.slice(0, start) + t('mcp.kilocodeProjectEnv', { name: message.slice(nameStart, end) });
+};
+
 /** A synced Claude entry that a local-scope server of the same name hides in this project. */
 export const isShadowed = (change: MCPChange) => change.action !== 'conflict' && Boolean(change.message?.startsWith(shadowMessage));
 

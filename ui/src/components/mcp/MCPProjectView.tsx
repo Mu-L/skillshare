@@ -15,7 +15,7 @@ import MCPServerDialog from './MCPServerDialog';
 import MCPServerList from './MCPServerList';
 import MCPSyncBox from './MCPSyncBox';
 import { TargetPill } from './TargetPicker';
-import { buildMatrix, describeEndpoint, projectOf, targetLabel } from './mcpView';
+import { buildMatrix, describeEndpoint, describeError, projectOf, targetLabel } from './mcpView';
 
 type MCPList = Awaited<ReturnType<typeof mcpApi.list>>;
 
@@ -64,7 +64,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
       await mcpApi.save({ ...mutation, project: root });
       onChanged();
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(describeError(t, (e as Error).message), 'error');
     } finally {
       setBusy(false);
     }
@@ -100,7 +100,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
       await mcpApi.save({ project: root, remove: true });
       onRemoved();
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(describeError(t, (e as Error).message), 'error');
       setBusy(false);
     }
   };
