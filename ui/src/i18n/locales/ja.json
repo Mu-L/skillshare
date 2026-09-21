@@ -185,6 +185,8 @@
   "config.beautify.noChange": "すでに整形済みです。",
   "config.beautify.invalid": "整形できません: {error}",
   "config.discard.confirmText": "破棄",
+  "config.expand": "拡大",
+  "config.collapse": "縮小",
   "config.discard.message": "保存されていない変更があります。破棄しますか？",
   "config.discard.title": "未保存の変更",
   "config.errorLoading": "{file} の読み込みに失敗しました",

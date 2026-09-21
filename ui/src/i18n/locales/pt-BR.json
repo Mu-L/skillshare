@@ -185,6 +185,8 @@
   "config.beautify.noChange": "Já está formatado.",
   "config.beautify.invalid": "Não foi possível formatar: {error}",
   "config.discard.confirmText": "Descartar",
+  "config.expand": "Expandir",
+  "config.collapse": "Recolher",
   "config.discard.message": "Você tem alterações não salvas que serão perdidas. Descartá-las?",
   "config.discard.title": "Alterações não salvas",
   "config.errorLoading": "Falha ao carregar {file}",

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Save, FileCode, Info, RefreshCw, FileCog, FolderOpen, Download, WandSparkles } from 'lucide-react';
+import { Save, FileCode, Info, RefreshCw, FileCog, FolderOpen, Download, WandSparkles, Maximize2, Minimize2, X } from 'lucide-react';
 import { useT } from '../i18n';
 import CodeMirror from '@uiw/react-codemirror';
 import { yaml } from '@codemirror/lang-yaml';
@@ -18,6 +18,7 @@ import { PageSkeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import AssistantPanel from '../components/config/AssistantPanel';
 import ConfirmDialog from '../components/ConfirmDialog';
+import DialogShell from '../components/DialogShell';
 import { api } from '../api/client';
 import { queryKeys, staleTimes } from '../lib/queryKeys';
 import { useAppContext } from '../context/AppContext';
@@ -61,6 +62,8 @@ export default function ConfigPage() {
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const [pendingTab, setPendingTab] = useState<ConfigTab | null>(null);
   const [showRevertDialog, setShowRevertDialog] = useState(false);
+  // Expanded editing: the same editor and panel, in a near-fullscreen dialog
+  const [expanded, setExpanded] = useState(false);
 
   // --- config.yaml state ---
   const { data: configData, isPending: configPending, error: configError } = useQuery({
@@ -334,6 +337,64 @@ export default function ConfigPage() {
     );
   }
 
+  // Rendered inline or inside the expanded dialog, never both: CodeMirror owns editorRef.
+  const editorBlock = (
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="ss-code !overflow-hidden !p-0">
+        <CodeMirror
+          key={tab}
+          value={editor.value}
+          onChange={editor.onChange}
+          extensions={editor.extensions}
+          theme="none"
+          height={expanded ? 'calc(100vh - 13rem)' : '500px'}
+          onCreateEditor={(view) => { editorRef.current = view; }}
+          basicSetup={{
+            lineNumbers: true,
+            foldGutter: tab === 'config',
+            highlightActiveLine: true,
+            highlightSelectionMatches: true,
+            bracketMatching: tab === 'config',
+            indentOnInput: tab === 'config',
+            autocompletion: false,
+          }}
+        />
+      </div>
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-[13px] text-ink-3">{editor.hint}</span>
+        <span className="flex items-center gap-2.5">
+          {tab === 'config' && (
+            <Button variant="ghost" size="sm" onClick={handleBeautify} disabled={activeSaving} title={t('config.beautify.hint')}>
+              <WandSparkles size={15} />{t('config.beautify')}
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={() => setExpanded((v) => !v)} title={t(expanded ? 'config.collapse' : 'config.expand')}>
+            {expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}{t(expanded ? 'config.collapse' : 'config.expand')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowRevertDialog(true)} disabled={!activeDirty || activeSaving}>{t('config.revert')}</Button>
+          <Button variant="primary" size="sm" onClick={handleSave} disabled={activeSaving || !activeDirty}>
+            <Save size={15} />{activeSaving ? t('config.saving') : t('config.save')}
+          </Button>
+        </span>
+      </div>
+    </div>
+  );
+  const panelBlock = (
+    <AssistantPanel
+      mode={tab}
+      errors={tab === 'config' ? yamlErrors : []}
+      changeCount={activeChangeCount}
+      fieldPath={tab === 'config' ? fieldPath : null}
+      cursorLine={cursorLine}
+      source={editor.value}
+      diff={tab === 'config' ? diff : { lines: [], changeCount: 0 }}
+      editorRef={editorRef}
+      onRevert={() => setShowRevertDialog(true)}
+      ignoredSkills={ignoreData?.stats?.ignored_skills ?? []}
+      ignoredAgents={agentIgnoreData?.stats?.ignored_agents ?? []}
+    />
+  );
+
   return (
     <div className="ss-wrap animate-fade-in">
       <PageHeader
@@ -375,62 +436,30 @@ export default function ConfigPage() {
               ))}
             </nav>
 
-            <div className="flex min-w-0 flex-col gap-3">
-              <div className="ss-code !overflow-hidden !p-0">
-                <CodeMirror
-                  key={tab}
-                  value={editor.value}
-                  onChange={editor.onChange}
-                  extensions={editor.extensions}
-                  theme="none"
-                  height="500px"
-                  onCreateEditor={(view) => { editorRef.current = view; }}
-                  basicSetup={{
-                    lineNumbers: true,
-                    foldGutter: tab === 'config',
-                    highlightActiveLine: true,
-                    highlightSelectionMatches: true,
-                    bracketMatching: tab === 'config',
-                    indentOnInput: tab === 'config',
-                    autocompletion: false,
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-[13px] text-ink-3">{editor.hint}</span>
-                <span className="flex items-center gap-2.5">
-                  {tab === 'config' && (
-                    <Button variant="ghost" size="sm" onClick={handleBeautify} disabled={activeSaving} title={t('config.beautify.hint')}>
-                      <WandSparkles size={15} />{t('config.beautify')}
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={() => setShowRevertDialog(true)} disabled={!activeDirty || activeSaving}>{t('config.revert')}</Button>
-                  <Button variant="primary" size="sm" onClick={handleSave} disabled={activeSaving || !activeDirty}>
-                    <Save size={15} />{activeSaving ? t('config.saving') : t('config.save')}
-                  </Button>
-                </span>
-              </div>
-            </div>
+            {expanded ? <div /> : editorBlock}
 
             {/* Sticky: the file can be long, the panel should stay where the eye is */}
             <div className="sticky top-6">
-              <AssistantPanel
-                mode={tab}
-                errors={tab === 'config' ? yamlErrors : []}
-                changeCount={activeChangeCount}
-                fieldPath={tab === 'config' ? fieldPath : null}
-                cursorLine={cursorLine}
-                source={editor.value}
-                diff={tab === 'config' ? diff : { lines: [], changeCount: 0 }}
-                editorRef={editorRef}
-                onRevert={() => setShowRevertDialog(true)}
-                ignoredSkills={ignoreData?.stats?.ignored_skills ?? []}
-                ignoredAgents={agentIgnoreData?.stats?.ignored_agents ?? []}
-              />
+              {!expanded && panelBlock}
             </div>
           </div>
         </>
       )}
+
+      <DialogShell open={expanded} onClose={() => setExpanded(false)} maxWidth="full" padding="none" preventClose ariaLabel={t('config.expand')}>
+        <div className="dh">
+          <h2 className="ss-h2 font-mono">{FILES.find((f) => f.value === tab)?.label}</h2>
+          <button type="button" className="ss-ib" onClick={() => setExpanded(false)} aria-label={t('common.close')}>
+            <X size={16} />
+          </button>
+        </div>
+        <div className="db">
+          <div className="grid grid-cols-[minmax(0,1fr)_300px] items-start gap-6">
+            {expanded && editorBlock}
+            {expanded && panelBlock}
+          </div>
+        </div>
+      </DialogShell>
 
       <SyncPreviewModal
         open={showSyncPreview}

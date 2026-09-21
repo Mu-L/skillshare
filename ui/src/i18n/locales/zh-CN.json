@@ -185,6 +185,8 @@
   "config.beautify.noChange": "格式已经很整齐。",
   "config.beautify.invalid": "无法美化：{error}",
   "config.discard.confirmText": "丢弃",
+  "config.expand": "展开",
+  "config.collapse": "收起",
   "config.discard.message": "你有未保存的更改，将会丢失。确认丢弃吗？",
   "config.discard.title": "未保存的更改",
   "config.errorLoading": "加载 {file} 失败",

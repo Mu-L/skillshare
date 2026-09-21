@@ -167,6 +167,8 @@
   "config.beautify.noChange": "Already formatted.",
   "config.beautify.invalid": "Cannot beautify: {error}",
   "config.discard.confirmText": "Discard",
+  "config.expand": "Expand",
+  "config.collapse": "Collapse",
   "config.discard.message": "You have unsaved changes that will be lost. Discard them?",
   "config.discard.title": "Unsaved Changes",
   "config.errorLoading": "Failed to load {file}",

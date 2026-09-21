@@ -185,6 +185,8 @@
   "config.beautify.noChange": "از قبل قالب‌بندی شده است.",
   "config.beautify.invalid": "زیباسازی ممکن نیست: {error}",
   "config.discard.confirmText": "رد کردن",
+  "config.expand": "بزرگ‌نمایی",
+  "config.collapse": "کوچک‌نمایی",
   "config.discard.message": "تغییرات ذخیره‌نشده دارید که از دست خواهند رفت. آن‌ها را رد کنید؟",
   "config.discard.title": "تغییرات ذخیره‌نشده",
   "config.errorLoading": "بارگذاری {file} ناموفق بود",

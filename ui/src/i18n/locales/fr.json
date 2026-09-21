@@ -185,6 +185,8 @@
   "config.beautify.noChange": "Déjà formaté.",
   "config.beautify.invalid": "Reformatage impossible : {error}",
   "config.discard.confirmText": "Ignorer",
+  "config.expand": "Agrandir",
+  "config.collapse": "Réduire",
   "config.discard.message": "Vous avez des modifications non enregistrées qui seront perdues. Les ignorer ?",
   "config.discard.title": "Modifications non enregistrées",
   "config.errorLoading": "Impossible de charger {file}",
