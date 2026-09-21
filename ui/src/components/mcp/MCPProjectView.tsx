@@ -110,7 +110,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
 
   return (
     <div>
-      <RailLayout rail={data.plan && <MCPSyncBox changes={changes} roots={roots} />}>
+      <RailLayout pageScroll rail={data.plan && <MCPSyncBox changes={changes} roots={roots} />}>
         <div className="ss-box flex flex-col gap-3.5">
           <dl className="ss-kv !grid-cols-[110px_minmax(0,1fr)] items-center">
             <dt>{t('mcp.targets')}</dt>
