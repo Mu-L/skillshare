@@ -97,7 +97,8 @@ func (s *Server) handleCollectScan(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			agentPath := resolveAgentPath(target, builtinAgents, name, s.IsProjectMode())
-			if agentPath == "" || agentsSource == "" {
+			// Extension targets hold converted output, never agents to collect.
+			if agentPath == "" || agentsSource == "" || target.AgentsConfig().Extension != "" {
 				continue
 			}
 			localAgents, err := ssync.FindLocalAgents(agentPath, agentsSource)

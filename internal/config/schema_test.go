@@ -182,7 +182,7 @@ func TestSchemaFiles_ValidJSON(t *testing.T) {
 	}
 }
 
-func TestSchema_ExtraTargetsAllowExtension(t *testing.T) {
+func TestSchema_ExtrasAndAgentsAllowExtension(t *testing.T) {
 	root := findRepoRoot(t)
 	for _, file := range []string{"schemas/config.schema.json", "schemas/project-config.schema.json"} {
 		data, err := os.ReadFile(filepath.Join(root, file))
@@ -199,8 +199,8 @@ func TestSchema_ExtraTargetsAllowExtension(t *testing.T) {
 		if !owners["extraTargetConfig"] {
 			t.Errorf("%s: extraTargetConfig missing 'extension' property", file)
 		}
-		if owners["agents"] {
-			t.Errorf("%s: agents block must not expose 'extension' (agent extensions are unsupported)", file)
+		if !owners["agents"] {
+			t.Errorf("%s: agents block missing 'extension' property", file)
 		}
 	}
 }

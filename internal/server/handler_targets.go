@@ -31,6 +31,7 @@ type targetItem struct {
 	CollisionCount     int      `json:"collisionCount,omitempty"`
 	AgentPath          string   `json:"agentPath,omitempty"`
 	AgentMode          string   `json:"agentMode,omitempty"`
+	AgentExtension     string   `json:"agentExtension,omitempty"`
 	AgentInclude       []string `json:"agentInclude,omitempty"`
 	AgentExclude       []string `json:"agentExclude,omitempty"`
 	AgentLinkedCount   *int     `json:"agentLinkedCount,omitempty"`
@@ -168,6 +169,7 @@ func (s *Server) handleListTargets(w http.ResponseWriter, r *http.Request) {
 		if agentSummary != nil {
 			item.AgentPath = agentSummary.Path
 			item.AgentMode = agentSummary.Mode
+			item.AgentExtension = agentSummary.Extension
 			item.AgentInclude = agentSummary.Include
 			item.AgentExclude = agentSummary.Exclude
 			item.AgentLinkedCount = intPtr(agentSummary.ManagedCount)
@@ -327,16 +329,24 @@ func (s *Server) handleUpdateTarget(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Include      *[]string `json:"include"` // null = no change, [] = clear
-		Exclude      *[]string `json:"exclude"`
-		Mode         *string   `json:"mode"`
-		TargetNaming *string   `json:"target_naming"`
-		AgentMode    *string   `json:"agent_mode"`
-		AgentInclude *[]string `json:"agent_include"`
-		AgentExclude *[]string `json:"agent_exclude"`
+		Include        *[]string `json:"include"` // null = no change, [] = clear
+		Exclude        *[]string `json:"exclude"`
+		Mode           *string   `json:"mode"`
+		TargetNaming   *string   `json:"target_naming"`
+		AgentMode      *string   `json:"agent_mode"`
+		AgentInclude   *[]string `json:"agent_include"`
+		AgentExclude   *[]string `json:"agent_exclude"`
+		AgentExtension *string   `json:"agent_extension"` // "" = clear
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+
+	// An extension converts each agent, so it implies copy mode. Reject a
+	// conflicting mode sent in this same call, as extras targets do.
+	if body.AgentExtension != nil && *body.AgentExtension != "" && body.AgentMode != nil && *body.AgentMode != "copy" {
+		writeError(w, http.StatusBadRequest, "agent extension requires copy mode, but agent_mode "+*body.AgentMode+" was set")
 		return
 	}
 
@@ -386,6 +396,13 @@ func (s *Server) handleUpdateTarget(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if body.AgentExtension != nil {
+		if *body.AgentExtension != "" {
+			target.EnsureAgents().Mode = "copy"
+		}
+		target.EnsureAgents().Extension = *body.AgentExtension
+	}
+
 	if body.AgentInclude != nil {
 		if _, err := ssync.FilterSkills(nil, *body.AgentInclude, nil); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid agent include pattern: "+err.Error())
@@ -429,6 +446,13 @@ func (s *Server) handleUpdateTarget(w http.ResponseWriter, r *http.Request) {
 				if body.AgentExclude != nil {
 					s.projectCfg.Targets[i].EnsureAgents().Exclude = *body.AgentExclude
 				}
+				if body.AgentExtension != nil {
+					ag := s.projectCfg.Targets[i].EnsureAgents()
+					if *body.AgentExtension != "" {
+						ag.Mode = "copy"
+					}
+					ag.Extension = *body.AgentExtension
+				}
 				break
 			}
 		}
@@ -440,7 +464,7 @@ func (s *Server) handleUpdateTarget(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hasFilter := body.Include != nil || body.Exclude != nil || body.AgentInclude != nil || body.AgentExclude != nil
-	hasSetting := body.Mode != nil || body.TargetNaming != nil || body.AgentMode != nil
+	hasSetting := body.Mode != nil || body.TargetNaming != nil || body.AgentMode != nil || body.AgentExtension != nil
 	action := "filter"
 	if hasSetting && hasFilter {
 		action = "settings+filter"

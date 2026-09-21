@@ -378,3 +378,62 @@ func TestHandleUpdateTarget_AgentExclude_InvalidPattern(t *testing.T) {
 		t.Errorf("expected 400 for invalid agent exclude pattern, got %d", rr.Code)
 	}
 }
+
+func patchTarget(t *testing.T, s *Server, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPatch, "/api/targets/claude", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+	s.handler.ServeHTTP(rr, req)
+	return rr
+}
+
+func TestHandleUpdateTarget_AgentExtension_ForcesCopy(t *testing.T) {
+	tgtPath := filepath.Join(t.TempDir(), "claude-skills")
+	s, _ := newTestServerWithTargets(t, map[string]string{"claude": tgtPath})
+
+	if rr := patchTarget(t, s, `{"agent_mode":"merge"}`); rr.Code != http.StatusOK {
+		t.Fatalf("PATCH mode expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if rr := patchTarget(t, s, `{"agent_extension":"opencode-agents"}`); rr.Code != http.StatusOK {
+		t.Fatalf("PATCH extension expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	diskCfg, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tgt := diskCfg.Targets["claude"]
+	if tgt.Agents == nil || tgt.Agents.Extension != "opencode-agents" || tgt.Agents.Mode != "copy" {
+		t.Errorf("disk agents = %+v, want extension opencode-agents in copy mode", tgt.Agents)
+	}
+}
+
+func TestHandleUpdateTarget_AgentExtension_RejectsConflictingMode(t *testing.T) {
+	tgtPath := filepath.Join(t.TempDir(), "claude-skills")
+	s, _ := newTestServerWithTargets(t, map[string]string{"claude": tgtPath})
+
+	patchTarget(t, s, `{"agent_mode":"merge"}`) // agents block now exists and is shared
+	rr := patchTarget(t, s, `{"agent_extension":"opencode-agents","agent_mode":"symlink"}`)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rr.Code, rr.Body.String())
+	}
+	memTgt := s.cfg.Targets["claude"]
+	if mode := memTgt.AgentsConfig().Mode; mode == "symlink" {
+		t.Error("a rejected request must not change the agent mode")
+	}
+}
+
+func TestHandleUpdateTarget_AgentExtension_Clear(t *testing.T) {
+	tgtPath := filepath.Join(t.TempDir(), "claude-skills")
+	s, _ := newTestServerWithTargets(t, map[string]string{"claude": tgtPath})
+
+	patchTarget(t, s, `{"agent_extension":"opencode-agents"}`)
+	if rr := patchTarget(t, s, `{"agent_extension":""}`); rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	memTgt := s.cfg.Targets["claude"]
+	if ext := memTgt.AgentsConfig().Extension; ext != "" {
+		t.Errorf("extension = %q, want cleared", ext)
+	}
+}

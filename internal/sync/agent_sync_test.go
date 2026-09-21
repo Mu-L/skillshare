@@ -477,7 +477,7 @@ func TestPruneOrphanAgentCopies(t *testing.T) {
 		{FlatName: "active.md"},
 	}
 
-	removed, err := PruneOrphanAgentCopies(targetDir, agents, false)
+	removed, err := PruneOrphanAgentCopies(targetDir, agents, "", false)
 	if err != nil {
 		t.Fatalf("PruneOrphanAgentCopies: %v", err)
 	}
@@ -766,5 +766,90 @@ func TestPullAgents_DryRun(t *testing.T) {
 	// File should NOT exist (dry-run)
 	if _, err := os.Stat(filepath.Join(collectDir, "agent.md")); err == nil {
 		t.Error("file should not exist in dry-run")
+	}
+}
+
+// agentTransformFixture creates source agent tutor.md and returns it with an
+// uppercasing spec, so any write-through to the source is visible.
+func agentTransformFixture(t *testing.T) (string, []resource.DiscoveredResource, *ExtensionSpec) {
+	t.Helper()
+	sourceDir := t.TempDir()
+	src := filepath.Join(sourceDir, "tutor.md")
+	if err := os.WriteFile(src, []byte("body"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	agents := []resource.DiscoveredResource{{FlatName: "tutor.md", RelPath: "tutor.md", AbsPath: src}}
+	spec := &ExtensionSpec{Run: []string{"tr", "a-z", "A-Z"}, Dir: sourceDir, Name: "upper"}
+	return sourceDir, agents, spec
+}
+
+func assertSourceUntouched(t *testing.T, sourceDir string) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(sourceDir, "tutor.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "body" {
+		t.Errorf("source agent overwritten: %q", data)
+	}
+}
+
+func TestSyncAgentsTransform_ReplacesLeftoverFileSymlink(t *testing.T) {
+	sourceDir, agents, spec := agentTransformFixture(t)
+	targetDir := t.TempDir()
+	// Left over from merge mode.
+	if err := os.Symlink(agents[0].AbsPath, filepath.Join(targetDir, "tutor.md")); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := SyncAgentsTransform(agents, sourceDir, targetDir, "", spec, false, false); err != nil {
+		t.Fatal(err)
+	}
+	assertSourceUntouched(t, sourceDir)
+}
+
+func TestSyncAgentsTransform_ReplacesLeftoverDirSymlink(t *testing.T) {
+	sourceDir, agents, spec := agentTransformFixture(t)
+	targetDir := filepath.Join(t.TempDir(), "agents")
+	// Left over from symlink mode.
+	if err := os.Symlink(sourceDir, targetDir); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := SyncAgentsTransform(agents, sourceDir, targetDir, "", spec, false, false); err != nil {
+		t.Fatal(err)
+	}
+	assertSourceUntouched(t, sourceDir)
+}
+
+func TestSyncAgentsTransform_FailureRemovesStaleOutput(t *testing.T) {
+	sourceDir, agents, _ := agentTransformFixture(t)
+	targetDir := t.TempDir()
+	stale := filepath.Join(targetDir, "tutor.md")
+	if err := os.WriteFile(stale, []byte("unconverted"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	failing := &ExtensionSpec{Run: []string{"false"}, Dir: sourceDir, Name: "fail"}
+
+	if _, err := SyncAgentsTransform(agents, sourceDir, targetDir, "", failing, false, false); err == nil {
+		t.Fatal("expected conversion error")
+	}
+	if _, err := os.Lstat(stale); !os.IsNotExist(err) {
+		t.Error("an agent that fails to convert must not keep its old output")
+	}
+}
+
+func TestPruneOrphanAgentCopies_PrunesTransformedOrphans(t *testing.T) {
+	targetDir := t.TempDir()
+	orphan := filepath.Join(targetDir, "gone.toml")
+	if err := os.WriteFile(orphan, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := PruneOrphanAgentCopies(targetDir, nil, "toml", false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(orphan); !os.IsNotExist(err) {
+		t.Error("orphan gone.toml should be pruned")
 	}
 }

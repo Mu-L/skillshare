@@ -67,11 +67,22 @@ type ResourceTargetConfig struct {
 	TargetNaming string   `yaml:"target_naming,omitempty"`
 	Include      []string `yaml:"include,omitempty"`
 	Exclude      []string `yaml:"exclude,omitempty"`
+	// Extension transforms each agent file during sync (agents only; implies copy).
+	Extension string `yaml:"extension,omitempty"`
 }
 
 // IsEmpty reports whether all fields are zero-valued.
 func (r ResourceTargetConfig) IsEmpty() bool {
-	return r.Path == "" && r.Mode == "" && r.TargetNaming == "" && len(r.Include) == 0 && len(r.Exclude) == 0
+	return r.Path == "" && r.Mode == "" && r.TargetNaming == "" && len(r.Include) == 0 && len(r.Exclude) == 0 && r.Extension == ""
+}
+
+// withExtensionMode defaults an unset mode to copy when an extension is set,
+// so every reader of an agents config sees the mode sync actually uses.
+func (r ResourceTargetConfig) withExtensionMode() ResourceTargetConfig {
+	if r.Extension != "" && r.Mode == "" {
+		r.Mode = "copy"
+	}
+	return r
 }
 
 // TargetConfig holds configuration for a single target.
@@ -114,7 +125,7 @@ func (tc *TargetConfig) SkillsConfig() ResourceTargetConfig {
 // AgentsConfig returns the agents configuration, or an empty value if not set.
 func (tc *TargetConfig) AgentsConfig() ResourceTargetConfig {
 	if tc.Agents != nil {
-		return *tc.Agents
+		return tc.Agents.withExtensionMode()
 	}
 	return ResourceTargetConfig{}
 }

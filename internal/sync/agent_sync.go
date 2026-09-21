@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -275,6 +276,80 @@ func syncAgentsCopy(agents []resource.DiscoveredResource, targetDir string, dryR
 	return result, nil
 }
 
+// SyncAgentsTransform pipes each agent through spec and writes the output into
+// targetDir, renamed per spec.OutputExt. Like copy mode, the target is owned by
+// skillshare, so differing files are overwritten. A failing agent is reported in
+// the returned error without stopping the others.
+func SyncAgentsTransform(agents []resource.DiscoveredResource, sourceDir, targetDir, mode string, spec *ExtensionSpec, dryRun, force bool) (*AgentSyncResult, error) {
+	if _, err := ResolveExtensionMode(mode); err != nil {
+		return nil, err
+	}
+	result := &AgentSyncResult{}
+	var errs []error
+
+	// A symlink-mode leftover points the whole target at the source; writing
+	// through it would overwrite source agents.
+	if !dryRun && utils.IsSymlinkOrJunction(targetDir) {
+		if absLink, err := utils.ResolveLinkTarget(targetDir); err == nil && linkResolvesToSource(absLink, sourceDir) {
+			if err := os.Remove(targetDir); err != nil {
+				return nil, fmt.Errorf("failed to remove directory symlink: %w", err)
+			}
+		}
+	}
+
+	for _, agent := range agents {
+		name := ApplyOutputExt(agent.FlatName, spec.OutputExt)
+		// A preview must never execute extension code, so dry-run can't know
+		// whether the output would change.
+		if dryRun {
+			result.Linked = append(result.Linked, name)
+			continue
+		}
+
+		tgtFile := filepath.Join(targetDir, name)
+		// Merge-mode leftovers link to the source; drop the link, never write through it.
+		if info, err := os.Lstat(tgtFile); err == nil && info.Mode()&os.ModeSymlink != 0 {
+			if err := os.Remove(tgtFile); err != nil {
+				errs = append(errs, fmt.Errorf("%s: remove symlink: %w", agent.FlatName, err))
+				continue
+			}
+		}
+		existing, readErr := os.ReadFile(tgtFile)
+		out, err := runExtension(spec, agent.AbsPath, map[string]string{
+			"SS_SRC_PATH":   agent.AbsPath,
+			"SS_REL_PATH":   agent.RelPath,
+			"SS_TARGET_DIR": targetDir,
+			"SS_MODE":       "sync",
+		})
+		if err != nil {
+			// Keeping the old output would leave an unconverted agent active.
+			if readErr == nil {
+				os.Remove(tgtFile)
+			}
+			errs = append(errs, fmt.Errorf("%s: %w", agent.FlatName, err))
+			continue
+		}
+		if readErr == nil && bytes.Equal(existing, out) && !force {
+			result.Linked = append(result.Linked, name)
+			continue
+		}
+		if err := os.MkdirAll(targetDir, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create agent target directory: %w", err)
+		}
+		if err := os.WriteFile(tgtFile, out, 0644); err != nil {
+			errs = append(errs, fmt.Errorf("%s: write target: %w", agent.FlatName, err))
+			continue
+		}
+		if readErr == nil {
+			result.Updated = append(result.Updated, name)
+		} else {
+			result.Linked = append(result.Linked, name)
+		}
+	}
+
+	return result, errors.Join(errs...)
+}
+
 // SyncAgentsToTarget creates file symlinks in targetDir for each discovered agent.
 // Uses merge semantics. Kept for backward compatibility; prefer SyncAgents().
 func SyncAgentsToTarget(agents []resource.DiscoveredResource, targetDir string, dryRun, force bool) (*AgentSyncResult, error) {
@@ -327,8 +402,10 @@ func PruneOrphanAgentLinks(targetDir string, agents []resource.DiscoveredResourc
 }
 
 // PruneOrphanAgentCopies removes copied .md files in targetDir that don't
-// correspond to any discovered agent. For copy mode only.
-func PruneOrphanAgentCopies(targetDir string, agents []resource.DiscoveredResource, dryRun bool) (removed []string, _ error) {
+// correspond to any discovered agent. For copy mode only. outputExt is the
+// extension a transform renames outputs to ("" keeps .md); files with it are
+// pruned too, and a stale .md copy of a transformed agent counts as an orphan.
+func PruneOrphanAgentCopies(targetDir string, agents []resource.DiscoveredResource, outputExt string, dryRun bool) (removed []string, _ error) {
 	entries, err := os.ReadDir(targetDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -339,13 +416,18 @@ func PruneOrphanAgentCopies(targetDir string, agents []resource.DiscoveredResour
 
 	expected := make(map[string]bool, len(agents))
 	for _, a := range agents {
-		expected[a.FlatName] = true
+		expected[ApplyOutputExt(a.FlatName, outputExt)] = true
+	}
+	outSuffix := ""
+	if outputExt != "" {
+		outSuffix = "." + strings.ToLower(outputExt)
 	}
 
 	for _, entry := range entries {
 		name := entry.Name()
+		lower := strings.ToLower(name)
 
-		if !strings.HasSuffix(strings.ToLower(name), ".md") {
+		if !strings.HasSuffix(lower, ".md") && (outSuffix == "" || !strings.HasSuffix(lower, outSuffix)) {
 			continue
 		}
 

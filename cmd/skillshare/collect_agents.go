@@ -27,6 +27,12 @@ func collectLocalAgents(targets map[string]string, source string, warn bool) []s
 	return allLocalAgents
 }
 
+// errCollectTransformedAgents refuses to collect from a target whose files are
+// extension output: pulling them back would overwrite the source format.
+func errCollectTransformedAgents(target, ext string) error {
+	return fmt.Errorf("target '%s' converts agents with extension %q; collecting would overwrite source agents with converted files", target, ext)
+}
+
 func agentDisplayItem(a sync.LocalAgentInfo) collectDisplayItem {
 	return collectDisplayItem{Name: a.Name, TargetName: a.TargetName, Path: a.Path}
 }
@@ -64,13 +70,17 @@ func selectCollectAgentTargets(cfg *config.Config, targetName string, collectAll
 		if agentPath == "" {
 			return nil, fmt.Errorf("target '%s' does not support agents", targetName)
 		}
+		if ext := target.AgentsConfig().Extension; ext != "" {
+			return nil, errCollectTransformedAgents(targetName, ext)
+		}
 		return map[string]string{targetName: agentPath}, nil
 	}
 
 	targets := make(map[string]string)
 	for name := range cfg.Targets {
-		agentPath := resolveAgentTargetPath(cfg.Targets[name], builtinAgents, name)
-		if agentPath == "" {
+		tc := cfg.Targets[name]
+		agentPath := resolveAgentTargetPath(tc, builtinAgents, name)
+		if agentPath == "" || tc.AgentsConfig().Extension != "" {
 			continue
 		}
 		targets[name] = agentPath
@@ -134,6 +144,9 @@ func selectCollectProjectAgentTargets(projCfg *config.ProjectConfig, projectRoot
 			if agentPath == "" {
 				return nil, fmt.Errorf("target '%s' does not support agents in project config", targetName)
 			}
+			if ext := entry.AgentsConfig().Extension; ext != "" {
+				return nil, errCollectTransformedAgents(targetName, ext)
+			}
 			return map[string]string{targetName: agentPath}, nil
 		}
 		return nil, fmt.Errorf("target '%s' not found in project config", targetName)
@@ -142,7 +155,7 @@ func selectCollectProjectAgentTargets(projCfg *config.ProjectConfig, projectRoot
 	targets := make(map[string]string)
 	for _, entry := range projCfg.Targets {
 		agentPath := resolveProjectAgentTargetPath(entry, builtinAgents, projectRoot)
-		if agentPath == "" {
+		if agentPath == "" || entry.AgentsConfig().Extension != "" {
 			continue
 		}
 		targets[entry.Name] = agentPath

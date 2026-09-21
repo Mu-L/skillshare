@@ -531,12 +531,71 @@ func TestBundledCodexAgentExtension_RequiresNameAndBody(t *testing.T) {
 	}
 }
 
+func TestBundledOpencodeAgentExtension_ConvertsClaudeAgent(t *testing.T) {
+	out, err := runBundledExtension(t, "opencode-agents", "---\nname: code-reviewer\ndescription: Reviews code\nmodel: sonnet\ncolor: blue\n---\nReview carefully.\n")
+	if err != nil {
+		t.Fatalf("opencode-agents convert failed: %v\n%s", err, out)
+	}
+	// name and a non provider/model-id model are dropped; mode defaults to subagent.
+	want := "---\ndescription: Reviews code\ncolor: blue\nmode: subagent\n---\nReview carefully.\n"
+	if out != want {
+		t.Errorf("output =\n%s\nwant\n%s", out, want)
+	}
+}
+
+func TestBundledOpencodeAgentExtension_KeepsOpencodeFields(t *testing.T) {
+	input := "---\ndescription: d\nmode: primary\nmodel: anthropic/claude-sonnet-4-5\npermission:\n  edit: deny\n---\nbody\n"
+	out, err := runBundledExtension(t, "opencode-agents", input)
+	if err != nil {
+		t.Fatalf("opencode-agents convert failed: %v\n%s", err, out)
+	}
+	if out != input {
+		t.Errorf("output =\n%s\nwant unchanged\n%s", out, input)
+	}
+}
+
+func TestBundledOpencodeAgentExtension_RejectsClaudeTools(t *testing.T) {
+	out, err := runBundledExtension(t, "opencode-agents", "---\ndescription: d\ntools: Read, Bash(git log)\n---\nbody\n")
+	if err == nil {
+		t.Fatalf("expected tools to fail, got success:\n%s", out)
+	}
+	if !strings.Contains(out, "'tools'") {
+		t.Fatalf("expected error naming 'tools', got:\n%s", out)
+	}
+}
+
+func TestBundledOpencodeAgentExtension_RejectsClaudeToolRestrictions(t *testing.T) {
+	for _, field := range []string{"disallowedTools: Bash", "permissionMode: plan"} {
+		out, err := runBundledExtension(t, "opencode-agents", "---\ndescription: d\n"+field+"\n---\nbody\n")
+		if err == nil {
+			t.Errorf("%s: expected failure, got success:\n%s", field, out)
+		}
+	}
+}
+
+func TestBundledOpencodeAgentExtension_RequiresDescription(t *testing.T) {
+	out, err := runBundledExtension(t, "opencode-agents", "# Reviewer\nbody\n")
+	if err == nil {
+		t.Fatalf("expected missing description to fail, got success:\n%s", out)
+	}
+	if !strings.Contains(out, "missing required frontmatter 'description'") {
+		t.Fatalf("expected missing description error, got:\n%s", out)
+	}
+}
+
 func runBundledCodexAgentExtension(t *testing.T, input string) (string, error) {
+	t.Helper()
+	return runBundledExtension(t, "codex-agents", input)
+}
+
+// runBundledExtension runs extensions/<name>/convert.js over input and returns
+// its combined output.
+func runBundledExtension(t *testing.T, name, input string) (string, error) {
 	t.Helper()
 	node := requireNode(t)
 	root := testRepoRoot(t)
 
-	cmd := exec.Command(node, filepath.Join(root, "extensions", "codex-agents", "convert.js"))
+	cmd := exec.Command(node, filepath.Join(root, "extensions", name, "convert.js"))
 	cmd.Env = append(os.Environ(), "SS_REL_PATH=reviewer.md")
 	cmd.Stdin = strings.NewReader(input)
 

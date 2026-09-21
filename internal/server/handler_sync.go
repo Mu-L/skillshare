@@ -245,10 +245,25 @@ func (s *Server) syncResources(start time.Time, dryRun, force bool, kind string)
 				}
 				filteredAgents = ssync.FilterAgentsByTarget(filteredAgents, name)
 
-				agentResult, err := ssync.SyncAgents(filteredAgents, agentsSource, agentPath, agentMode, dryRun, force, s.projectRoot)
+				spec, err := s.resolveExtensionSpec(ac.Extension)
 				if err != nil {
 					warnings = append(warnings, "agent sync failed for "+name+": "+err.Error())
 					continue
+				}
+				var agentResult *ssync.AgentSyncResult
+				outputExt := ""
+				if spec != nil {
+					agentResult, err = ssync.SyncAgentsTransform(filteredAgents, agentsSource, agentPath, agentMode, spec, dryRun, force)
+					outputExt = spec.OutputExt
+				} else {
+					agentResult, err = ssync.SyncAgents(filteredAgents, agentsSource, agentPath, agentMode, dryRun, force, s.projectRoot)
+				}
+				if err != nil {
+					warnings = append(warnings, "agent sync failed for "+name+": "+err.Error())
+					// A transform returns partial results when only some agents failed.
+					if agentResult == nil {
+						continue
+					}
 				}
 
 				// Prune orphan agents even when the source is empty so uninstall-all
@@ -257,7 +272,7 @@ func (s *Server) syncResources(start time.Time, dryRun, force bool, kind string)
 				if agentMode == "merge" {
 					pruned, _ = ssync.PruneOrphanAgentLinks(agentPath, filteredAgents, dryRun)
 				} else if agentMode == "copy" {
-					pruned, _ = ssync.PruneOrphanAgentCopies(agentPath, filteredAgents, dryRun)
+					pruned, _ = ssync.PruneOrphanAgentCopies(agentPath, filteredAgents, outputExt, dryRun)
 				}
 
 				// Find or create result entry for this target

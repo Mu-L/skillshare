@@ -19,6 +19,7 @@ type AgentSummary struct {
 	DisplayPath   string
 	Path          string
 	Mode          string
+	Extension     string
 	Include       []string
 	Exclude       []string
 	ManagedCount  int
@@ -81,7 +82,7 @@ func (b *Builder) GlobalTarget(name string, tc config.TargetConfig) (*AgentSumma
 		return nil, nil
 	}
 
-	return b.buildSummary(name, config.ExpandPath(displayPath), displayPath, ac.Mode, ac.Include, ac.Exclude)
+	return b.buildSummary(name, config.ExpandPath(displayPath), displayPath, ac)
 }
 
 // ProjectTarget returns the effective agents summary for a project target.
@@ -99,10 +100,11 @@ func (b *Builder) ProjectTarget(entry config.ProjectTargetEntry) (*AgentSummary,
 		return nil, nil
 	}
 
-	return b.buildSummary(entry.Name, resolveProjectPath(b.projectRoot, displayPath), displayPath, ac.Mode, ac.Include, ac.Exclude)
+	return b.buildSummary(entry.Name, resolveProjectPath(b.projectRoot, displayPath), displayPath, ac)
 }
 
-func (b *Builder) buildSummary(targetName, path, displayPath, mode string, include, exclude []string) (*AgentSummary, error) {
+func (b *Builder) buildSummary(targetName, path, displayPath string, ac config.ResourceTargetConfig) (*AgentSummary, error) {
+	mode, include, exclude := ac.Mode, ac.Include, ac.Exclude
 	if mode == "" {
 		mode = defaultAgentMode
 	}
@@ -111,6 +113,7 @@ func (b *Builder) buildSummary(targetName, path, displayPath, mode string, inclu
 		Path:        path,
 		DisplayPath: displayPath,
 		Mode:        mode,
+		Extension:   ac.Extension,
 		Include:     append([]string(nil), include...),
 		Exclude:     append([]string(nil), exclude...),
 	}
@@ -128,7 +131,10 @@ func (b *Builder) buildSummary(targetName, path, displayPath, mode string, inclu
 		summary.ExpectedCount = len(expectedAgents)
 	}
 	summary.ManagedCount = countManagedAgents(path, mode, b.sourcePath, summary.ExpectedCount)
-	summary.LocalCount = countLocalAgents(path, b.sourcePath)
+	// Extension output is managed, not local, even when it keeps the .md name.
+	if ac.Extension == "" {
+		summary.LocalCount = countLocalAgents(path, b.sourcePath)
+	}
 
 	return summary, nil
 }

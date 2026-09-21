@@ -160,7 +160,7 @@ func (t *ProjectTargetEntry) SkillsConfig() ResourceTargetConfig {
 // AgentsConfig returns the agents configuration, or an empty value if not set.
 func (t *ProjectTargetEntry) AgentsConfig() ResourceTargetConfig {
 	if t.Agents != nil {
-		return *t.Agents
+		return t.Agents.withExtensionMode()
 	}
 	return ResourceTargetConfig{}
 }
@@ -536,10 +536,11 @@ func ResolveProjectTargets(projectRoot string, cfg *ProjectConfig) (map[string]T
 				absAgentPath = filepath.Join(projectRoot, filepath.FromSlash(agentPath))
 			}
 			tc.Agents = &ResourceTargetConfig{
-				Path:    absAgentPath,
-				Mode:    ac.Mode,
-				Include: append([]string(nil), ac.Include...),
-				Exclude: append([]string(nil), ac.Exclude...),
+				Path:      absAgentPath,
+				Mode:      ac.Mode,
+				Include:   append([]string(nil), ac.Include...),
+				Exclude:   append([]string(nil), ac.Exclude...),
+				Extension: ac.Extension,
 			}
 		}
 
