@@ -98,9 +98,13 @@ func chooseMCPTargets(service *mcp.Service, servers []mcp.Server, initial []stri
 	if len(available) == 0 {
 		return nil, fmt.Errorf("no compatible MCP clients in this scope")
 	}
-	selected, err := chooseMCP(p, checklistConfig{title: "Which Agents should receive these connections?", header: "Only clients compatible with every selected server are shown.", items: available, itemName: "target"})
+	// Confirming with nothing selected keeps the connections in Skillshare only; Esc cancels.
+	selected, err := p.choose(checklistConfig{title: "Which Agents should receive these connections? (none: keep in Skillshare only)", header: "Only clients compatible with every selected server are shown.", items: available, itemName: "target"})
 	if err != nil {
 		return nil, err
+	}
+	if selected == nil {
+		return nil, errMCPCancelled
 	}
 	targets := make([]string, 0, len(selected))
 	for _, i := range selected {

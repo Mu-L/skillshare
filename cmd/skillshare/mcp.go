@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -28,7 +30,7 @@ func parseMCPOptions(args []string) (mcpOptions, error) {
 		switch a := args[i]; a {
 		case "--":
 			o.command = args[i+1:]
-			return o, nil
+			i = len(args)
 		case "--url", "--target", "--from", "--file", "--revision", "--pi-extension", "--direct-tools":
 			if i+1 == len(args) {
 				return o, fmt.Errorf("%s requires a value", a)
@@ -77,6 +79,13 @@ func parseMCPOptions(args []string) (mcpOptions, error) {
 			o.name = a
 		}
 	}
+	// none is an empty list: the server stays in Skillshare and no Agent receives it.
+	if slices.Contains(o.targets, "none") {
+		if len(o.targets) > 1 {
+			return o, fmt.Errorf("--target none cannot be combined with a client")
+		}
+		o.targets = []string{}
+	}
 	return o, nil
 }
 
@@ -122,7 +131,26 @@ func cmdMCP(args []string) (resultErr error) {
 		if err != nil {
 			return err
 		}
-		return printMCPPlan(p, o.json)
+		if o.json {
+			return printMCPPlan(p, true)
+		}
+		source, err := mcp.LoadSource(service.ConfigPath)
+		if err != nil {
+			return err
+		}
+		// The plan lists what a sync would touch, which leaves out a server no Agent receives.
+		parked := mcpServersWithoutTargets(source, p)
+		if len(parked) == 0 || len(p.Changes) > 0 {
+			if err := printMCPPlan(p, false); err != nil {
+				return err
+			}
+		} else {
+			ui.Info("MCP source: %s", p.SourcePath)
+		}
+		for _, server := range parked {
+			ui.Status(server[0], "kept", server[1])
+		}
+		return nil
 	case "add":
 		return runMCPAdd(service, o)
 	case "edit":
@@ -157,7 +185,7 @@ func cmdSyncMCP(args []string) error {
 	if err != nil {
 		return err
 	}
-	if o.piExtension != "" || o.name != "" || o.url != "" || o.from != "" || o.file != "" || len(o.command) > 0 || len(o.targets) > 0 || o.replace || o.sync || o.disabled {
+	if o.piExtension != "" || o.name != "" || o.url != "" || o.from != "" || o.file != "" || len(o.command) > 0 || o.targets != nil || o.replace || o.sync || o.disabled {
 		return fmt.Errorf("sync mcp accepts only --dry-run, --json, --revision and scope flags")
 	}
 	if o.dryRun {
@@ -182,6 +210,32 @@ func cmdSyncMCP(args []string) error {
 		}
 	}
 	return err
+}
+
+// mcpServersWithoutTargets lists the servers kept in Skillshare only, as a name and a note
+// that adds a project's root. One that a sync still has to remove is already in the plan.
+func mcpServersWithoutTargets(source *mcp.Source, p *mcp.Plan) [][2]string {
+	planned := map[string]bool{}
+	for _, c := range p.Changes {
+		planned[c.Root+"\x00"+c.Name] = true
+	}
+	var names [][2]string
+	add := func(root string, servers map[string]mcp.Server) {
+		for _, name := range slices.Sorted(maps.Keys(servers)) {
+			if server := servers[name]; server.Targets != nil && len(server.Targets) == 0 && !planned[root+"\x00"+name] {
+				note := "no targets"
+				if root != "" {
+					note += " (" + root + ")"
+				}
+				names = append(names, [2]string{name, note})
+			}
+		}
+	}
+	add("", source.Servers)
+	for _, root := range slices.Sorted(maps.Keys(source.Projects)) {
+		add(root, source.Projects[root].Servers)
+	}
+	return names
 }
 
 func printMCPPlan(p *mcp.Plan, asJSON bool) error {
@@ -250,7 +304,8 @@ Commands:
 Options:
   --pi-extension <package>  pi-mcp-adapter or pi-mcp-extension (requires installation in Pi)
   --direct-tools <value>    pi-mcp-adapter only: true, false, search, or tool names separated by commas
-  --target <client>  Receiving client; repeat for multiple clients
+  --target <client>  Receiving client; repeat for multiple clients, or none to keep
+                    the server in Skillshare without writing it to any Agent
   --from <client>    Native client ID (see mcp documentation for destinations)
   --file <path>      Native configuration file to import
   --url <url>        Streamable HTTP endpoint

@@ -191,12 +191,14 @@ func (s *Service) renderScope(desired map[fileKey]map[string]map[string]any, ser
 	for _, name := range sortedKeys(servers) {
 		server := servers[name]
 		server = server.withDirectToolsDefault(directTools)
-		selected := server.Targets
+		// An explicit empty list is deliberate: the server stays in Skillshare and nothing is
+		// written. An inherited one is more likely a forgotten default, so it is refused.
+		selected := []string(server.Targets)
 		if selected == nil {
 			selected = defaults
-		}
-		if len(selected) == 0 {
-			return fmt.Errorf("MCP %s has no targets; select at least one Agent", name)
+			if len(selected) == 0 {
+				return fmt.Errorf("MCP %s has no targets; select at least one Agent, or set targets to an empty list (--target none) to keep it in Skillshare only", name)
+			}
 		}
 		for _, target := range selected {
 			if err := s.checkScope(name, target, server); err != nil {

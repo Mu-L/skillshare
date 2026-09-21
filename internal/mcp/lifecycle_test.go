@@ -232,6 +232,77 @@ func TestSaveOnlyRejectsServerWithoutTargets(t *testing.T) {
 	}
 }
 
+// An explicit empty list keeps a server in Skillshare and writes it to no Agent, unlike a
+// missing list, which inherits mcp.targets. Refs: #289.
+func TestServerWithNoTargetsWritesNothing(t *testing.T) {
+	s := testService(t)
+	config := "mcp:\n  targets: [claude]\n  servers:\n    docs:\n      url: https://example.com/mcp\n      targets: []\n"
+	if err := os.WriteFile(s.ConfigPath, []byte(config), 0600); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := s.Preview()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Changes) != 0 {
+		t.Fatalf("a server with no targets was planned: %+v", plan.Changes)
+	}
+}
+
+func TestClearingTargetsRemovesSyncedEntries(t *testing.T) {
+	s := testService(t)
+	plan, err := s.Preview()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Apply(plan.Revision); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Mutate(Mutation{Name: "docs", Replace: true, Server: &Server{URL: "https://example.com/mcp", Targets: []string{}}}, "", false); err != nil {
+		t.Fatal(err)
+	}
+	plan, err = s.Preview()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Changes) != 4 {
+		t.Fatalf("got %d changes", len(plan.Changes))
+	}
+	for _, change := range plan.Changes {
+		if change.Action != "remove" {
+			t.Fatalf("synced entry stays: %+v", change)
+		}
+	}
+}
+
+// Dropped on save, an empty list would read back as inherited and sync the server again.
+func TestNoTargetsSurvivesSaveAndTheAPI(t *testing.T) {
+	s := testService(t)
+	if _, err := s.Mutate(Mutation{Name: "docs", Replace: true, Server: &Server{URL: "https://example.com/mcp", Targets: []string{}}}, "", false); err != nil {
+		t.Fatal(err)
+	}
+	source, err := LoadSource(s.ConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if targets := source.Servers["docs"].Targets; targets == nil || len(targets) != 0 {
+		t.Fatalf("saved targets read back as %#v", targets)
+	}
+	data, err := json.Marshal(source.Servers["docs"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"targets":[]`) {
+		t.Fatalf("API response drops the empty list: %s", data)
+	}
+}
+
+func TestDisabledEntryStillNeedsATarget(t *testing.T) {
+	if err := (Server{Disabled: true, Targets: []string{}}).Validate("docs"); err == nil {
+		t.Fatal("accepted a switch that turns nothing off")
+	}
+}
+
 func TestScopeIsolationAndForeignOwnership(t *testing.T) {
 	s := testService(t)
 	if _, err := s.Apply(""); err != nil {

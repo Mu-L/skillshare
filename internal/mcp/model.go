@@ -76,7 +76,7 @@ type Server struct {
 	Env         map[string]Value `yaml:"env,omitempty" json:"env,omitempty"`
 	Headers     map[string]Value `yaml:"headers,omitempty" json:"headers,omitempty"`
 	BearerToken *Value           `yaml:"bearerToken,omitempty" json:"bearerToken,omitempty"`
-	Targets     []string         `yaml:"targets,omitempty" json:"targets,omitempty"`
+	Targets     TargetList       `yaml:"targets,omitempty" json:"targets,omitzero"`
 	// DirectTools is pi-mcp-adapter's directTools: true, false, "search" or a list of
 	// tool names. Only Pi receives it.
 	DirectTools any `yaml:"directTools,omitempty" json:"directTools,omitempty"`
@@ -85,6 +85,13 @@ type Server struct {
 	// Skillshare defines, so a disabled server carries no command or url.
 	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 }
+
+// TargetList tells a missing list from an empty one. Missing inherits mcp.targets; empty
+// keeps the server in Skillshare and writes it to no Agent, so it has to survive a save.
+type TargetList []string
+
+// IsZero makes yaml's omitempty drop only a missing list.
+func (t TargetList) IsZero() bool { return t == nil }
 
 var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 var serverName = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$`)
@@ -128,9 +135,6 @@ func (s Server) Validate(name string) error {
 	if s.PiExtension != "" && s.PiExtension != "pi-mcp-adapter" && s.PiExtension != "pi-mcp-extension" {
 		return fmt.Errorf("MCP %s: piExtension must be pi-mcp-adapter or pi-mcp-extension", name)
 	}
-	if s.Targets != nil && len(s.Targets) == 0 {
-		return fmt.Errorf("MCP %s: select at least one target or omit targets to inherit defaults", name)
-	}
 	for key := range s.Env {
 		if !envName.MatchString(key) {
 			return fmt.Errorf("MCP %s: invalid environment variable name", name)
@@ -145,6 +149,9 @@ func (s Server) Validate(name string) error {
 	if s.Disabled {
 		if s.Command != "" || s.URL != "" || s.Transport != "" || s.BearerToken != nil || len(s.Args)+len(s.Env)+len(s.Headers) > 0 {
 			return fmt.Errorf("MCP %s: disabled turns off a server the Agent already has; leave out its command, url and settings", name)
+		}
+		if s.Targets != nil && len(s.Targets) == 0 {
+			return fmt.Errorf("MCP %s: disabled needs at least one target to turn the server off for; omit targets to inherit defaults", name)
 		}
 		return validateTargets(s.Targets)
 	}

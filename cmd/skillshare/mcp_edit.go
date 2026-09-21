@@ -96,7 +96,7 @@ func editMCPDraft(service *mcp.Service, name string, server mcp.Server, defaults
 			{label: "Environment variables", desc: fmt.Sprintf("%d variables (values hidden)", len(server.Env))},
 			{label: "HTTP headers", desc: fmt.Sprintf("%d headers (values hidden)", len(server.Headers))},
 			{label: "Bearer token", desc: "Environment variable name only"},
-			{label: "Targets", desc: strings.Join(targets, ", ")},
+			{label: "Targets", desc: mcpTargetSummary(targets)},
 			{label: "Review changes", desc: "Preview before saving"},
 			{label: "Pi extension", desc: server.PiExtension},
 		}

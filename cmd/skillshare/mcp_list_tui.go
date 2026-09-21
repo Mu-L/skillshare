@@ -59,9 +59,9 @@ func mcpListItems(source *mcp.Source, plan *mcp.Plan) []list.Item {
 		if len(status) == 0 {
 			status = []string{"not synchronized / no preview"}
 		}
-		description := mcpConnectionSummary(server) + " · " + strings.Join(targets, ", ") + " · " + strings.Join(status, "; ")
+		description := mcpConnectionSummary(server) + " · " + mcpTargetSummary(targets) + " · " + strings.Join(status, "; ")
 		var detail strings.Builder
-		fmt.Fprintf(&detail, "%s\n\n%s\nArguments: %d (values hidden)\nTargets: %s\n\nSync status\n%s\n", name, mcpConnectionSummary(server), len(server.Args), strings.Join(targets, ", "), strings.Join(status, "\n"))
+		fmt.Fprintf(&detail, "%s\n\n%s\nArguments: %d (values hidden)\nTargets: %s\n\nSync status\n%s\n", name, mcpConnectionSummary(server), len(server.Args), mcpTargetSummary(targets), strings.Join(status, "\n"))
 		for _, group := range []struct {
 			title  string
 			values map[string]mcp.Value
@@ -270,4 +270,12 @@ func mcpSyncWizard(service *mcp.Service, prompts mcpPrompts) error {
 		}
 	}
 	return err
+}
+
+// mcpTargetSummary names the receiving Agents, or says that a server is kept in Skillshare only.
+func mcpTargetSummary(targets []string) string {
+	if len(targets) == 0 {
+		return "no targets"
+	}
+	return strings.Join(targets, ", ")
 }
