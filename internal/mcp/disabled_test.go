@@ -322,3 +322,23 @@ func TestSwitchWithoutTargetsFollowsTheProject(t *testing.T) {
 		})
 	}
 }
+
+// Pi reads one config file per project, through one extension. Where the project's own
+// servers use pi-mcp-extension, Pi has no switch there, so the switch leaves Pi alone
+// instead of failing the whole plan over two extensions in one file.
+func TestSwitchLeavesPiAloneWhereTheProjectUsesAnotherExtension(t *testing.T) {
+	s, tmp := projectsService(t, "mcp:\n  servers:\n    docs:\n      command: tool\n      piExtension: pi-mcp-adapter\n      targets: [opencode, pi]\n  projects:\n    $TMP/p1:\n      targets: [opencode, pi]\n      servers:\n        mine:\n          command: tool\n          piExtension: pi-mcp-extension\n          targets: [pi]\n        docs:\n          disabled: true\n")
+	plan, err := s.Preview()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, c := range plan.Changes {
+		if c.Root == filepath.Join(tmp, "p1") && c.Name == "docs" {
+			got = append(got, c.Target)
+		}
+	}
+	if !slices.Equal(got, []string{"opencode"}) {
+		t.Fatalf("got %v", got)
+	}
+}

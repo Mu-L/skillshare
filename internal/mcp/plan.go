@@ -239,6 +239,13 @@ func followingSwitches(servers map[string]Server, defaults []string, global *Sou
 				}
 			}
 		}
+		// Pi reads one file per project through one extension. What the project's own servers
+		// use decides, and with pi-mcp-extension Pi has no switch to write.
+		for _, own := range servers {
+			if !own.Disabled && own.PiExtension != "" {
+				server.PiExtension = own.PiExtension
+			}
+		}
 		server.Targets = SwitchTargets(server, defaults, reached)
 		out[name] = server
 	}

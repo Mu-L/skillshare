@@ -39,6 +39,11 @@ describe('MCP project view', () => {
     expect(screen.getByText(/Saved with its own Agents/)).toBeInTheDocument();
   });
 
+  it("leaves Pi out where the project's own servers use another Pi extension", () => {
+    view({ docs: { command: 'npx', piExtension: 'pi-mcp-adapter', targets: ['opencode', 'pi'] } }, { targets: ['opencode', 'pi'], servers: { docs: { disabled: true }, mine: { command: 'npx', piExtension: 'pi-mcp-extension', targets: ['pi'] } } });
+    expect(screen.getByText(/No per-project switch in Pi/)).toBeInTheDocument();
+  });
+
   it('counts Pi for a switch only with pi-mcp-adapter, as sync does', () => {
     view({}, { targets: ['opencode', 'pi'], servers: { gone: { disabled: true } } });
     expect(screen.getByRole('button', { name: 'Choose which agents get gone' })).toHaveTextContent('1/3');

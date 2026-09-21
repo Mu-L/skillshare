@@ -76,7 +76,9 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
   };
 
   /** Agents where this global server can be turned off from here. */
-  const switchable = (server: MCPServer) => switchTargets(server, defaults, targets);
+  // Pi reads one file per project through one extension, so the project's own servers decide it.
+  const ownPi = Object.values(servers).find((x) => !x.disabled && x.piExtension)?.piExtension;
+  const switchable = (server: MCPServer) => switchTargets(ownPi ? { ...server, piExtension: ownPi } : server, defaults, targets);
 
   // The switch names no targets: sync works out where it goes from the project's targets at
   // that moment. A stored list went stale as soon as those changed.
