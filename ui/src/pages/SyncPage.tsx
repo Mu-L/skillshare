@@ -98,6 +98,7 @@ export default function SyncPage() {
         <span className="font-semibold">{g.part === 'mcp' ? targetLabel(g.name) : g.name}</span>
         <span className="ss-tag">{g.part === 'mcp' ? 'MCP' : g.mode}</span>
         {g.path && <span className="min-w-0 truncate font-mono text-[12px] text-ink-3" title={g.path}>{shortenHome(g.path)}</span>}
+        {g.project && <span className="ss-tag shrink-0" title={g.project}>{t('sync.mcp.offList', { project: shortenHome(g.project) })}</span>}
         <span className="flex-1" />
         {n > 0 && <span className="shrink-0 text-[12px] text-ink-2">{t(n === 1 ? 'sync.changes.one' : 'sync.changes.other', { count: n })}</span>}
       </div>

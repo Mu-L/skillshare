@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, type DiffTarget, type Target } from '../../api/client';
 import { mcpApi, type MCPPlan } from '../../api/mcp';
-import { countChanges, countEdited, extraGroups, MCP_CHANGED, pendingCount, resourceGroups, runSync } from './syncView';
+import { countChanges, countEdited, extraGroups, MCP_CHANGED, mcpGroups, pendingCount, resourceGroups, runSync } from './syncView';
 
 vi.mock('../../api/client', async (load) => ({ ...await load<typeof import('../../api/client')>(), api: { sync: vi.fn(), syncExtras: vi.fn() } }));
 vi.mock('../../api/mcp', async (load) => ({ ...await load<typeof import('../../api/mcp')>(), mcpApi: { preview: vi.fn(), configure: vi.fn() } }));
@@ -84,5 +84,16 @@ describe('runSync', () => {
     vi.mocked(mcpApi.preview).mockResolvedValueOnce(plan).mockResolvedValueOnce({ ...plan, revision: 'after', changes: [{ ...change, action: 'remove' }] });
     await expect(runSync(run)).rejects.toThrow(MCP_CHANGED);
     expect(mcpApi.configure).not.toHaveBeenCalled();
+  });
+});
+
+describe('mcpGroups', () => {
+  it("says a change to a project's Claude off list turns the server on or off there", () => {
+    const plan = { revision: 'r', sourcePath: '', blocked: false, changes: [
+      { target: 'claude', path: '/home/u/.claude.json', name: 'context7', root: '/work/app', action: 'remove' },
+      { target: 'claude', path: '/home/u/.claude.json', name: 'github', root: '/work/app', action: 'add' },
+    ] };
+    const [group] = mcpGroups(plan);
+    expect([group.project, ...group.rows.map((r) => r.text)]).toEqual(['/work/app', 'sync.row.mcp.offList.remove', 'sync.row.mcp.offList.add']);
   });
 });

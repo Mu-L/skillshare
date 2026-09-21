@@ -26,6 +26,8 @@ export interface ChangeGroup {
   name: string;
   mode?: string;
   path?: string;
+  /** Set on Claude Code's off list, which sits in the global file: the project it is for */
+  project?: string;
   rows: ChangeRow[];
 }
 
@@ -93,16 +95,18 @@ const MCP_ICON: Record<string, RowIcon> = { add: 'add', update: 'update', remove
 
 export function mcpGroups(plan: MCPPlan | null | undefined): ChangeGroup[] {
   return groupByFile((plan?.changes ?? []).filter((c) => MCP_ICON[c.action])).map((file) => ({
-    key: `mcp/${file.path}`,
+    key: `mcp/${file.key}`,
     part: 'mcp',
     name: file.target,
     path: file.path,
+    project: file.offListFor,
     rows: file.changes.map((c: MCPChange) => ({
-      key: `${file.path}/${c.name}`,
+      key: `${file.key}/${c.name}`,
       part: 'mcp',
       name: c.name,
       icon: MCP_ICON[c.action],
-      text: c.action === 'conflict' ? null : `sync.row.mcp.${c.action}`,
+      // In the off list, adding a name turns the server off and removing it turns it back on.
+      text: c.action === 'conflict' ? null : file.offListFor && c.action !== 'update' ? `sync.row.mcp.offList.${c.action}` : `sync.row.mcp.${c.action}`,
       detail: c.message,
       counts: c.action !== 'conflict',
     })),

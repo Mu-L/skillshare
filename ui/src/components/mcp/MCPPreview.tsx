@@ -34,11 +34,12 @@ export default function MCPPreview({ plan, onResolve, busy = false }: Props) {
       <AlertTriangle size={16} className="text-warning shrink-0 mt-0.5" aria-hidden="true" />{t('mcp.conflictHint')}
     </p> : null}
     <div className="space-y-3 max-h-[50vh] overflow-auto">
-      {files.map(file => <section key={file.path} aria-label={file.target} className="border border-muted rounded-[var(--radius-md)] overflow-hidden">
+      {files.map(file => <section key={file.key} aria-label={file.target} className="border border-muted rounded-[var(--radius-md)] overflow-hidden">
         <header className="flex flex-wrap items-center gap-2 px-3 py-2 bg-paper text-sm">
           <AgentIcon target={file.target} />
           <span className="font-semibold">{file.target}</span>
           <span className="font-mono text-xs text-pencil-light break-all">{file.path}</span>
+          {file.offListFor ? <span className="text-xs text-pencil-light">{t('sync.mcp.offList', { project: file.offListFor })}</span> : null}
         </header>
         <ul className="divide-y divide-dashed divide-pencil-light/30">
           {file.changes.map(change => <li key={change.name} className="px-3 py-2.5 space-y-2">

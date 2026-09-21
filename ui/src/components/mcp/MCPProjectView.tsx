@@ -15,7 +15,7 @@ import MCPServerDialog from './MCPServerDialog';
 import MCPServerList from './MCPServerList';
 import MCPSyncBox from './MCPSyncBox';
 import { TargetPill } from './TargetPicker';
-import { buildMatrix, describeEndpoint, describeError, projectOf, targetLabel } from './mcpView';
+import { buildMatrix, describeEndpoint, describeError, projectOf, switchTargets, targetLabel } from './mcpView';
 
 type MCPList = Awaited<ReturnType<typeof mcpApi.list>>;
 
@@ -75,8 +75,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
   };
 
   /** Agents where this global server can be turned off from here. */
-  const switchable = (server: MCPServer) =>
-    (server.targets ?? defaults).filter((x) => offTargets.includes(x) && (x !== 'pi' || server.piExtension === 'pi-mcp-adapter'));
+  const switchable = (server: MCPServer) => switchTargets(server, defaults, targets);
 
   const toggleGlobal = (n: string, on: boolean) => {
     const to = switchable(globals[n]);
@@ -143,7 +142,9 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
                 const to = switchable(server);
                 const hint = entry && !off ? t('mcp.projects.overridden')
                   : off ? (entry.targets ?? to).filter((x) => switchField[x]).map((x) => t('mcp.projects.writesSwitch', { target: targetLabel(x), field: switchField[x] })).join(', ')
-                  : to.length > 0 ? t('mcp.projects.followsGlobal') : t('mcp.projects.noSwitch');
+                  : to.length > 0 ? t('mcp.projects.followsGlobal')
+                  // Some Agent could turn it off, just none this project uses.
+                  : switchTargets(server, defaults, mcpOffTargets).length > 0 ? t('mcp.projects.noSwitchHere') : t('mcp.projects.noSwitch');
                 return (
                   <div key={n} className="ss-r">
                     <span className="ss-cat sm mcp"><Plug size={14} /></span>

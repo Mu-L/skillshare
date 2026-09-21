@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MCPPlan } from '../../api/mcp';
-import { buildMatrix, describeError, describeMessage, isResolvable, joinCommand, splitCommand, targetLabel } from './mcpView';
+import { buildMatrix, describeError, describeMessage, groupByFile, isResolvable, joinCommand, splitCommand, switchTargets, targetLabel } from './mcpView';
 import { mcpTargets } from '../../api/mcp';
 
 const change = (name: string, target: string, action: string, message?: string) => ({ name, target, action, message, path: `/${target}.json` });
@@ -56,5 +56,28 @@ describe('MCP view helpers', () => {
     const words = splitCommand(`npx -y @scope/server "~/My Notes" --label='a b' ''`);
     expect(words).toEqual(['npx', '-y', '@scope/server', '~/My Notes', '--label=a b', '']);
     expect(splitCommand(joinCommand(words))).toEqual(words);
+  });
+});
+
+describe('switchTargets', () => {
+  const context7 = { command: 'npx', targets: ['claude', 'opencode', 'kilocode', 'pi'], piExtension: 'pi-mcp-adapter' };
+
+  it('turns a global server off only for the Agents the project uses', () => {
+    expect(switchTargets(context7, [], ['opencode', 'pi'])).toEqual(['opencode', 'pi']);
+  });
+
+  it('follows the default targets of a server that names none', () => {
+    expect(switchTargets({ command: 'npx' }, ['claude', 'cursor'], ['claude', 'cursor'])).toEqual(['claude']);
+  });
+});
+
+describe('groupByFile', () => {
+  it("keeps a project's Claude off list apart from the servers in the same file", () => {
+    const groups = groupByFile([
+      { target: 'claude', path: '/home/u/.claude.json', name: 'context7', action: 'unchanged' },
+      { target: 'claude', path: '/home/u/.claude.json', name: 'context7', root: '/work/app', action: 'remove' },
+      { target: 'opencode', path: '/work/app/opencode.json', name: 'context7', root: '/work/app', action: 'add' },
+    ]);
+    expect(groups.map((g) => g.offListFor)).toEqual([undefined, '/work/app', undefined]);
   });
 });

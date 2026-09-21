@@ -1,3 +1,4 @@
+import { mcpOffTargets } from '../../api/mcp';
 import type { MCPPlan, MCPServer } from '../../api/mcp';
 
 export type MCPChange = MCPPlan['changes'][number];
@@ -24,11 +25,13 @@ export function buildMatrix(servers: Record<string, MCPServer>, plan: MCPPlan | 
   return [...rows.values()];
 }
 
+const inside = (root: string, path: string) => path.startsWith(root + '/') || path.startsWith(root + '\\');
+
 /** The mcp.projects root a change belongs to, if any. */
 // The plan says so outright, because Claude Code's off list is written to the global file
 // rather than to anything under the folder it turns a server off for.
 export const projectOf = (roots: string[], change: MCPChange) =>
-  change.root ?? roots.find((root) => change.path.startsWith(root + '/') || change.path.startsWith(root + '\\'));
+  change.root ?? roots.find((root) => inside(root, change.path));
 
 export function countActions(changes: MCPChange[]): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -36,12 +39,18 @@ export function countActions(changes: MCPChange[]): Record<string, number> {
   return counts;
 }
 
+/** The project a change turns a server off for, when it edits Claude Code's off list. */
+// That list is the one project destination outside its root: it sits in ~/.claude.json, next
+// to the user-scope servers, so the path alone reads as a change to the global server.
+export const offListFor = (change: MCPChange) => (change.root && !inside(change.root, change.path) ? change.root : undefined);
+
 export function groupByFile(changes: MCPChange[]) {
-  const files = new Map<string, { target: string; path: string; changes: MCPChange[] }>();
+  const files = new Map<string, { key: string; target: string; path: string; offListFor?: string; changes: MCPChange[] }>();
   for (const change of changes) {
-    const file = files.get(change.path) ?? { target: change.target, path: change.path, changes: [] };
+    const key = `${change.path}\0${offListFor(change) ?? ''}`;
+    const file = files.get(key) ?? { key, target: change.target, path: change.path, offListFor: offListFor(change), changes: [] };
     file.changes.push(change);
-    files.set(change.path, file);
+    files.set(key, file);
   }
   return [...files.values()];
 }
@@ -101,6 +110,10 @@ export const isShadowed = (change: MCPChange) => change.action !== 'conflict' &&
 export const isResolvable = (change: MCPChange) =>
   change.action === 'conflict' &&
   ['mcp.conflictChanged', 'mcp.conflictUnmanaged', 'mcp.conflictOrphaned'].includes(conflictKeys[conflictPrefix(change.message ?? '')]);
+
+/** Agents a project can turn a global server off for: those it uses, that the server reaches and that have a switch. */
+export const switchTargets = (server: MCPServer, defaults: string[], projectTargets: readonly string[]) =>
+  (server.targets ?? defaults).filter((x) => mcpOffTargets.includes(x) && projectTargets.includes(x) && (x !== 'pi' || server.piExtension === 'pi-mcp-adapter'));
 
 /** Display names for the MCP clients, as in their own docs. */
 export const targetLabel = (target: string) =>
