@@ -3,8 +3,10 @@ package plugin
 import (
 	"context"
 	"errors"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 )
@@ -44,6 +46,17 @@ func TestRunCommandMarksAnAbsentBinary(t *testing.T) {
 	}
 	if !errors.Is(err, ErrCLIMissing) {
 		t.Fatalf("err = %v, want ErrCLIMissing", err)
+	}
+}
+
+func TestRunCommandReadsVersionFromStderr(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "pi"), []byte("#!/bin/sh\necho 0.73.1 >&2\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runCommand(context.Background(), dir, filepath.Join(dir, "pi"), "--version")
+	if err != nil || strings.TrimSpace(string(out)) != "0.73.1" {
+		t.Fatalf("version = %q %v", out, err)
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -52,6 +53,10 @@ func runCommand(ctx context.Context, dir, bin string, args ...string) ([]byte, e
 		}
 		// Native output can contain credentials or command-source scripts.
 		return nil, agentError{key: "plugins.error.commandFailed", message: fmt.Sprintf("%s command failed; open the native client to resolve authentication, trust, or configuration", bin)}
+	}
+	// Some CLIs (Pi) print their version to stderr.
+	if stdout.Len() == 0 && slices.Equal(args, []string{"--version"}) {
+		return stderr.Bytes(), nil
 	}
 	return stdout.Bytes(), nil
 }
