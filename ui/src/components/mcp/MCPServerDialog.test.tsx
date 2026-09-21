@@ -7,6 +7,10 @@ import { I18nProvider } from '../../i18n';
 import MCPServerDialog from './MCPServerDialog';
 
 vi.mock('../CopyButton', () => ({ default: () => null }));
+// CodeMirror needs a real layout engine; a textarea stands in for it
+vi.mock('../CodeEditor', () => ({
+  default: ({ value, onChange, ariaLabel }: { value: string; onChange: (v: string) => void; ariaLabel: string }) => <textarea aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} />,
+}));
 vi.mock('../../api/mcp', async (load) => ({ ...await load<typeof import('../../api/mcp')>(), mcpApi: { save: vi.fn(), render: vi.fn() } }));
 
 const renderDialog = (props: Partial<Parameters<typeof MCPServerDialog>[0]> = {}) =>
@@ -140,6 +144,30 @@ describe('MCP server dialog', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(mcpApi.save).toHaveBeenCalledWith(expect.objectContaining({
       server: { command: 'docs', targets: ['pi'], piExtension: 'pi-mcp-adapter', directTools: ['search_docs', 'fetch'] },
+    })));
+  });
+
+  it('keeps Pi options when editing something else', async () => {
+    const user = userEvent.setup();
+    const server = { command: 'docs', targets: ['pi'], piExtension: 'pi-mcp-adapter', piOptions: { excludeTools: ['*emulator*'] } };
+    renderDialog({ initial: { name: 'docs', server } });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mcpApi.save).toHaveBeenCalledWith(expect.objectContaining({ server })));
+  });
+
+  it('takes other Pi adapter settings as a JSON object', async () => {
+    const user = userEvent.setup();
+    renderDialog({ initial: { name: 'docs', server: { command: 'docs', targets: ['pi'], piExtension: 'pi-mcp-adapter' } } });
+    const box = screen.getByLabelText('Other adapter settings');
+    await user.click(box);
+    await user.paste('["delete_*"]');
+    expect(screen.getByText('Enter a JSON object.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    await user.clear(box);
+    await user.paste('{"approveTools": ["delete_*"]}');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mcpApi.save).toHaveBeenCalledWith(expect.objectContaining({
+      server: { command: 'docs', targets: ['pi'], piExtension: 'pi-mcp-adapter', piOptions: { approveTools: ['delete_*'] } },
     })));
   });
 

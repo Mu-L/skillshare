@@ -3,6 +3,7 @@ import { Check, KeyRound, Link2, Plus, SquareTerminal, X } from 'lucide-react';
 import { mcpApi, mcpOffTargets, mcpTargets, type MCPServer, type MCPValue } from '../../api/mcp';
 import AgentIcon from '../AgentIcon';
 import Button from '../Button';
+import CodeEditor from '../CodeEditor';
 import DialogShell from '../DialogShell';
 import SegmentedControl from '../SegmentedControl';
 import { Select } from '../Input';
@@ -10,7 +11,7 @@ import { useT } from '../../i18n';
 import PiExtensionField from './PiExtensionField';
 import DirectToolsField, { directToolsComplete, directToolsDraft, directToolsValue } from './DirectToolsField';
 import MCPConfigView from './MCPConfigView';
-import { describeError, joinCommand, splitCommand, targetLabel } from './mcpView';
+import { describeError, joinCommand, parsePiOptions, splitCommand, targetLabel } from './mcpView';
 
 // Mirrors mcp.serverName
 const NAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
@@ -90,6 +91,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
   const [name, setName] = useState(initial?.name ?? '');
   const [http, setHttp] = useState(Boolean(server?.url));
   const [directTools, setDirectTools] = useState(() => directToolsDraft(server?.directTools));
+  const [piOptions, setPiOptions] = useState(() => (server?.piOptions ? JSON.stringify(server.piOptions, null, 2) : ''));
   const [command, setCommand] = useState(server?.command ? joinCommand([server.command, ...(server.args ?? [])]) : '');
   const [env, setEnv] = useState(() => envRows(server?.env));
   const [headers, setHeaders] = useState(() => envRows(server?.headers));
@@ -104,7 +106,10 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
   const taken = !initial && existingNames.includes(trimmed);
   const nameError = trimmed && !NAME.test(trimmed) ? t('mcp.nameHint') : taken ? t('mcp.nameTaken') : '';
   const words = splitCommand(command);
-  const canSave = Boolean(trimmed) && !nameError && (targets.length > 0 || !off) && (off || (http ? url.trim() !== '' : words.length > 0)) && (!targets.includes('pi') || off || Boolean(piExtension)) && (piExtension !== 'pi-mcp-adapter' || directToolsComplete(directTools)) && !saving;
+  const adapter = targets.includes('pi') && !off && piExtension === 'pi-mcp-adapter';
+  const options = adapter ? parsePiOptions(piOptions) : {};
+  const optionsError = options.invalid ? t('mcp.piOptionsInvalid') : options.taken ? t('mcp.piOptionsTaken', { field: options.taken }) : '';
+  const canSave = Boolean(trimmed) && !nameError && (targets.length > 0 || !off) && (off || (http ? url.trim() !== '' : words.length > 0)) && (!targets.includes('pi') || off || Boolean(piExtension)) && (piExtension !== 'pi-mcp-adapter' || directToolsComplete(directTools)) && !optionsError && !saving;
   const title = t(off ? (initial ? 'mcp.editOff' : 'mcp.addOff') : (initial ? 'mcp.editServer' : 'mcp.addServer'));
   const visibleTargets = new Set([...availableTargets, ...targets].filter((x) => !off || offTargets.includes(x)));
 
@@ -128,6 +133,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
     if (piExtension) next.piExtension = piExtension;
     const direct = directToolsValue(directTools);
     if (direct !== undefined && piExtension === 'pi-mcp-adapter' && targets.includes('pi')) next.directTools = direct;
+    if (options.value && Object.keys(options.value).length > 0) next.piOptions = options.value;
     return next;
   };
   const ordered = mcpTargets.filter((x) => targets.includes(x));
@@ -246,7 +252,12 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
           </div>
         </div>
         {targets.includes('pi') && !off && <PiExtensionField value={piExtension} onChange={setPiExtension} disabled={saving} />}
-        {targets.includes('pi') && !off && piExtension === 'pi-mcp-adapter' && <DirectToolsField value={directTools} onChange={setDirectTools} disabled={saving} />}
+        {adapter && <DirectToolsField value={directTools} onChange={setDirectTools} disabled={saving} />}
+        {adapter && <div className="ss-fld">
+          <label>{t('mcp.piOptions')}</label>
+          <CodeEditor value={piOptions} onChange={setPiOptions} lang="json" placeholder={'{\n  "excludeTools": ["delete_*"]\n}'} ariaLabel={t('mcp.piOptions')} disabled={saving} minHeight="96px" />
+          {optionsError ? <span className="hp !text-bad">{optionsError}</span> : <span className="hp">{t('mcp.piOptionsHint')}</span>}
+        </div>}
         {error && <div className="ss-note bad"><span className="flex-1">{error}</span></div>}
       </form>}
       {viewing ? <div className="df"><Button variant="secondary" onClick={() => setViewing(false)}>{t('common.back')}</Button></div> : <div className="df">

@@ -19,6 +19,8 @@ export interface MCPServer {
   bearerToken?: { fromEnv: string };
   /** pi-mcp-adapter only. Left out, Skillshare does not touch the value in Pi's file. */
   directTools?: MCPDirectTools;
+  /** pi-mcp-adapter only: fields Skillshare has no setting for, written into Pi's entry as given. */
+  piOptions?: Record<string, unknown>;
   /** Project mode: the whole entry, turning off a server the Agent's global config defines. */
   disabled?: boolean;
 }

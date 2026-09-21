@@ -27,9 +27,10 @@ interface Props {
   ariaLabel: string;
   disabled?: boolean;
   className?: string;
+  minHeight?: string;
 }
 
-export default function CodeEditor({ value, onChange, lang = '', placeholder, ariaLabel, disabled = false, className = '' }: Props) {
+export default function CodeEditor({ value, onChange, lang = '', placeholder, ariaLabel, disabled = false, className = '', minHeight = '140px' }: Props) {
   const extensions = useMemo(
     () => [chrome, syntaxHighlighting(classHighlighter), EditorView.contentAttributes.of({ 'aria-label': ariaLabel }), ...(lang === 'json' ? [json()] : [])],
     [lang, ariaLabel],
@@ -43,7 +44,7 @@ export default function CodeEditor({ value, onChange, lang = '', placeholder, ar
         theme="none"
         placeholder={placeholder}
         editable={!disabled}
-        minHeight="140px"
+        minHeight={minHeight}
         maxHeight="320px"
         basicSetup={{
           lineNumbers: true,

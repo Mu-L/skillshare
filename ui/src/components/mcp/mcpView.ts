@@ -99,6 +99,22 @@ export const describeError = (t: (key: string, params?: Record<string, string>) 
   return message.slice(0, start) + t('mcp.kilocodeProjectEnv', { name: message.slice(nameStart, end) });
 };
 
+/** Pi entry fields Skillshare writes from the server's own settings; the backend refuses them in piOptions. */
+const piOwnFields = ['command', 'args', 'env', 'url', 'headers', 'transport', 'disabled', 'enabled', 'directTools'];
+
+/** piOptions as typed. An empty box sets nothing; `invalid` is text that is not a JSON object, `taken` a field Skillshare writes. */
+export const parsePiOptions = (text: string): { value?: Record<string, unknown>; invalid?: true; taken?: string } => {
+  if (!text.trim()) return {};
+  try {
+    const value: unknown = JSON.parse(text);
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return { invalid: true };
+    const taken = Object.keys(value).find((key) => piOwnFields.includes(key));
+    return taken ? { taken } : { value: value as Record<string, unknown> };
+  } catch {
+    return { invalid: true };
+  }
+};
+
 /** A synced Claude entry that a local-scope server of the same name hides in this project. */
 export const isShadowed = (change: MCPChange) => change.action !== 'conflict' && Boolean(change.message?.startsWith(shadowMessage));
 

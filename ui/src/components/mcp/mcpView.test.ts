@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MCPPlan } from '../../api/mcp';
-import { buildMatrix, describeError, describeMessage, canImportConflict, groupByFile, isResolvable, joinCommand, splitCommand, switchTargets, targetLabel } from './mcpView';
+import { buildMatrix, describeError, describeMessage, canImportConflict, groupByFile, isResolvable, joinCommand, parsePiOptions, splitCommand, switchTargets, targetLabel } from './mcpView';
 import { mcpTargets } from '../../api/mcp';
 
 const change = (name: string, target: string, action: string, message?: string) => ({ name, target, action, message, path: `/${target}.json` });
@@ -87,5 +87,20 @@ describe('canImportConflict', () => {
   it('offers no import for a changed switch, which only a replace can settle', () => {
     const changed = { target: 'opencode', path: '/work/app/opencode.json', name: 'docs', action: 'conflict', message: 'Agent configuration changed; import it or explicitly replace this entry' };
     expect([canImportConflict(changed), canImportConflict({ ...changed, root: '/work/app', switch: true })]).toEqual([true, false]);
+  });
+});
+
+describe('parsePiOptions', () => {
+  it('reads a JSON object and treats an empty box as nothing set', () => {
+    expect(parsePiOptions('{"excludeTools": ["a"]}')).toEqual({ value: { excludeTools: ['a'] } });
+    expect(parsePiOptions('  ')).toEqual({});
+  });
+
+  it('refuses anything that is not a JSON object', () => {
+    for (const text of ['{', '["a"]', '3', 'null']) expect(parsePiOptions(text)).toEqual({ invalid: true });
+  });
+
+  it('names a field Skillshare writes itself', () => {
+    expect(parsePiOptions('{"excludeTools": [], "directTools": true}')).toEqual({ taken: 'directTools' });
   });
 });
