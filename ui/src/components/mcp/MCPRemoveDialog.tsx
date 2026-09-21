@@ -9,6 +9,7 @@ import Spinner from '../Spinner';
 import { useT } from '../../i18n';
 import { shortenHome } from '../../lib/paths';
 import { describeMessage } from './mcpView';
+import type { MCPChange } from './mcpView';
 
 interface Props {
   name: string;

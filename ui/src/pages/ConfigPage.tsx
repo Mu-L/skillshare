@@ -382,9 +382,11 @@ export default function ConfigPage() {
       </div>
     </div>
   );
+  // The extensions tab renders its own branch and never this panel, but the type
+  // cannot see that from here; AssistantPanel's default mode covers the dead case.
   const panelBlock = (
     <AssistantPanel
-      mode={tab}
+      mode={tab === 'extensions' ? undefined : tab}
       errors={tab === 'config' ? yamlErrors : []}
       changeCount={activeChangeCount}
       fieldPath={tab === 'config' ? fieldPath : null}

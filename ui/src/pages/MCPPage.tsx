@@ -288,7 +288,7 @@ export default function MCPPage() {
         />
       )}
       {viewing && servers[viewing] && <MCPConfigDialog mutation={{ name: viewing, server: { ...servers[viewing], targets: mcpTargets.filter((x) => targetsOf(viewing).includes(x)) } }} onClose={() => setViewing('')} />}
-      {removing && <MCPRemoveDialog name={removing} inScope={(path) => globalPaths.includes(path)} onClose={() => setRemoving('')} onSaved={() => done(t('mcp.toast.removed', { name: removing }))} />}
+      {removing && <MCPRemoveDialog name={removing} inScope={(c) => !c.root && globalPaths.includes(c.path)} onClose={() => setRemoving('')} onSaved={() => done(t('mcp.toast.removed', { name: removing }))} />}
       {backupsOpen && data && <MCPRestoreDialog backups={data.backups} onClose={() => setBackupsOpen(false)} onRestored={() => done(t('mcp.toast.restored'))} />}
       <DialogShell open={Boolean(replace)} onClose={() => setReplace(null)} padding="none" preventClose={busy} ariaLabel={t('mcp.replace')} className="!max-w-[640px]">
         {replace && <>
