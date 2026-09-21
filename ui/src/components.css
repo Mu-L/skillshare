@@ -85,6 +85,8 @@ svg.lucide { flex: none; stroke-width: var(--isw); }
 .ss-btn.pri { background: var(--pri); color: var(--on-pri); border-color: var(--pri); }
 :root[data-theme="playful"] .ss-btn.pri { border-color: var(--line); }
 .ss-btn.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--ink-2); padding: 0 10px; }
+/* A borderless button under a heading: pulled left by its padding so the icon lines up with the text above. */
+.ss-btn.ghost.flush { margin-left: -11px; }
 .ss-btn.dng { color: var(--bad); border-color: var(--bad); }
 :root[data-theme="playful"] .ss-btn.dng { background: #FF5C2B; color: #FFFDF7; border-color: var(--line); }
 .ss-btn.sm { height: 28px; padding: 0 11px; font-size: 12.5px; }
@@ -485,6 +487,8 @@ button:disabled { cursor: not-allowed; }
 /* Next to 2px ink frames a bare label does not read as a button, so ghost gets a soft outline here. */
 :root[data-theme="playful"] .ss-btn.ghost { color: var(--ink); border-color: var(--line-soft); }
 :root[data-theme="playful"] .ss-btn.ghost:hover:not(:disabled) { background: var(--sunken); border-color: var(--ink-3); }
+/* Its outline is what has to line up here, so the pull that lined up the bare icon is undone. */
+:root[data-theme="playful"] .ss-btn.ghost.flush { margin-left: 0; }
 .ss-btn:focus-visible, .ss-ib:focus-visible, .ss-nv:focus-visible, .ss-seg>*:focus-visible, .ss-tabs>*:focus-visible, .ss-menu>:is(a,button):focus-visible, .ss-sw:focus-visible, .ss-r.link:focus-visible, .ss-counts>a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ss-ib { transition: background-color .12s, color .12s; }
 .ss-ib:hover:not(:disabled) { background: var(--sel); color: var(--ink); }

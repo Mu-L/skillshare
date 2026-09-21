@@ -175,9 +175,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
             ? <MCPServerList rows={ownRows} targets={shown} targetsOf={targetsOf} offTargets={offTargets} onToggle={toggleOwn} onMenu={openMenu} />
             : <p className="text-[13px] text-ink-3">{t('mcp.projects.noOnlyHere')}</p>}
         </section>
-        {/* -ml cancels the ghost button's own padding, so its icon lines up with
-            the section headings above rather than sitting indented from them. */}
-        <Button className="mt-6 -ml-[11px] self-start" size="sm" variant="ghost" onClick={() => setDropping(true)}><Trash2 size={14} />{t('projects.mcp.stop')}</Button>
+        <Button className="flush mt-6 self-start" size="sm" variant="ghost" onClick={() => setDropping(true)}><Trash2 size={14} />{t('projects.mcp.stop')}</Button>
       </RailLayout>
 
       {editing !== null && (editing === '' && addMode === 'paste' ? (
