@@ -194,9 +194,11 @@ If the source already contains the name, use the dashboard's **Edit** action or
 CLI `--replace`. On import, `--replace` also rewrites the imported Agent's own
 entry; **Save only** then records that entry as the baseline without changing the
 file, so the next sync rewrites it and still detects edits made in the meantime.
-It never overrides other conflicting native entries. In the MCP dashboard, each
-conflict offers an import action named after the Agent, such as **Import from
+It never overrides other conflicting native entries. In the MCP dashboard, a conflict
+you can settle offers an import action named after the Agent, such as **Import from
 cursor**, to adopt that version, or **Replace with source** to overwrite that entry.
+A conflict held by another Skillshare configuration that still exists offers neither,
+because only that configuration can release the entry.
 
 ## Turn off a global server in one project
 
@@ -259,7 +261,9 @@ recovering an interrupted write, and previews already show that result. If the
 Agent file was edited again in the meantime, entries that no longer match are
 reported as conflicts.
 Do not delete ownership state to “fix” conflicts: existing entries would become
-unmanaged and need explicit import again.
+unmanaged and need explicit import again. An entry whose owning configuration was
+deleted does not need that: the conflict reports it as left over, and an import or
+replacement from the conflict itself takes it over.
 
 See the [MCP command reference](/docs/reference/commands/mcp) for supported paths,
 flags and current limitations.

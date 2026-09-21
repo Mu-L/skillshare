@@ -522,9 +522,11 @@ Limits:
   removing the server leaves it in place until you import it. A different
   unmanaged entry requires import or an explicit per-entry replacement; another
   Skillshare configuration's ownership cannot be overridden while that
-  configuration file still exists. If it was moved or deleted it can never release
-  the entry, so an explicit import or replacement takes it over. The conflict names
-  the owning file.
+  configuration file still exists. If that file is gone it can never release the
+  entry, so the conflict says the entry is left over, names the file, and takes it
+  over on an explicit import or replacement, in the terminal and from the conflict
+  in the dashboard. A file that only cannot be read, such as one on a drive that is
+  not mounted, still counts as the owner being there.
 - The dashboard's MCP settings work only when the browser opens the dashboard by
   `localhost` or an IP address. Through a domain name, including a reverse
   proxy, MCP requests return 403, because DNS rebinding attacks always use a

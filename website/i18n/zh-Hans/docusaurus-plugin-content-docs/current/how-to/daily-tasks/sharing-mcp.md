@@ -188,9 +188,11 @@ skillshare mcp import docs --from claude --target claude --target codex --sync
 CLI 的 `--replace`。在 Import 时，`--replace` 也会重写被导入 Agent 自身的
 条目；**Save only** 则会将该条目记录为基准，但不改动
 文件，因此下一次同步会重写它，并且仍能检测到期间所做的编辑。它
-绝不会覆盖其他有冲突的原生条目。在 MCP 控制台中，每个
-冲突都会提供一个以该 Agent 命名的导入操作，例如 **Import from
+绝不会覆盖其他有冲突的原生条目。在 MCP 控制台中，可以处理的
+冲突会提供一个以该 Agent 命名的导入操作，例如 **Import from
 cursor**，用于采用该版本；或 **Replace with source**，用于覆写该条目。
+如果某个冲突是由另一份仍然存在的 Skillshare 配置所拥有，则这两个
+操作都不会出现，因为只有那份配置才能释放该条目。
 
 ## 在单一项目中关闭某个全局 server
 
@@ -251,6 +253,8 @@ skillshare mcp restore BACKUP_ID
 完成一次中断写入的恢复，且预览已经会显示该结果。如果该 Agent 文件在
 此期间又被再次编辑，则不再匹配的条目会被回报为冲突。
 请勿透过删除所有权状态来“修复”冲突：现有条目将因此变成
-未受管理状态，需要重新明确执行 import。
+未受管理状态，需要重新明确执行 import。如果某个条目的所属配置
+已被删除，则不需要这么做：冲突会将它回报为残留条目，直接从该
+冲突执行 import 或替换即可接管它。
 
 支持的路径、参数与目前的限制，请参见 [MCP 命令参考文档](/docs/reference/commands/mcp)。
