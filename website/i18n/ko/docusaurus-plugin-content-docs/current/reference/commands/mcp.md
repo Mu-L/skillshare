@@ -407,8 +407,13 @@ mcp:
   root 아래에 두세요. project가 scope에 없는 global `mcp.servers`에서는 거부됩니다.
 - **`disabled`는 단독으로 사용됩니다.** 항목은 `targets`와, Pi의 경우
   `piExtension`을 받습니다. `command`, `url`, `env`, `headers`를 추가하면 오류입니다.
-- **`targets`는 명시하는 것이 좋습니다.** 명시하지 않으면 항목은 `mcp.targets`를
-  상속하며, 해당 목록에 지원되지 않는 client가 있으면 오류입니다.
+- **`targets`는 생략할 수 있습니다.** 그러면 항목은 프로젝트의 target을
+  따릅니다: sync할 때마다 프로젝트가 사용하는 client 중 프로젝트별 스위치가 있는
+  client에 작성됩니다. Skillshare가 같은 이름의 global 서버도 알고 있는
+  `mcp.projects` 아래에서는 그 서버가 작성되는 client로 더 좁혀지며, Pi는 global
+  서버의 `piExtension`을 사용합니다. 나중에 프로젝트의 target을 변경해도 항목을
+  수정할 필요가 없습니다. 직접 정하려면 `targets`를 명시하세요. 그 목록에 지원되지
+  않는 client가 있으면 오류입니다.
 - **이름이 일치해야 합니다.** Skillshare는 Agent의 global 파일을 읽지 않으므로,
   이 이름의 서버가 그곳에 존재하는지 확인할 수 없습니다. 아무것도 일치하지 않는
   이름은 문제가 되지 않습니다: Agent가 이를 무시할 뿐입니다.
@@ -502,8 +507,10 @@ Global mode에서는 대시보드에 **프로젝트** 페이지가 있습니다.
 - **프로젝트 추가**는 폴더와 그 target을 받습니다. **MCP**를 체크하면 해당 폴더가
   `mcp.projects` 아래에도 나열됩니다.
 - **MCP** 탭은 모든 global 서버를 스위치와 함께 나열합니다. 하나를 끄면
-  프로젝트별 스위치가 있는 Agent에 대해 `disabled` 항목이 저장되고, 다시 켜면 그
-  항목이 제거됩니다. 그 아래에는 해당 프로젝트에만 존재하는 서버가 있습니다.
+  `targets` 없이 `disabled` 항목이 저장되므로,
+  [위](#turn-off-a-global-server-in-one-project)에서 설명한 대로 프로젝트의
+  target을 따릅니다. 다시 켜면 그 항목이 제거됩니다. 그 아래에는 해당
+  프로젝트에만 존재하는 서버가 있습니다.
 - MCP 페이지 하단의 **기본값**은 `mcp.targets`와 `mcp.directTools`를 편집합니다.
 
 저장하면 변경한 프로젝트만 다시 씁니다. 다른 프로젝트는 anchor와 alias를 포함해

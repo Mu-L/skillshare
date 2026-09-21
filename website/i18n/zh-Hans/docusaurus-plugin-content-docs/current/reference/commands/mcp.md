@@ -408,8 +408,11 @@ mcp:
   在 global `mcp.servers` 中没有 project 在作用范围内，因此会被拒绝。
 - **`disabled` 必须单独存在。** 该条目可以带 `targets`，对 Pi 而言还可以带
   `piExtension`。添加 `command`、`url`、`env` 或 `headers` 会报错。
-- **应当列出 `targets`。** 如果不写，该条目会继承 `mcp.targets`，其中
-  任何不受支持的 client 都会报错。
+- **`targets` 可以省略。** 此时该条目会跟随项目的 targets：每次同步时，它都会写入
+  该项目所用且支持按项目开关的 client。在 `mcp.projects` 下，Skillshare 还知道
+  同名的 global server，因此范围会进一步缩小到该 server 写入的那些 client，并且 Pi 会
+  沿用该 global server 的 `piExtension`。之后更改项目的 targets 时，无需修改该条目。
+  如果想自行决定，请列出 `targets`；该列表中出现不受支持的 client 会报错。
 - **名称必须匹配。** Skillshare 不会读取 Agent 的 global 文件，因此
   无法检查该文件中是否确实存在这个名称的 server。如果名称什么都没匹配到也无妨：
   Agent 会忽略它。
@@ -503,9 +506,9 @@ mcp:
 
 - **添加项目** 需要填写文件夹和它的 targets。勾选 **MCP** 可以让该文件夹同时列在
   `mcp.projects` 下。
-- **MCP** 标签页列出每个 global server，并各带一个开关。关闭其中一个，会为
-  支持按项目开关的 Agent 保存一条 `disabled` 条目；重新打开则会
-  移除该条目。其下方是只存在于该项目中的 server。
+- **MCP** 标签页列出每个 global server，并各带一个开关。关闭其中一个，会保存一条
+  不带 `targets` 的 `disabled` 条目，因此它会如[上文](#turn-off-a-global-server-in-one-project)所述
+  跟随项目的 targets；重新打开则会移除该条目。其下方是只存在于该项目中的 server。
 - **默认值** 位于 **MCP** 标签页底部，用于编辑 `mcp.targets` 和
   `mcp.directTools`。
 

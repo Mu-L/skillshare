@@ -376,8 +376,12 @@ mcp:
   在沒有任何 project 在作用範圍內的 global `mcp.servers` 中，它會被拒絕。
 - **`disabled` 必須單獨存在。** 該項目可以帶 `targets`，Pi 的話還可以帶
   `piExtension`。加入 `command`、`url`、`env` 或 `headers` 會是錯誤。
-- **應該列出 `targets`。** 若省略，該項目會繼承 `mcp.targets`，
-  該清單中任何不支援的 client 都會是錯誤。
+- **`targets` 可以省略。** 該項目會跟著 project 的 targets：每次同步時，它會寫到
+  project 所使用、且支援個別 project 開關的 clients。在 `mcp.projects` 底下，
+  Skillshare 也知道同名的 global server，因此範圍會再縮小到該 server 實際寫入的
+  clients，而 Pi 會沿用該 global server 的 `piExtension`。之後變更 project 的
+  targets 時，不需要修改這個項目。若要自行決定，請列出 `targets`；該清單中任何
+  不支援的 client 都會是錯誤。
 - **名稱必須相符。** Skillshare 不會讀取 Agent 的 global 檔案，所以它
   無法確認該名稱的 server 是否真的存在。名稱不符任何 server 也無妨：
   Agent 會直接忽略它。
@@ -471,9 +475,10 @@ mcp:
 
 - **新增專案** 會要求填入資料夾與它的 targets。勾選 **MCP** 可以讓該資料夾
   同時列在 `mcp.projects` 底下。
-- **MCP** 分頁會列出每個 global server，並各附一個開關。關閉其中一個會為
-  支援個別 project 開關的 Agents 儲存一筆 `disabled` 項目；重新開啟則會移除
-  該項目。下方則是只存在於該 project 的 servers。
+- **MCP** 分頁會列出每個 global server，並各附一個開關。關閉其中一個會儲存一筆
+  不含 `targets` 的 `disabled` 項目，因此它會如
+  [上方說明](#turn-off-a-global-server-in-one-project)所述跟著 project 的 targets；
+  重新開啟則會移除該項目。下方則是只存在於該 project 的 servers。
 - **預設值** 位於 MCP 頁面底部，用來編輯 `mcp.targets` 與
   `mcp.directTools`。
 

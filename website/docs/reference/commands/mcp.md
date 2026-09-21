@@ -412,8 +412,13 @@ mcp:
   `mcp.servers`, where no project is in scope, it is refused.
 - **`disabled` stands alone.** The entry takes `targets` and, for Pi, `piExtension`.
   Adding `command`, `url`, `env` or `headers` is an error.
-- **`targets` should be listed.** Without it the entry inherits `mcp.targets`, and
-  any unsupported client in that list is an error.
+- **`targets` can be left out.** The entry then follows the project's targets: on every
+  sync it goes to the clients the project uses that have a per-project switch. Under
+  `mcp.projects`, where Skillshare also knows the global server of that name, it is
+  narrowed further to the clients that server is written to, and Pi takes the global
+  server's `piExtension`. Changing the project's targets later needs no edit to the
+  entry. List `targets` to decide for yourself; an unsupported client in that list is
+  an error.
 - **The name must match.** Skillshare does not read the Agent's global file, so it
   cannot check that a server with this name exists there. A name that matches
   nothing is harmless: the Agent ignores it.
@@ -509,8 +514,9 @@ project has an **MCP** tab.
 - **Add project** takes the folder and its targets. Tick **MCP** to list the folder under
   `mcp.projects` as well.
 - The **MCP** tab lists every global server with a switch. Turning one off saves a
-  `disabled` entry for the Agents that have a per-project switch; turning it back on
-  removes the entry. Below it are the servers that exist in that project only.
+  `disabled` entry without `targets`, so it follows the project's targets as described
+  [above](#turn-off-a-global-server-in-one-project); turning it back on removes the
+  entry. Below it are the servers that exist in that project only.
 - **Defaults**, at the bottom of the MCP page, edits `mcp.targets` and
   `mcp.directTools`.
 

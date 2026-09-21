@@ -319,8 +319,12 @@ mcp:
   置いてください。project がスコープ内にない global の `mcp.servers` では拒否されます。
 - **`disabled` は単独で指定します。** このエントリが取れるのは `targets` と、Pi の場合は
   `piExtension` のみです。`command`、`url`、`env`、`headers` を追加するとエラーになります。
-- **`targets` は明示的に列挙すべきです。** これがない場合、エントリは `mcp.targets` を継承し、
-  そのリスト内の非対応クライアントはエラーになります。
+- **`targets` は省略できます。** その場合、エントリは project の target に従います。sync のたびに、
+  project が使うクライアントのうち、project ごとのスイッチを持つものに書き込まれます。Skillshare が同名の
+  global サーバーも把握している `mcp.projects` 配下では、そのサーバーの書き込み先クライアントにさらに
+  絞り込まれ、Pi は global サーバーの `piExtension` を引き継ぎます。後から project の target を変更しても、
+  エントリの編集は不要です。自分で決めたい場合は `targets` を列挙してください。そのリスト内の
+  非対応クライアントはエラーになります。
 - **名前は一致している必要があります。** Skillshare は Agent の global ファイルを読み込まないため、
   この名前のサーバーがそこに存在するかを確認できません。何にも一致しない名前は無害です。Agent はそれを無視します。
 - **再びオンにするには**、エントリを削除し（`skillshare mcp remove company-docs`）
@@ -408,8 +412,9 @@ global mode では、ダッシュボードに **プロジェクト** ページ�
 
 - **プロジェクトを追加** では、フォルダーとその target を指定します。**MCP** にチェックを入れると、そのフォルダーは
   `mcp.projects` にも一覧されます。
-- **MCP** タブには、すべての global サーバーがスイッチ付きで一覧表示されます。オフにすると、project ごとの
-  スイッチを持つ Agent に対して `disabled` エントリが保存され、オンに戻すとそのエントリは削除されます。
+- **MCP** タブには、すべての global サーバーがスイッチ付きで一覧表示されます。オフにすると、`targets` を
+  持たない `disabled` エントリが保存されるため、[上記](#turn-off-a-global-server-in-one-project)のとおり
+  project の target に従います。オンに戻すとそのエントリは削除されます。
   その下には、その project にのみ存在するサーバーが並びます。
 - MCP ページの一番下にある **デフォルト** では、`mcp.targets` と `mcp.directTools` を編集します。
 

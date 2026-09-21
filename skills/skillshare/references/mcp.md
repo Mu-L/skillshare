@@ -232,8 +232,10 @@ skillshare mcp add NAME --disabled --target pi --pi-extension pi-mcp-adapter -p 
 skillshare sync mcp -p
 ```
 
-- `--disabled` cannot be combined with `--url` or `-- command`. List `--target`
-  explicitly: an inherited `mcp.targets` containing an unsupported client is an error.
+- `--disabled` cannot be combined with `--url` or `-- command`. Without `--target` the
+  entry follows the project's targets: each sync sends it to the clients that have a
+  switch (under `mcp.projects`, also only those the global server of that name goes to).
+  With `--target`, an unsupported client is an error.
 - `piExtension` is only read for Pi, so one entry can cover `[opencode, kilocode, pi]`.
 - Claude's off list is per machine and keyed by the project's absolute path. Each
   teammate syncs once in their own checkout, and a moved project needs a new sync. A
