@@ -87,7 +87,7 @@ targets: [claude, cursor]   # optional — only sync to these targets
 You are a patient math tutor. Walk through problems step by step.
 ```
 
-**Per-agent targets:** the optional `targets` list restricts an agent to the listed targets (aliases such as `claude-code` match `claude`). Omit it to sync everywhere. Other frontmatter fields are passed through verbatim — skillshare does not translate them between tools, so an agent written for one harness may not be understood by another. Use `targets` to keep a per-harness variant of the same agent side by side (for example `reviewer.md` with `targets: [claude]` and `reviewer-opencode.md` with `targets: [opencode]`).
+**Per-agent targets:** the optional `targets` list restricts an agent to the listed targets (aliases such as `claude-code` match `claude`). Omit it to sync everywhere. Other frontmatter fields are passed through verbatim — skillshare does not translate them between tools unless the target uses an [extension](#extensions), so an agent written for one harness may not be understood by another. Use `targets` to keep a per-harness variant of the same agent side by side (for example `reviewer.md` with `targets: [claude]` and `reviewer-opencode.md` with `targets: [opencode]`).
 
 **Naming rules:**
 - Filename determines the agent name: `tutor.md` = "tutor"
@@ -137,6 +137,32 @@ skillshare sync agents
 
 Orphan cleanup works the same way — broken symlinks or copied files that no longer have a source are pruned automatically.
 
+### Converting agents with an extension {#extensions}
+
+Tools don't agree on agent frontmatter, and some don't read Markdown at all. Set `extension` on a target's `agents` block to run each agent through a transform script during sync:
+
+```yaml
+targets:
+  opencode:
+    agents:
+      extension: opencode-agents   # implies mode: copy
+  codex:
+    skills:
+      path: ~/.codex/skills
+    agents:
+      path: ~/.codex/agents
+      extension: codex-agents      # tutor.md → tutor.toml
+```
+
+- `extension` implies `copy` mode. Setting `mode: merge` or `mode: symlink` alongside it is an error.
+- Extensions are the same ones extras use: a bare name resolves under `~/.config/skillshare/extensions/` (`.skillshare/extensions/` in project mode), a path is used directly. See [Extension transforms](/docs/reference/commands/extras#extension-transforms) for the script contract.
+- When an extension changes the file extension, orphan cleanup follows the new name, so a leftover `tutor.md` copy is removed once the target gets `tutor.toml`.
+- A failing agent is reported and not written; the other agents still sync.
+
+The web dashboard sets this from the target's **Agents** tab.
+
+**`opencode-agents`** converts Claude-style agents for [OpenCode](https://opencode.ai/docs/agents/). It keeps only the fields OpenCode documents (`description`, `mode`, `model`, `temperature`, `top_p`, `steps`, `permission`, `hidden`, `color`, `prompt`) and adds `mode: subagent` when `mode` is missing. It drops a `model` that isn't in `provider/model-id` form, and fails when `description` is missing. An agent that sets Claude's `tools:`, `disallowedTools:`, or `permissionMode:` fails instead of being guessed at: write an OpenCode variant with `permission:` and `targets: [opencode]`.
+
 ---
 
 ## Collect Behavior
@@ -161,7 +187,7 @@ Rules:
 - Existing source agents are skipped by default
 - Use `--force` to overwrite existing source agents
 - `--json` implies `--force` and skips the confirmation prompt
-- The web dashboard Collect page is still skills-only; use the CLI for agents
+- Targets with an agent [extension](#extensions) hold converted files, so they are never collected: `--all` skips them and naming one is an error
 
 ---
 

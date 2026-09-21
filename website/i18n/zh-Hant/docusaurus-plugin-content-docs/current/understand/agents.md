@@ -87,7 +87,7 @@ targets: [claude, cursor]   # optional — only sync to these targets
 You are a patient math tutor. Walk through problems step by step.
 ```
 
-**每個 agent 各自的 targets：** 選用的 `targets` 清單可將某個 agent 限制在列出的 targets 中（例如 `claude-code` 這類別名也會比對到 `claude`）。省略此欄位則會同步到所有地方。其他 frontmatter 欄位會原樣傳遞 — skillshare 不會在工具之間轉譯這些欄位，因此為某個 harness 撰寫的 agent，另一個工具未必能理解。可利用 `targets` 讓同一個 agent 針對不同 harness 各自保留一份變體並存（例如 `reviewer.md` 搭配 `targets: [claude]`，以及 `reviewer-opencode.md` 搭配 `targets: [opencode]`）。
+**每個 agent 各自的 targets：** 選用的 `targets` 清單可將某個 agent 限制在列出的 targets 中（例如 `claude-code` 這類別名也會比對到 `claude`）。省略此欄位則會同步到所有地方。其他 frontmatter 欄位會原樣傳遞 — skillshare 不會在工具之間轉譯這些欄位，除非該 target 使用了 [extension](#extensions)，因此為某個 harness 撰寫的 agent，另一個工具未必能理解。可利用 `targets` 讓同一個 agent 針對不同 harness 各自保留一份變體並存（例如 `reviewer.md` 搭配 `targets: [claude]`，以及 `reviewer-opencode.md` 搭配 `targets: [opencode]`）。
 
 **命名規則：**
 - 檔名決定 agent 名稱：`tutor.md` = "tutor"
@@ -137,6 +137,32 @@ skillshare sync agents
 
 孤兒清理的運作方式相同 — 找不到對應 source 的失效 symlink 或已複製檔案，會被自動清除。
 
+### 使用 extension 轉換 agents {#extensions}
+
+工具之間對 agent frontmatter 的認知並不一致，有些甚至完全不讀取 Markdown。在 target 的 `agents` 區塊設定 `extension`，就能在同步時讓每個 agent 都跑過一個 transform 腳本：
+
+```yaml
+targets:
+  opencode:
+    agents:
+      extension: opencode-agents   # implies mode: copy
+  codex:
+    skills:
+      path: ~/.codex/skills
+    agents:
+      path: ~/.codex/agents
+      extension: codex-agents      # tutor.md → tutor.toml
+```
+
+- `extension` 隱含 `copy` 模式。在帶有 `extension` 的 target 上同時設定 `mode: merge` 或 `mode: symlink` 會是錯誤。
+- Extension 與 extras 使用的是同一套：單純的名稱會在 `~/.config/skillshare/extensions/` 底下解析（project mode 為 `.skillshare/extensions/`），路徑則直接使用。腳本規格請參閱 [Extension transforms](/docs/reference/commands/extras#extension-transforms)。
+- 當 extension 變更了副檔名，孤兒清理會跟著新名稱走，因此一旦 target 拿到 `tutor.toml`，殘留的 `tutor.md` 複本就會被移除。
+- 失敗的 agent 會被回報且不會寫入；其他 agents 仍會照常同步。
+
+網頁儀表板可從該 target 的 **Agents** 分頁設定此項。
+
+**`opencode-agents`** 會把 Claude 風格的 agents 轉成 [OpenCode](https://opencode.ai/docs/agents/) 格式。它只保留 OpenCode 文件列出的欄位（`description`、`mode`、`model`、`temperature`、`top_p`、`steps`、`permission`、`hidden`、`color`、`prompt`），缺少 `mode` 時補上 `mode: subagent`。不是 `provider/model-id` 格式的 `model` 會被丟掉，缺少 `description` 則會失敗。設定了 Claude `tools:`、`disallowedTools:` 或 `permissionMode:` 的 agent 會直接失敗而不是用猜的：請另寫一份使用 `permission:` 並加上 `targets: [opencode]` 的 OpenCode 版本。
+
 ---
 
 ## Collect 行為
@@ -161,7 +187,7 @@ skillshare collect -p agents --json
 - 預設會略過已存在的 source agents
 - 使用 `--force` 覆寫已存在的 source agents
 - `--json` 隱含 `--force`，並跳過確認提示
-- 網頁儀表板的 Collect 頁面目前僅支援 skills；agents 請使用 CLI
+- 具有 agent [extension](#extensions) 的 targets 存放的是轉換後的檔案，因此永遠不會被 collect：`--all` 會略過它們，而指名其中一個則會是錯誤
 
 ---
 

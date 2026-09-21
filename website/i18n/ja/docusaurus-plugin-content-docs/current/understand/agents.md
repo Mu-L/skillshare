@@ -87,7 +87,7 @@ targets: [claude, cursor]   # optional — only sync to these targets
 You are a patient math tutor. Walk through problems step by step.
 ```
 
-**Agent ごとの targets：** 任意の `targets` リストを指定すると、その agent は列挙された Target のみに同期されます（`claude-code` のようなエイリアスも `claude` にマッチします）。省略するとすべての場所に同期されます。それ以外の frontmatter フィールドはそのまま渡されます — skillshare はツール間で変換を行わないため、あるハーネス向けに書かれた agent が別のハーネスでは理解されないことがあります。同じ agent のハーネスごとのバリアントを並存させるには `targets` を使ってください（例：`targets: [claude]` を指定した `reviewer.md` と `targets: [opencode]` を指定した `reviewer-opencode.md`）。
+**Agent ごとの targets：** 任意の `targets` リストを指定すると、その agent は列挙された Target のみに同期されます（`claude-code` のようなエイリアスも `claude` にマッチします）。省略するとすべての場所に同期されます。それ以外の frontmatter フィールドはそのまま渡されます — Target が [extension](#extensions) を使用しない限り、skillshare はツール間で変換を行わないため、あるハーネス向けに書かれた agent が別のハーネスでは理解されないことがあります。同じ agent のハーネスごとのバリアントを並存させるには `targets` を使ってください（例：`targets: [claude]` を指定した `reviewer.md` と `targets: [opencode]` を指定した `reviewer-opencode.md`）。
 
 **命名ルール：**
 - ファイル名が agent 名を決定します：`tutor.md` = "tutor"
@@ -137,6 +137,32 @@ skillshare sync agents
 
 孤立ファイルの掃除も同様に動作します — Source が存在しなくなった壊れた symlink やコピーされたファイルは自動的に削除されます。
 
+### extension を使った Agent の変換 {#extensions}
+
+ツールによって agent の frontmatter の扱いは異なり、なかには Markdown をまったく読み込まないものもあります。Target の `agents` ブロックに `extension` を設定すると、sync 時に各 agent が変換スクリプトを通されます。
+
+```yaml
+targets:
+  opencode:
+    agents:
+      extension: opencode-agents   # implies mode: copy
+  codex:
+    skills:
+      path: ~/.codex/skills
+    agents:
+      path: ~/.codex/agents
+      extension: codex-agents      # tutor.md → tutor.toml
+```
+
+- `extension` は `copy` モードを暗黙的に指定します。`extension` と併せて `mode: merge` または `mode: symlink` を設定するとエラーになります。
+- Extension は extras で使われるものと同じです。裸の名前は `~/.config/skillshare/extensions/`（Project モードでは `.skillshare/extensions/`）配下で解決され、パスはそのまま使われます。スクリプトの契約については [Extension transforms](/docs/reference/commands/extras#extension-transforms) を参照してください。
+- extension がファイル拡張子を変更する場合、孤立ファイルの掃除は新しい名前に追従します。そのため、Target が `tutor.toml` を取得すると、残っていた `tutor.md` のコピーは削除されます。
+- 失敗した agent は報告され、書き込まれません。他の agent は引き続き sync されます。
+
+Web ダッシュボードでは、Target の **Agents** タブからこれを設定します。
+
+**`opencode-agents`** は Claude 形式の Agent を [OpenCode](https://opencode.ai/docs/agents/) 向けに変換します。OpenCode のドキュメントに記載されたフィールド（`description`、`mode`、`model`、`temperature`、`top_p`、`steps`、`permission`、`hidden`、`color`、`prompt`）だけを残し、`mode` がなければ `mode: subagent` を追加します。`provider/model-id` 形式でない `model` は削除され、`description` がない場合は失敗します。Claude の `tools:`、`disallowedTools:`、`permissionMode:` のいずれかを設定した Agent は推測で変換せずに失敗します。`permission:` と `targets: [opencode]` を使った OpenCode 用のバリアントを別に用意してください。
+
 ---
 
 ## Collect の挙動
@@ -161,7 +187,7 @@ skillshare collect -p agents --json
 - 既存の Source agent はデフォルトでスキップされます
 - 既存の Source agent を上書きするには `--force` を使用します
 - `--json` は `--force` を暗黙的に有効にし、確認プロンプトをスキップします
-- Web ダッシュボードの Collect ページは依然として skill のみに対応しています。agent には CLI を使用してください
+- agent [extension](#extensions) を持つ Target には変換済みのファイルが格納されているため、collect の対象には決してなりません。`--all` はそれらをスキップし、個別に指定するとエラーになります
 
 ---
 

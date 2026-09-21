@@ -87,7 +87,7 @@ targets: [claude, cursor]   # optional — only sync to these targets
 You are a patient math tutor. Walk through problems step by step.
 ```
 
-**Agent별 targets:** 선택적인 `targets` 목록은 agent를 나열된 target으로 제한합니다 (`claude-code` 같은 별칭도 `claude`와 일치합니다). 생략하면 모든 곳에 sync됩니다. 다른 frontmatter 필드는 그대로 전달됩니다 — skillshare는 이를 도구 간에 변환하지 않으므로, 한 harness를 위해 작성된 agent는 다른 harness에서 이해되지 않을 수 있습니다. 동일한 agent의 harness별 변형을 나란히 유지하려면 `targets`를 사용하세요 (예: `targets: [claude]`인 `reviewer.md`와 `targets: [opencode]`인 `reviewer-opencode.md`).
+**Agent별 targets:** 선택적인 `targets` 목록은 agent를 나열된 target으로 제한합니다 (`claude-code` 같은 별칭도 `claude`와 일치합니다). 생략하면 모든 곳에 sync됩니다. 다른 frontmatter 필드는 그대로 전달됩니다 — target이 [extension](#extensions)을 사용하지 않는 한 skillshare는 이를 도구 간에 변환하지 않으므로, 한 harness를 위해 작성된 agent는 다른 harness에서 이해되지 않을 수 있습니다. 동일한 agent의 harness별 변형을 나란히 유지하려면 `targets`를 사용하세요 (예: `targets: [claude]`인 `reviewer.md`와 `targets: [opencode]`인 `reviewer-opencode.md`).
 
 **이름 짓기 규칙:**
 - 파일 이름이 agent 이름을 결정: `tutor.md` = "tutor"
@@ -137,6 +137,32 @@ skillshare sync agents
 
 orphan 정리도 동일하게 동작합니다 — source가 더 이상 없는 깨진 symlink나 복사된 파일이 자동으로 정리됩니다.
 
+### extension으로 Agent 변환하기 {#extensions}
+
+도구마다 agent frontmatter에 대한 합의가 없고, 일부는 Markdown을 아예 읽지 못합니다. target의 `agents` 블록에 `extension`을 설정하면 sync 중 각 agent가 transform 스크립트를 거치도록 할 수 있습니다:
+
+```yaml
+targets:
+  opencode:
+    agents:
+      extension: opencode-agents   # implies mode: copy
+  codex:
+    skills:
+      path: ~/.codex/skills
+    agents:
+      path: ~/.codex/agents
+      extension: codex-agents      # tutor.md → tutor.toml
+```
+
+- `extension`은 `copy` mode를 암시합니다. `extension`이 있는 target에 `mode: merge` 또는 `mode: symlink`를 설정하면 오류입니다.
+- Extension은 extras가 사용하는 것과 동일합니다: 단순 이름은 `~/.config/skillshare/extensions/`(project mode에서는 `.skillshare/extensions/`) 아래에서 해석되고, 경로는 그대로 사용됩니다. 스크립트 계약은 [Extension transforms](/docs/reference/commands/extras#extension-transforms)를 참고하세요.
+- extension이 파일 확장자를 변경하면 orphan 정리도 새 이름을 따라가므로, target이 `tutor.toml`을 받으면 남아 있던 `tutor.md` 사본이 제거됩니다.
+- 실패한 agent는 보고되고 기록되지 않으며, 다른 agent는 계속 sync됩니다.
+
+웹 대시보드에서는 target의 **Agents** 탭에서 이를 설정합니다.
+
+**`opencode-agents`**는 Claude 스타일 agent를 [OpenCode](https://opencode.ai/docs/agents/)용으로 변환합니다. OpenCode가 문서화한 필드(`description`, `mode`, `model`, `temperature`, `top_p`, `steps`, `permission`, `hidden`, `color`, `prompt`)만 유지하며, `mode`가 없으면 `mode: subagent`를 추가합니다. `provider/model-id` 형식이 아닌 `model`은 제거하고, `description`이 없으면 실패합니다. Claude의 `tools:`, `disallowedTools:`, `permissionMode:` 중 하나를 설정한 agent는 추측해서 처리하는 대신 실패합니다: `permission:`과 `targets: [opencode]`를 사용하는 OpenCode 변형을 따로 작성하세요.
+
 ---
 
 ## Collect 동작
@@ -161,7 +187,7 @@ skillshare collect -p agents --json
 - 기존 source agent는 기본적으로 건너뜀
 - 기존 source agent를 덮어쓰려면 `--force` 사용
 - `--json`은 `--force`를 암시하며 확인 프롬프트를 건너뜀
-- 웹 대시보드의 Collect 페이지는 여전히 skill 전용입니다. agent에는 CLI를 사용하세요
+- agent [extension](#extensions)이 있는 target은 변환된 파일을 보유하므로 collect 대상이 되지 않습니다: `--all`은 이를 건너뛰며, 이름을 직접 지정하면 오류입니다
 
 ---
 
