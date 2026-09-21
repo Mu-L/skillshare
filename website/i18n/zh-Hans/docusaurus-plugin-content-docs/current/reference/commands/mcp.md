@@ -28,7 +28,7 @@ skillshare sync --all
 
 | 选项 | 含义 |
 |---|---|
-| `--target CLIENT` | 接收方 client；重复此标志可选择多个 client |
+| `--target CLIENT` | 接收方 client；重复此标志可选择多个 client。`--target none` 会把 server 保留在 Skillshare 中，而不写入任何 client。参见[下文](#keep-a-server-without-syncing-it) |
 | `--url URL` | 用于 `add` 的 Streamable HTTP 端点 |
 | `-- command args...` | 用于 `add` 的本地可执行文件及其字面参数 |
 | `--disabled` | Project mode，配合 `add` 使用：关闭一个由 Agent 全局配置定义的 server。参见[下文](#turn-off-a-global-server-in-one-project) |
@@ -113,7 +113,7 @@ Skillshare 配置中。schema 是仓库中的 `schemas/mcp.schema.json`。
 | `headers` | HTTP header：字符串或 `{fromEnv: VARIABLE}` |
 | `bearerToken` | `{fromEnv: VARIABLE}`；不能与 Authorization header 共存 |
 | `transport` | 可选的 `stdio` 或 `streamable-http`；省略时会自动推断 |
-| `targets` | 可选的接收方 client；覆盖 `mcp.targets` |
+| `targets` | 可选的接收方 client；覆盖 `mcp.targets`。空列表会让该 server 只保留在 Skillshare 中。参见[下文](#keep-a-server-without-syncing-it) |
 | `directTools` | 仅限使用 `pi-mcp-adapter` 的 Pi：`true`、`false`、`"search"` 或工具名称列表。参见[下文](#pi-direct-tools) |
 | `disabled` | 仅限 `true`，不能有其他连接字段，且必须有 project 在作用范围内：project mode，或 `mcp.projects` 下的某个项目根目录。参见[下文](#turn-off-a-global-server-in-one-project) |
 
@@ -122,7 +122,39 @@ Client ID 有 `claude`、`codex`、`cursor`、`vscode`、`opencode`、`kilocode`
 `goose`、`junie`、`kiro`、`lmstudio`、`warp`、`windsurf` 和 `pi`。
 `grok` 指的是官方的 xAI Grok CLI。Server 名称使用字母、
 数字、点、下划线和连字符。一个 server 在同步之前，必须
-直接或通过 `mcp.targets` 选择至少一个 client。
+直接或通过 `mcp.targets` 选择至少一个 client，除非它自己的
+`targets` 是空列表。
+
+### 保留 server 但不同步 {#keep-a-server-without-syncing-it}
+
+带有 `targets: []` 的 server 会保留在 Skillshare source 中，不会被写入任何 client。
+可以用它把一个 server 从所有 client 中拿掉，同时保留它的定义以备日后使用。
+如果它之前同步过，下一次同步会从那些 client 中移除它的条目。
+
+```yaml
+mcp:
+  targets: [claude, codex]
+  servers:
+    docs:
+      url: https://example.com/mcp
+      targets: []
+```
+
+```bash
+skillshare mcp add docs --url https://example.com/mcp --target none
+skillshare mcp edit docs --target none
+skillshare mcp edit docs --target claude   # 把它加回来
+```
+
+- **不写 `targets` 则是另一回事。** 此时该 server 会继承 `mcp.targets`，如果
+  那个列表也是空的，它就会被拒绝。
+- `none` 不能与 client 一起使用。
+- 在终端的选择菜单中，不选择任何 client 直接确认。在仪表盘中，取消勾选
+  所有 client；该 server 会被标记为 **尚未选择 Agent**。
+- 对 project 的 server 以及 `mcp.projects` 下的 server，行为相同。
+- `disabled` 条目仍然需要至少一个 client，因为它必须在某个地方把该 server
+  关闭。
+- `mcp list` 会把这样的 server 显示为 `kept no targets`。
 
 对于 Grok，名称必须以字母或下划线开头，只能包含字母、
 数字、连字符和单个下划线，且不能以下划线结尾。

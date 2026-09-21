@@ -28,7 +28,7 @@ skillshare sync --all
 
 | Option | Meaning |
 |---|---|
-| `--target CLIENT` | Receiving client; repeat to select multiple clients |
+| `--target CLIENT` | Receiving client; repeat to select multiple clients. `--target none` keeps the server in Skillshare without writing it to any client. See [below](#keep-a-server-without-syncing-it) |
 | `--url URL` | Streamable HTTP endpoint for `add` |
 | `-- command args...` | Local executable and literal arguments for `add` |
 | `--disabled` | Project mode, with `add`: turn off a server the Agent's global config defines. See [below](#turn-off-a-global-server-in-one-project) |
@@ -114,7 +114,7 @@ Skillshare config. The schema is `schemas/mcp.schema.json` in the repository.
 | `headers` | HTTP headers: strings or `{fromEnv: VARIABLE}` |
 | `bearerToken` | `{fromEnv: VARIABLE}`; cannot coexist with an Authorization header |
 | `transport` | Optional `stdio` or `streamable-http`; inferred when omitted |
-| `targets` | Optional receiving clients; overrides `mcp.targets` |
+| `targets` | Optional receiving clients; overrides `mcp.targets`. An empty list keeps the server in Skillshare only. See [below](#keep-a-server-without-syncing-it) |
 | `directTools` | Pi with `pi-mcp-adapter` only: `true`, `false`, `"search"` or a list of tool names. See [below](#pi-direct-tools) |
 | `disabled` | `true` only, no other connection fields, and a project must be in scope: project mode, or a root under `mcp.projects`. See [below](#turn-off-a-global-server-in-one-project) |
 
@@ -123,7 +123,39 @@ Client IDs are `claude`, `codex`, `cursor`, `vscode`, `opencode`, `kilocode`,
 `goose`, `junie`, `kiro`, `lmstudio`, `warp`, `windsurf`, and `pi`.
 `grok` means the official xAI Grok CLI. Server names use letters,
 digits, dots, underscores and hyphens. A server must select at least one client
-either directly or through `mcp.targets` before synchronization.
+either directly or through `mcp.targets` before synchronization, unless its own
+`targets` is an empty list.
+
+### Keep a server without syncing it
+
+A server with `targets: []` stays in the Skillshare source and is written to no client.
+Use it to take a server out of every client while keeping its definition for later.
+If it was synced before, the next sync removes its entries from those clients.
+
+```yaml
+mcp:
+  targets: [claude, codex]
+  servers:
+    docs:
+      url: https://example.com/mcp
+      targets: []
+```
+
+```bash
+skillshare mcp add docs --url https://example.com/mcp --target none
+skillshare mcp edit docs --target none
+skillshare mcp edit docs --target claude   # bring it back
+```
+
+- **Leaving `targets` out is different.** The server then inherits `mcp.targets`, and
+  it is refused when that list is empty too.
+- `none` cannot be combined with a client.
+- In the terminal picker, confirm with no client selected. In the dashboard, untick
+  every client; the server is tagged **No Agents yet**.
+- It works the same for a project's servers and for servers under `mcp.projects`.
+- A `disabled` entry still needs at least one client, since it has to turn the server
+  off somewhere.
+- `mcp list` shows such a server as `kept no targets`.
 
 For Grok, names must start with a letter or underscore, contain only letters,
 digits, hyphens and single underscores, and cannot end with an underscore.

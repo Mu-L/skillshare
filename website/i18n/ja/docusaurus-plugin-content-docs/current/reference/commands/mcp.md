@@ -28,7 +28,7 @@ skillshare sync --all
 
 | オプション | 意味 |
 |---|---|
-| `--target CLIENT` | 受け取り側クライアント。複数のクライアントを選択するには繰り返し指定 |
+| `--target CLIENT` | 受け取り側クライアント。複数のクライアントを選択するには繰り返し指定。`--target none` はサーバーをどのクライアントにも書き込まずに Skillshare 内に保持する。[下記](#keep-a-server-without-syncing-it)を参照 |
 | `--url URL` | `add` 用の Streamable HTTP エンドポイント |
 | `-- command args...` | `add` 用のローカル実行ファイルとリテラルな引数 |
 | `--disabled` | project mode で `add` と併用: Agent の global config が定義するサーバーをオフにする。[下記](#turn-off-a-global-server-in-one-project)を参照 |
@@ -86,7 +86,7 @@ Add、edit、remove、import では、**Save and sync** または **Save only** 
 | `headers` | HTTP ヘッダー: 文字列または `{fromEnv: VARIABLE}` |
 | `bearerToken` | `{fromEnv: VARIABLE}`。Authorization ヘッダーと共存不可 |
 | `transport` | 任意の `stdio` または `streamable-http`。省略時は推測される |
-| `targets` | 任意の受け取り側クライアント。`mcp.targets` を上書きする |
+| `targets` | 任意の受け取り側クライアント。`mcp.targets` を上書きする。空のリストにすると、サーバーは Skillshare 内にのみ保持される。[下記](#keep-a-server-without-syncing-it)を参照 |
 | `directTools` | `pi-mcp-adapter` を使う Pi 限定: `true`、`false`、`"search"`、またはツール名のリスト。[下記](#pi-direct-tools)を参照 |
 | `disabled` | `true` のみ、他の接続フィールドを伴わない、かつ project がスコープ内にあること: project mode、または `mcp.projects` 配下の root。[下記](#turn-off-a-global-server-in-one-project)を参照 |
 
@@ -95,7 +95,39 @@ Add、edit、remove、import では、**Save and sync** または **Save only** 
 `goose`、`junie`、`kiro`、`lmstudio`、`warp`、`windsurf`、`pi` です。
 `grok` は公式の xAI Grok CLI を意味します。サーバー名には文字、
 数字、ドット、アンダースコア、ハイフンを使用します。サーバーは同期前に、直接または
-`mcp.targets` 経由で少なくとも 1 つのクライアントを選択する必要があります。
+`mcp.targets` 経由で少なくとも 1 つのクライアントを選択する必要があります。ただし、サーバー自身の
+`targets` が空のリストである場合は除きます。
+
+### 同期せずにサーバーを保持する {#keep-a-server-without-syncing-it}
+
+`targets: []` を持つサーバーは Skillshare の source に残り、どのクライアントにも書き込まれません。
+定義を後のために残したまま、サーバーをすべてのクライアントから外したいときに使います。
+以前に同期されていた場合、次の sync でそれらのクライアントからエントリが削除されます。
+
+```yaml
+mcp:
+  targets: [claude, codex]
+  servers:
+    docs:
+      url: https://example.com/mcp
+      targets: []
+```
+
+```bash
+skillshare mcp add docs --url https://example.com/mcp --target none
+skillshare mcp edit docs --target none
+skillshare mcp edit docs --target claude   # 元に戻す
+```
+
+- **`targets` を省略するのとは異なります。** その場合、サーバーは `mcp.targets` を継承し、
+  そのリストも空であれば拒否されます。
+- `none` はクライアントと組み合わせられません。
+- ターミナルの選択メニューでは、クライアントを何も選択せずに確定します。ダッシュボードでは、
+  すべてのクライアントのチェックを外します。サーバーには **Agent 未選択** のタグが付きます。
+- project のサーバーでも、`mcp.projects` 配下のサーバーでも同じように動作します。
+- `disabled` エントリには引き続き少なくとも 1 つのクライアントが必要です。どこかでサーバーを
+  オフにする必要があるためです。
+- `mcp list` では、このようなサーバーは `kept no targets` と表示されます。
 
 Grok の場合、名前は文字またはアンダースコアで始まり、文字、数字、ハイフン、単一のアンダースコアのみを含み、アンダースコアで終わってはいけません。
 `company-docs` のような名前は、すべての対応クライアントで動作します。

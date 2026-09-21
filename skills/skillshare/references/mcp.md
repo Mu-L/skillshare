@@ -26,6 +26,9 @@ skillshare mcp restore BACKUP_ID --no-tui            # Apply restoration; source
   need a name or backup ID when noninteractive.
 - Receiving clients use repeated `--target` (singular), not `--targets`. `--force` is
   unsupported and cannot bypass a conflict.
+- `--target none` (YAML `targets: []`) keeps a server in Skillshare and writes it to no
+  client; the next sync removes entries it had. Omitting `--target` inherits
+  `mcp.targets` instead, and fails when that is empty. Not valid with `--disabled`.
 - `add`, `edit`, `import` and `remove` save the source only. Add `--sync` to write the
   Agent files too. `sync --all` includes MCP along with skills, agents and extras.
 - Scripted `edit` accepts `--url`, repeated `--target`, `--pi-extension`, `--direct-tools`
@@ -64,7 +67,7 @@ mcp:
 | `command`, `args`, `env` | Local stdio server. `env` values are strings or `{fromEnv: VARIABLE}` |
 | `url`, `headers`, `bearerToken` | Streamable HTTP server. `bearerToken` is `{fromEnv: VARIABLE}` and cannot coexist with an Authorization header |
 | `transport` | Optional `stdio` or `streamable-http`; inferred when omitted. Legacy SSE is not supported |
-| `targets` | Receiving clients for this server |
+| `targets` | Receiving clients for this server. `[]` keeps it in Skillshare only |
 | `piExtension`, `directTools` | Pi only. See [Pi](#pi) |
 | `disabled` | `true` only, no connection fields, and a project must be in scope: project mode, or a root under `mcp.projects`. See [Turn off a global server in one project](#turn-off-a-global-server-in-one-project) |
 
