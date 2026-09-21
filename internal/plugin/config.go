@@ -9,6 +9,7 @@ import (
 	"slices"
 
 	"gopkg.in/yaml.v3"
+	"skillshare/internal/utils"
 )
 
 type document struct {
@@ -106,7 +107,7 @@ func (s *Service) save(d *document) error {
 	if !found {
 		root.Content = append(root.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "plugins"}, &n)
 	}
-	data, err := yaml.Marshal(&d.node)
+	data, err := utils.MarshalYAML(&d.node)
 	if err != nil {
 		return err
 	}

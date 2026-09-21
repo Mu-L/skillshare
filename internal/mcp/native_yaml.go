@@ -1,10 +1,10 @@
 package mcp
 
 import (
-	"bytes"
 	"fmt"
 
 	"gopkg.in/yaml.v3"
+	"skillshare/internal/utils"
 )
 
 // Aliases and merges can make changing one entry affect another. Fail closed
@@ -56,17 +56,12 @@ func (n *Native) editYAML(changes map[string]map[string]any) ([]byte, error) {
 	if len(extensions.Content) > 0 {
 		extensions.Style = 0
 	}
-	var out bytes.Buffer
-	enc := yaml.NewEncoder(&out)
-	enc.SetIndent(2)
-	if err := enc.Encode(&doc); err != nil {
+	out, err := utils.MarshalYAML(&doc)
+	if err != nil {
 		return nil, err
 	}
-	if err := enc.Close(); err != nil {
+	if _, err := ParseNative(n.Target, out); err != nil {
 		return nil, err
 	}
-	if _, err := ParseNative(n.Target, out.Bytes()); err != nil {
-		return nil, err
-	}
-	return out.Bytes(), nil
+	return out, nil
 }

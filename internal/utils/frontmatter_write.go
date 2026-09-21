@@ -71,7 +71,7 @@ func SetFrontmatterList(filePath string, field string, values []string) error {
 		}
 	}
 
-	fmBytes, err := yaml.Marshal(fm)
+	fmBytes, err := MarshalYAML(fm)
 	if err != nil {
 		return err
 	}

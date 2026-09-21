@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -33,5 +34,26 @@ func TestFilesListsTheSnapshotAndReadsOnlyInsideIt(t *testing.T) {
 	}
 	if files, err := s.Files("imported"); err != nil || len(files) != 0 {
 		t.Fatalf("an imported plugin has no snapshot: %v, %v", files, err)
+	}
+}
+
+func TestSaveKeepsTwoSpaceIndent(t *testing.T) {
+	s := &Service{ConfigPath: filepath.Join(t.TempDir(), "config.yaml")}
+	raw := []byte("ignore:\n  - '**/.git/**'\n")
+	if err := os.WriteFile(s.ConfigPath, raw, 0644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := decodeDocument(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.packages["demo"] = Package{Bindings: map[string]Binding{"claude": {ID: "demo@local", Components: []string{"skills"}}}}
+	if err := s.save(d); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(s.ConfigPath)
+	want := "ignore:\n  - '**/.git/**'\nplugins:\n  packages:\n    demo:\n      bindings:\n        claude:\n          components:\n            - skills\n"
+	if !strings.HasPrefix(string(data), want) {
+		t.Errorf("got:\n%s\nwant prefix:\n%s", data, want)
 	}
 }

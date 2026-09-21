@@ -562,3 +562,14 @@ func TestTogglePattern_EnableClearsCustomRuleDisables(t *testing.T) {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+func TestWriteRulesFile_TwoSpaceIndent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "audit-rules.yaml")
+	if err := writeRulesFile(path, []yamlRule{{ID: "rule-1"}}); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	if !strings.Contains(string(data), "rules:\n  - id: rule-1\n    severity:") {
+		t.Errorf("rules not indented with 2 spaces:\n%s", data)
+	}
+}

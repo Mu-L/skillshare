@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+	"skillshare/internal/utils"
 )
 
 // Resolution is an explicit per-entry decision, never a global force switch.
@@ -250,10 +251,8 @@ func drop(node *yaml.Node, key string) {
 // section is expanded first to stay readable in the editor.
 func writeYAML(path string, doc, section *yaml.Node) error {
 	blockCollections(section)
-	var buffer bytes.Buffer
-	encoder := yaml.NewEncoder(&buffer)
-	encoder.SetIndent(2)
-	if err := encoder.Encode(doc); err != nil {
+	data, err := utils.MarshalYAML(doc)
+	if err != nil {
 		return err
 	}
 	// Dotfile managers often symlink config.yaml; write its target so the link survives.
@@ -264,7 +263,7 @@ func writeYAML(path string, doc, section *yaml.Node) error {
 	if err != nil {
 		return err
 	}
-	return atomicWrite(path, buffer.Bytes(), mode)
+	return atomicWrite(path, data, mode)
 }
 
 // inlineOrphanAliases writes out in full every alias whose anchor put just dropped by

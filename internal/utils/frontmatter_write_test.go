@@ -162,3 +162,16 @@ func TestSetFrontmatterList_MultipleTargets(t *testing.T) {
 		t.Errorf("expected 3 targets, got %v", result)
 	}
 }
+
+func TestSetFrontmatterList_TwoSpaceIndent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "SKILL.md")
+	os.WriteFile(path, []byte("---\nname: my-skill\n---\n"), 0644)
+
+	if err := SetFrontmatterList(path, "metadata.targets", []string{"claude"}); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	if !strings.Contains(string(data), "metadata:\n  targets:\n    - claude\n") {
+		t.Errorf("frontmatter not indented with 2 spaces:\n%s", data)
+	}
+}

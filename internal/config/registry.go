@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+	"skillshare/internal/utils"
 )
 
 const registryFileName = "registry.yaml"
@@ -113,7 +114,7 @@ func (r *Registry) Save(dir string) error {
 		return fmt.Errorf("failed to create registry directory: %w", err)
 	}
 
-	data, err := marshalYAML(r)
+	data, err := utils.MarshalYAML(r)
 	if err != nil {
 		return fmt.Errorf("failed to marshal registry: %w", err)
 	}

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/yaml.v3"
+	"skillshare/internal/utils"
 )
 
 // rulesFileHeader is prepended when writing audit-rules.yaml.
@@ -65,7 +65,7 @@ func writeRulesFile(path string, rules []yamlRule) error {
 	}
 
 	f := rulesFile{Rules: rules}
-	data, err := yaml.Marshal(&f)
+	data, err := utils.MarshalYAML(&f)
 	if err != nil {
 		return fmt.Errorf("marshal YAML: %w", err)
 	}
