@@ -290,7 +290,7 @@ export const api = {
     }),
   removeTarget: (name: string) =>
     apiFetch<{ success: boolean }>(`/targets/${encodeURIComponent(name)}`, { method: 'DELETE' }),
-  updateTarget: (name: string, opts: { include?: string[]; exclude?: string[]; mode?: string; target_naming?: string; agent_mode?: string; agent_include?: string[]; agent_exclude?: string[] }) =>
+  updateTarget: (name: string, opts: { include?: string[]; exclude?: string[]; mode?: string; target_naming?: string; agent_mode?: string; agent_include?: string[]; agent_exclude?: string[]; agent_extension?: string }) =>
     apiFetch<{ success: boolean }>(`/targets/${encodeURIComponent(name)}`, {
       method: 'PATCH',
       body: JSON.stringify(opts),
@@ -872,6 +872,7 @@ export interface Target {
   collisionCount?: number;
   agentPath?: string;
   agentMode?: string;
+  agentExtension?: string; // converts each agent; implies copy mode
   agentInclude?: string[];
   agentExclude?: string[];
   agentLinkedCount?: number;

@@ -6,6 +6,7 @@ import { api, type Target } from '../api/client';
 import Button from '../components/Button';
 import CollectDialog from '../components/CollectDialog';
 import EmptyState from '../components/EmptyState';
+import { Select } from '../components/Input';
 import PageHeader from '../components/PageHeader';
 import SegmentedControl from '../components/SegmentedControl';
 import { PageSkeleton } from '../components/Skeleton';
@@ -21,6 +22,7 @@ type Kind = 'skill' | 'agent';
 const draftOf = (target: Target) => ({
   include: target.include ?? [], exclude: target.exclude ?? [], mode: target.mode || 'merge', naming: target.targetNaming || 'flat',
   agentInclude: target.agentInclude ?? [], agentExclude: target.agentExclude ?? [], agentMode: target.agentMode || 'merge',
+  agentExtension: target.agentExtension ?? '',
 });
 type Draft = ReturnType<typeof draftOf>;
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -57,6 +59,8 @@ function TargetEditor({ target }: { target: Target }) {
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [collecting, setCollecting] = useState(false);
+  const { data: extData } = useQuery({ queryKey: ['extras', 'extensions'], queryFn: () => api.listExtraExtensions(), staleTime: staleTimes.extras });
+  const extensions = extData?.extensions ?? [];
 
   // Preview the draft filters once typing settles.
   const [filters, setFilters] = useState(draft);
@@ -80,6 +84,7 @@ function TargetEditor({ target }: { target: Target }) {
     ...(!same(draft.agentInclude, saved.agentInclude) && { agent_include: draft.agentInclude }),
     ...(!same(draft.agentExclude, saved.agentExclude) && { agent_exclude: draft.agentExclude }),
     ...(draft.agentMode !== saved.agentMode && { agent_mode: draft.agentMode }),
+    ...(draft.agentExtension !== saved.agentExtension && { agent_extension: draft.agentExtension }),
   };
   const dirty = Object.keys(payload).length > 0;
   const save = async () => {
@@ -144,9 +149,28 @@ function TargetEditor({ target }: { target: Target }) {
               <span className="text-[12.5px] text-ink-3">{t('targetDetail.agentsFolderHint')}</span>
             </div>
           )}
+          {agent && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[13px] font-semibold">{t('extras.modal.colExtension')}</span>
+              <Select
+                value={draft.agentExtension}
+                // An extension converts each agent, so it always writes copies
+                onChange={(v) => setDraft({ ...draft, agentExtension: v, ...(v ? { agentMode: 'copy' } : {}) })}
+                options={[
+                  { value: '', label: t('extras.noExtension') },
+                  ...[...new Set([...extensions, ...(draft.agentExtension ? [draft.agentExtension] : [])])].map((e) => ({ value: e, label: e })),
+                ]}
+                disabled={saving || (extensions.length === 0 && !draft.agentExtension)}
+              />
+              <span className="text-[12.5px] text-ink-3">
+                {t('extras.hint.extension')}{' '}
+                {extensions.length === 0 && <Link to="/config?tab=extensions" className="font-semibold text-ink-2 hover:text-ink">{t('extras.installExtensionHint')}</Link>}
+              </span>
+            </div>
+          )}
           <div className="flex flex-col gap-3">
             <h2 className="ss-h2">{t('targetDetail.syncMode')}</h2>
-            <ModePicker kind={kind} mode={mode} onChange={(m) => setDraft(agent ? { ...draft, agentMode: m } : { ...draft, mode: m })} disabled={saving} />
+            <ModePicker kind={kind} mode={mode} onChange={(m) => setDraft(agent ? { ...draft, agentMode: m } : { ...draft, mode: m })} disabled={saving || (agent && draft.agentExtension !== '')} />
           </div>
 
           {!agent && draft.mode !== 'symlink' && (
