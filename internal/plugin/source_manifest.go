@@ -97,15 +97,17 @@ func inspect(root string, explicit ...string) (Candidate, error) {
 				info.Components = append(info.Components, "extensions")
 			}
 		}
-		if !namePattern.MatchString(name) {
+		// Pi and OpenCode install by path, so a package.json name may be scoped (@owner/pkg),
+		// differ, or be missing; it only names the plugin when nothing else does.
+		npm := spec.path == "package.json"
+		if !namePattern.MatchString(name) && !npm {
 			info.block("plugins.problem.manifestName", spec.path+" requires a valid plugin name", map[string]string{"manifest": spec.path})
 		}
-		// An npm name is often scoped (@owner/pkg), and Pi and OpenCode install by path, not by it.
-		if c.Name != "" && c.Name != name && spec.path != "package.json" {
+		if c.Name != "" && c.Name != name && !npm {
 			info.block("plugins.problem.nameDiffers", "Native manifest name differs from "+c.Name, map[string]string{"name": c.Name})
 		}
 		if info.Problem == "" {
-			if c.Name == "" {
+			if c.Name == "" && namePattern.MatchString(name) {
 				c.Name, c.Description, c.Version = name, desc, info.Version
 			}
 			info.Components = manifestComponents(root, spec.target, m, info.Components)

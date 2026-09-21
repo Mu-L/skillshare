@@ -142,6 +142,18 @@ func TestDiscoverScopedPackageNameKeepsPi(t *testing.T) {
 	}
 }
 
+func TestDiscoverUnnamedPackageKeepsPi(t *testing.T) {
+	root := fixture(t)
+	writeFile(t, root, "package.json", `{"pi":{"skills":["./skills"]}}`)
+	d, err := Discover(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := d.Candidates[0]; c.Name != "demo" || !slices.Contains(c.Targets, "pi") {
+		t.Fatalf("unnamed package.json blocked Pi: %+v", c.TargetInfo["pi"])
+	}
+}
+
 func TestDiscoverClaudeEntryThatIsOneSkill(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, root, ".claude-plugin/marketplace.json", `{"name":"market","plugins":[{"name":"tool","source":"./tool","strict":false}]}`)
