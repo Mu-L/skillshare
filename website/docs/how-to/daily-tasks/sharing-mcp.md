@@ -209,8 +209,8 @@ skillshare mcp add company-docs --disabled --target opencode
 skillshare sync mcp
 ```
 
-In the dashboard, open it from the project folder with `skillshare ui`, choose
-**Add server**, and pick **Off in this project**.
+In the dashboard, open it from the project folder with `skillshare ui` and choose
+**Turn off a global server**, the button beside **Add server**.
 
 This works with Claude Code, OpenCode, Kilo Code, and Pi with `pi-mcp-adapter`. Other Agents
 are refused. For Pi, add `--pi-extension pi-mcp-adapter`. The

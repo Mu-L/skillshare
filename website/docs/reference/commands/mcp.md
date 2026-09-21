@@ -116,7 +116,7 @@ Skillshare config. The schema is `schemas/mcp.schema.json` in the repository.
 | `transport` | Optional `stdio` or `streamable-http`; inferred when omitted |
 | `targets` | Optional receiving clients; overrides `mcp.targets` |
 | `directTools` | Pi with `pi-mcp-adapter` only: `true`, `false`, `"search"` or a list of tool names. See [below](#pi-direct-tools) |
-| `disabled` | `true` only, project mode only, and no other connection fields. See [below](#turn-off-a-global-server-in-one-project) |
+| `disabled` | `true` only, no other connection fields, and a project must be in scope: project mode, or a root under `mcp.projects`. See [below](#turn-off-a-global-server-in-one-project) |
 
 Client IDs are `claude`, `codex`, `cursor`, `vscode`, `opencode`, `kilocode`,
 `grok`, `antigravity`, `amp`, `claude-desktop`, `cline`, `copilot`, `factory`, `gemini`,
@@ -371,8 +371,11 @@ mcp:
 
 ### Rules
 
-- **Project mode only.** Run it inside a project that has `.skillshare/config.yaml`
-  (created by `skillshare init -p`), or pass `-p`. In global mode it is refused.
+- **A project must be in scope.** Run it inside a project that has
+  `.skillshare/config.yaml` (created by `skillshare init -p`), pass `-p`, or put the
+  entry under a project root in
+  [`mcp.projects`](#manage-several-projects-from-the-global-config). In the global
+  `mcp.servers`, where no project is in scope, it is refused.
 - **`disabled` stands alone.** The entry takes `targets` and, for Pi, `piExtension`.
   Adding `command`, `url`, `env` or `headers` is an error.
 - **`targets` should be listed.** Without it the entry inherits `mcp.targets`, and
@@ -381,7 +384,8 @@ mcp:
   cannot check that a server with this name exists there. A name that matches
   nothing is harmless: the Agent ignores it.
 - **To turn it back on**, remove the entry (`skillshare mcp remove company-docs`)
-  and sync. The switch is removed from the project file.
+  and sync. The switch is removed from the file it was written to: the project's own
+  file, or `~/.claude.json` for Claude Code.
 - **A server Skillshare itself defines does not need this.** Unselect the Agent on
   that server instead, and the next sync removes its entry.
 

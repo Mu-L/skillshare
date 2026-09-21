@@ -201,8 +201,8 @@ skillshare mcp add company-docs --disabled --target opencode
 skillshare sync mcp
 ```
 
-대시보드에서는 `skillshare ui`로 프로젝트 폴더에서 열어 **Add server**를 선택하고
-**Off in this project**를 고르세요.
+대시보드에서는 `skillshare ui`로 프로젝트 폴더에서 열어 **서버 추가** 옆에 있는
+**전역 서버 끄기** 버튼을 선택하세요.
 
 이 기능은 Claude Code, OpenCode, Kilo Code, 그리고 `pi-mcp-adapter`를 사용하는 Pi에서
 작동합니다. 다른 Agent는 거부됩니다. Pi의 경우 `--pi-extension pi-mcp-adapter`를

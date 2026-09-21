@@ -87,7 +87,7 @@ Add、edit、remove 與 import 在 **Save and sync** 或 **Save only** 之前會
 | `transport` | 選填的 `stdio` 或 `streamable-http`；省略時自動推斷 |
 | `targets` | 選填的接收端 clients；覆寫 `mcp.targets` |
 | `directTools` | 僅限搭配 `pi-mcp-adapter` 的 Pi：`true`、`false`、`"search"` 或工具名稱清單。參見[下方說明](#pi-direct-tools) |
-| `disabled` | 只能是 `true`，僅限 project mode，且不能有其他連線欄位。參見[下方說明](#turn-off-a-global-server-in-one-project) |
+| `disabled` | 只能是 `true`，不能有其他連線欄位，且必須有 project 在作用範圍內：project mode，或 `mcp.projects` 下的某個 root。參見[下方說明](#turn-off-a-global-server-in-one-project) |
 
 Client ID 有 `claude`、`codex`、`cursor`、`vscode`、`opencode`、`kilocode`、
 `grok`、`antigravity`、`amp`、`claude-desktop`、`cline`、`copilot`、`factory`、`gemini`、
@@ -337,8 +337,10 @@ mcp:
 
 ### Rules
 
-- **僅限 Project mode。** 請在有 `.skillshare/config.yaml` 的 project 中執行
-  （由 `skillshare init -p` 建立），或加上 `-p`。在 global mode 中會被拒絕。
+- **必須有 project 在作用範圍內。** 請在有 `.skillshare/config.yaml` 的 project 中執行
+  （由 `skillshare init -p` 建立）、加上 `-p`，或把該項目放在
+  [`mcp.projects`](#manage-several-projects-from-the-global-config) 下的某個 project root。
+  在沒有任何 project 在作用範圍內的 global `mcp.servers` 中，它會被拒絕。
 - **`disabled` 必須單獨存在。** 該項目可以帶 `targets`，Pi 的話還可以帶
   `piExtension`。加入 `command`、`url`、`env` 或 `headers` 會是錯誤。
 - **應該列出 `targets`。** 若省略，該項目會繼承 `mcp.targets`，
@@ -347,12 +349,13 @@ mcp:
   無法確認該名稱的 server 是否真的存在。名稱不符任何 server 也無妨：
   Agent 會直接忽略它。
 - **要重新開啟時**，移除該項目（`skillshare mcp remove company-docs`）
-  並同步。開關會從 project 檔案中移除。
+  並同步。開關會從當初寫入它的檔案中移除：project 自己的檔案，
+  或 Claude Code 的 `~/.claude.json`。
 - **Skillshare 自己定義的 server 不需要這麼做。** 改為在該 server 上取消選擇
   該 Agent，下一次同步就會移除它的項目。
 
-在 dashboard 中，這是新增 server 時，`stdio` 與
-`streamable-http` 旁邊的 **Off in this project** 選項。它只會出現在 project mode 中。
+在 dashboard 中，這是 **新增伺服器** 旁邊的 **關閉全域伺服器** 按鈕。它會出現在
+project mode，以及 project 的 MCP 分頁中。
 
 ## Manage several projects from the global config {#manage-several-projects-from-the-global-config}
 
@@ -389,7 +392,7 @@ Project 只需要列出與 global config 不同的部分。像 `context7` 這樣
 不需要在這裡新增項目：Agent 會同時讀取自己的 global 檔案與 project 的檔案，
 所以它已經會在每個 project 中載入。`disabled` 項目會
 [在該資料夾中把它關閉](#turn-off-a-global-server-in-one-project)，
-適用於該處列出的 clients，但 Claude Code 除外。
+適用於該處列出的任何 client。
 
 每個 key 都是一個 project 資料夾：絕對路徑，或以 `~` 開頭的路徑。其下放的是
 該 project 自己的 `config.yaml` 會放在 `mcp` 下的同一組 `targets` 與 `servers`，
@@ -451,9 +454,9 @@ anchor 與 alias，而寫成 `~/work/app` 的資料夾也會保留它的 `~`。�
 - 沒有指令可以編輯它：`skillshare mcp add` 管理的是 `mcp.servers`，
   `mcp.projects` 會維持原樣。請在 `config.yaml` 中編輯它，或使用
   [dashboard](#projects-in-the-dashboard)。
-- 在這裡 `disabled` 不能以 Claude Code 為 target，因為它的關閉清單位於
-  `~/.claude.json`，也就是 global servers 寫入的同一個檔案。請改為在該資料夾中使用
-  [project mode](#turn-off-a-global-server-in-one-project)。
+- 以 Claude Code 為 target 的 `disabled` 項目會寫入 `~/.claude.json`，也就是
+  global servers 寫入的同一個檔案，因為 Claude Code 的個別 project 關閉清單就放在那裡。
+  servers 本身則維持原樣。
 - 如果某個資料夾也有自己的 `.skillshare/config.yaml` 在管理同一個項目，
   計畫會回報衝突，而不是覆寫它。
 

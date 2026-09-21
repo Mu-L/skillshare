@@ -115,7 +115,7 @@ Skillshare 配置中。schema 是仓库中的 `schemas/mcp.schema.json`。
 | `transport` | 可选的 `stdio` 或 `streamable-http`；省略时会自动推断 |
 | `targets` | 可选的接收方 client；覆盖 `mcp.targets` |
 | `directTools` | 仅限使用 `pi-mcp-adapter` 的 Pi：`true`、`false`、`"search"` 或工具名称列表。参见[下文](#pi-direct-tools) |
-| `disabled` | 仅限 `true`，仅限 project mode，且不能有其他连接字段。参见[下文](#turn-off-a-global-server-in-one-project) |
+| `disabled` | 仅限 `true`，不能有其他连接字段，且必须有 project 在作用范围内：project mode，或 `mcp.projects` 下的某个项目根目录。参见[下文](#turn-off-a-global-server-in-one-project) |
 
 Client ID 有 `claude`、`codex`、`cursor`、`vscode`、`opencode`、`kilocode`、
 `grok`、`antigravity`、`amp`、`claude-desktop`、`cline`、`copilot`、`factory`、`gemini`、
@@ -368,8 +368,10 @@ mcp:
 
 ### 规则
 
-- **仅限 Project mode。** 在拥有 `.skillshare/config.yaml`（由 `skillshare init -p`
-  创建）的项目内运行，或传入 `-p`。在 global mode 下会被拒绝。
+- **必须有 project 在作用范围内。** 在拥有 `.skillshare/config.yaml`（由 `skillshare init -p`
+  创建）的项目内运行，传入 `-p`，或者把该条目放在
+  [`mcp.projects`](#manage-several-projects-from-the-global-config) 下的某个项目根目录里。
+  在 global `mcp.servers` 中没有 project 在作用范围内，因此会被拒绝。
 - **`disabled` 必须单独存在。** 该条目可以带 `targets`，对 Pi 而言还可以带
   `piExtension`。添加 `command`、`url`、`env` 或 `headers` 会报错。
 - **应当列出 `targets`。** 如果不写，该条目会继承 `mcp.targets`，其中
@@ -378,12 +380,13 @@ mcp:
   无法检查该文件中是否确实存在这个名称的 server。如果名称什么都没匹配到也无妨：
   Agent 会忽略它。
 - **要重新打开它**，移除该条目（`skillshare mcp remove company-docs`）
-  并同步。该开关会从 project 文件中被移除。
+  并同步。该开关会从它被写入的那个文件中移除：project 自己的文件，
+  对 Claude Code 而言则是 `~/.claude.json`。
 - **Skillshare 自身定义的 server 不需要这个方法。** 只需在该 server 上取消选择
   该 Agent，下一次同步就会移除它的条目。
 
-在仪表盘中，这就是添加 server 时 `stdio` 和
-`streamable-http` 旁边的 **Off in this project** 选项。它只出现在 project mode 中。
+在仪表盘中，这就是 **添加服务器** 旁边的 **关闭全局服务器** 按钮。它会出现在
+project mode，以及项目的 MCP 标签页中。
 
 ## 通过 global 配置管理多个项目 {#manage-several-projects-from-the-global-config}
 
@@ -419,7 +422,7 @@ mcp:
 项目只需列出与 global 配置不同的部分。像 `context7` 这样的 global server 不需要在这里
 添加条目：Agent 会同时读取它的 global 文件和 project 的文件，因此它已经会在每个项目中
 加载。一条 `disabled` 条目会[在该文件夹中将它关闭](#turn-off-a-global-server-in-one-project)，
-对其中列出的 client 生效，Claude Code 除外。
+对其中列出的所有 client 生效。
 
 每个 key 都是一个项目文件夹：可以是绝对路径，也可以是以 `~` 开头的路径。它下面写的是
 该项目自己的 `config.yaml` 在 `mcp` 下会包含的同样的 `targets` 和 `servers`，
@@ -483,9 +486,9 @@ mcp:
 - 没有命令可以编辑它：`skillshare mcp add` 管理 `mcp.servers`，并让
   `mcp.projects` 保持原样。请在 `config.yaml` 中编辑它，或者在
   [仪表盘](#projects-in-the-dashboard)中编辑。
-- 在这里 `disabled` 不能以 Claude Code 为 target，因为它的关闭列表位于
-  `~/.claude.json`，也就是写入 global server 的同一个文件。请改为在该文件夹中使用
-  [project mode](#turn-off-a-global-server-in-one-project)。
+- 以 Claude Code 为 target 的 `disabled` 条目会写入 `~/.claude.json`，也就是写入
+  global server 的同一个文件，因为 Claude Code 把自己按项目区分的关闭列表保存在那里。
+  server 本身则保持原样。
 - 如果某个文件夹同时也有自己的 `.skillshare/config.yaml` 在管理同一个条目，
   计划会报告冲突，而不是将其覆盖。
 

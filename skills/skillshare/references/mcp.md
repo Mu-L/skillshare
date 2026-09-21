@@ -66,7 +66,7 @@ mcp:
 | `transport` | Optional `stdio` or `streamable-http`; inferred when omitted. Legacy SSE is not supported |
 | `targets` | Receiving clients for this server |
 | `piExtension`, `directTools` | Pi only. See [Pi](#pi) |
-| `disabled` | `true` only, project mode only, no connection fields. See [Turn off a global server in one project](#turn-off-a-global-server-in-one-project) |
+| `disabled` | `true` only, no connection fields, and a project must be in scope: project mode, or a root under `mcp.projects`. See [Turn off a global server in one project](#turn-off-a-global-server-in-one-project) |
 
 Client IDs: `claude`, `codex`, `cursor`, `vscode`, `opencode`, `kilocode`, `grok`,
 `antigravity`, `amp`, `claude-desktop`, `cline`, `copilot`, `factory`, `gemini`, `goose`,
@@ -209,9 +209,10 @@ skillshare mcp edit context7 --direct-tools resolve-library-id,get-library-docs 
 
 ## Turn off a global server in one project
 
-Project mode only (`-p`, or a folder with `.skillshare/config.yaml`). It writes just the
-switch, so the Agent keeps its global command or URL. NAME must be the name in the
-Agent's own global config; Skillshare does not check that it exists there.
+Needs a project in scope: `-p`, a folder with `.skillshare/config.yaml`, or a root under
+`mcp.projects` in the global config. It writes just the switch, so the Agent keeps its
+global command or URL. NAME must be the name in the Agent's own global config;
+Skillshare does not check that it exists there.
 
 | Target | Supported | Written |
 |---|---|---|

@@ -114,7 +114,7 @@ source가 한 번 저장되기 전에 검증되며, 이후의 네이티브 파�
 | `transport` | 선택적으로 `stdio` 또는 `streamable-http`; 생략 시 추론됨 |
 | `targets` | 선택적 수신 client; `mcp.targets`를 재정의 |
 | `directTools` | `pi-mcp-adapter`를 사용하는 Pi 전용: `true`, `false`, `"search"` 또는 도구 이름 목록. [아래](#pi-direct-tools) 참고 |
-| `disabled` | `true`만 가능, project mode 전용, 다른 연결 필드 불가. [아래](#turn-off-a-global-server-in-one-project) 참고 |
+| `disabled` | `true`만 가능, 다른 연결 필드 불가, 그리고 project가 scope 안에 있어야 합니다: project mode이거나 `mcp.projects` 아래의 root. [아래](#turn-off-a-global-server-in-one-project) 참고 |
 
 Client ID는 `claude`, `codex`, `cursor`, `vscode`, `opencode`, `kilocode`,
 `grok`, `antigravity`, `amp`, `claude-desktop`, `cline`, `copilot`, `factory`, `gemini`,
@@ -368,8 +368,10 @@ mcp:
 
 ### Rules
 
-- **Project mode only.** `skillshare init -p`로 생성된 `.skillshare/config.yaml`이
-  있는 프로젝트 안에서 실행하거나 `-p`를 전달하세요. global mode에서는 거부됩니다.
+- **project가 scope 안에 있어야 합니다.** `skillshare init -p`로 생성된
+  `.skillshare/config.yaml`이 있는 프로젝트 안에서 실행하거나, `-p`를 전달하거나,
+  항목을 [`mcp.projects`](#manage-several-projects-from-the-global-config)의 프로젝트
+  root 아래에 두세요. project가 scope에 없는 global `mcp.servers`에서는 거부됩니다.
 - **`disabled`는 단독으로 사용됩니다.** 항목은 `targets`와, Pi의 경우
   `piExtension`을 받습니다. `command`, `url`, `env`, `headers`를 추가하면 오류입니다.
 - **`targets`는 명시하는 것이 좋습니다.** 명시하지 않으면 항목은 `mcp.targets`를
@@ -378,12 +380,13 @@ mcp:
   이 이름의 서버가 그곳에 존재하는지 확인할 수 없습니다. 아무것도 일치하지 않는
   이름은 문제가 되지 않습니다: Agent가 이를 무시할 뿐입니다.
 - **다시 켜려면**, 항목을 제거하고(`skillshare mcp remove company-docs`) sync하세요.
-  프로젝트 파일에서 스위치가 제거됩니다.
+  스위치가 작성된 파일에서 제거됩니다: 프로젝트 자체 파일, 또는 Claude Code의 경우
+  `~/.claude.json`.
 - **Skillshare가 직접 정의하는 서버는 이것이 필요 없습니다.** 대신 해당 서버에서
   Agent 선택을 해제하면, 다음 sync에서 그 항목이 제거됩니다.
 
-대시보드에서는 서버를 추가할 때 `stdio`와 `streamable-http` 옆에 있는 **Off in
-this project** 선택지가 이에 해당합니다. project mode에서만 표시됩니다.
+대시보드에서는 **서버 추가** 옆에 있는 **전역 서버 끄기** 버튼이 이에 해당합니다.
+project mode와 프로젝트의 MCP 탭에 표시됩니다.
 
 ## Manage several projects from the global config {#manage-several-projects-from-the-global-config}
 
@@ -418,8 +421,7 @@ mcp:
 
 프로젝트에는 global 설정과 다른 부분만 나열합니다. `context7` 같은 global 서버는
 여기에 항목이 필요 없습니다. Agent는 자체 global 파일과 프로젝트 파일을 함께 읽으므로,
-이미 모든 프로젝트에서 로드됩니다. `disabled` 항목은 Claude Code를 제외하고 해당
-섹션에 나열된 client에 대해
+이미 모든 프로젝트에서 로드됩니다. `disabled` 항목은 그곳에 나열된 client에 대해
 [그 폴더에서 서버를 끕니다](#turn-off-a-global-server-in-one-project).
 
 각 키는 프로젝트 폴더입니다: 절대 경로이거나 `~`로 시작하는 경로입니다. 그 아래에는
@@ -483,10 +485,9 @@ Sync가 작성합니다.
 - 이를 편집하는 명령은 없습니다. `skillshare mcp add`는 `mcp.servers`를 관리하며
   `mcp.projects`는 작성된 그대로 둡니다. `config.yaml`에서 직접 편집하거나
   [대시보드](#projects-in-the-dashboard)에서 편집하세요.
-- 여기서는 `disabled`가 Claude Code를 대상으로 할 수 없습니다. Claude Code의 off
-  목록은 global 서버가 작성되는 것과 같은 파일인 `~/.claude.json`에 있기 때문입니다.
-  대신 해당 폴더에서 [project mode](#turn-off-a-global-server-in-one-project)를
-  사용하세요.
+- Claude Code에 대한 `disabled` 항목은 global 서버가 작성되는 것과 같은 파일인
+  `~/.claude.json`에 작성됩니다. Claude Code가 프로젝트별 off 목록을 그곳에 보관하기
+  때문입니다. 서버 자체는 그대로 둡니다.
 - 폴더에 같은 항목을 관리하는 자체 `.skillshare/config.yaml`도 있으면, plan은 이를
   덮어쓰지 않고 충돌로 보고합니다.
 
