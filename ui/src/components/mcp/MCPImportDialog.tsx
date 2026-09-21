@@ -98,7 +98,10 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
   const showList = tab === 'target' || candidates.length > 1 || candidates.some((c) => c.problems.length || c.warnings.length || exists(c));
 
   // An import that matches the inherited targets keeps inheriting them, like the server dialog
-  const inherited = targets.length === defaultTargets.length && targets.every((x) => defaultTargets.includes(x));
+  const inherited = targets.length > 0 && targets.length === defaultTargets.length && targets.every((x) => defaultTargets.includes(x));
+  // A pasted snippet is a new server and may stay in Skillshare only. Importing from an Agent
+  // takes over the entry that Agent has, so it still needs somewhere to write.
+  const needsTarget = tab === 'target' && targets.length === 0;
 
   const run = async () => {
     setSaving(true);
@@ -298,11 +301,11 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
         {/* Name what is missing: a greyed-out button next to "writes 0 config files" reads as a bug. */}
         <span className="flex-1 text-[13px]">
           {targets.length === 0
-            ? <span className="ss-st warn">{t('mcp.pickTarget')}</span>
+            ? (needsTarget ? <span className="ss-st warn">{t('mcp.pickTarget')}</span> : <span className="text-ink-2">{t('mcp.noTargetsNote')}</span>)
             : <span className="text-ink-2">{t(targets.length === 1 ? 'mcp.writes.one' : 'mcp.writes.other', { count: targets.length })}</span>}
         </span>
         <Button variant="ghost" onClick={onClose} disabled={saving}>{t('common.cancel')}</Button>
-        <Button variant="primary" loading={saving} disabled={count === 0 || targets.length === 0 || ((targets.includes('pi') || chosen.some((c) => servers[c.name]?.targets?.includes('pi'))) && !piExtension)} onClick={run}>
+        <Button variant="primary" loading={saving} disabled={count === 0 || needsTarget || ((targets.includes('pi') || chosen.some((c) => servers[c.name]?.targets?.includes('pi'))) && !piExtension)} onClick={run}>
           {adding ? <Plus size={15} /> : <Download size={15} />}
           {/* "Add 0 servers" reads as a bug before anything is pasted; the plain verb doesn't. */}
           {count === 0

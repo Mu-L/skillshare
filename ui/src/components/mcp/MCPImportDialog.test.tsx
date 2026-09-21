@@ -86,6 +86,20 @@ describe('MCP import dialog', () => {
     await waitFor(() => expect(mcpApi.import).toHaveBeenLastCalledWith(expect.objectContaining({ from: 'grok' })));
   });
 
+  // Refs: #289. A pasted snippet is a new server, so like the form it may have no Agent yet.
+  it('adds a pasted server with no Agent selected as an explicit empty list', async () => {
+    vi.mocked(mcpApi.import).mockResolvedValue({ candidates: [{ name: 'docs', server: { url: 'https://example.com/mcp' }, problems: [], warnings: [] }] });
+    const user = userEvent.setup();
+    renderDialog({ source: 'paste', defaultTargets: [] });
+    await user.click(screen.getByLabelText('Server snippet'));
+    await user.paste('{"mcpServers":{"docs":{"url":"https://example.com/mcp"}}}');
+    expect(await screen.findByText('With no Agent selected, it is only kept in Skillshare, not written to any config file')).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Add 1 server' }));
+    await waitFor(() => expect(mcpApi.save).toHaveBeenCalledWith(expect.objectContaining({
+      server: { url: 'https://example.com/mcp', targets: [] },
+    })));
+  });
+
   it('reads a picked file into the snippet editor', async () => {
     vi.mocked(mcpApi.import).mockResolvedValue({ candidates: [{ name: 'docs', server: { url: 'https://example.com/mcp' }, problems: [], warnings: [] }] });
     const user = userEvent.setup();
