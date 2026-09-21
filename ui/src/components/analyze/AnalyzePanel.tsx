@@ -5,6 +5,7 @@ import { AlertCircle, AlertTriangle, ArrowDown, Puzzle, Search, X } from 'lucide
 import { api, type AnalyzeSkill, type AnalyzeTarget } from '../../api/client';
 import AgentIcon from '../AgentIcon';
 import Button from '../Button';
+import { Checkbox } from '../Checkbox';
 import DialogShell from '../DialogShell';
 import EmptyState from '../EmptyState';
 import { Select } from '../Select';
@@ -14,10 +15,13 @@ import { formatSkillDisplayName } from '../../lib/resourceNames';
 import { queryKeys, staleTimes } from '../../lib/queryKeys';
 
 const STEP = 100;
+const MANAGED_ONLY_KEY = 'skillshare:analyze-managed-only';
 /** Thousands collapse to "3.4k" so the column stays one glance wide; smaller counts stay exact. */
 const kTokens = (n: number) => (n < 1000 ? n.toLocaleString() : n >= 10000 ? `${Math.round(n / 1000)}k` : `${(n / 1000).toFixed(1)}k`);
 /** "description-length" reads as "description length" — the full sentence waits in the dialog. */
 const ruleLabel = (rule: string) => rule.replace(/-/g, ' ');
+/** A local skill's path is wherever the tool put it (e.g. synced/<org>_<uuid>/docx), so show just its folder. */
+const skillLabel = (s: AnalyzeSkill) => (s.local ? s.path.split('/').pop() || s.path : formatSkillDisplayName(s.name));
 /** Project targets are named `project@tool`; own targets have no `@`. */
 const projectOf = (name: string) => (name.includes('@') ? name.slice(0, name.lastIndexOf('@')) : '');
 /** Exact name first. A project link may name a tool that shares its folder with another, so any target of that project will do. */
@@ -37,6 +41,9 @@ export default function AnalyzePanel() {
   const setTarget = (v: string) => setParams((p) => { p.set('target', v); return p; }, { replace: true });
   const [search, setSearch] = useState('');
   const [onlyIssues, setOnlyIssues] = useState(false);
+  const [managedOnly, setManagedOnly] = useState(() => {
+    try { return localStorage.getItem(MANAGED_ONLY_KEY) === '1'; } catch { return false; }
+  });
   const [limit, setLimit] = useState(STEP);
   const [detail, setDetail] = useState<AnalyzeSkill | null>(null);
 
@@ -51,11 +58,20 @@ export default function AnalyzePanel() {
   const options = [...targets]
     .sort((a, b) => Number(Boolean(projectOf(a.name))) - Number(Boolean(projectOf(b.name))))
     .map((x) => ({ value: x.name, label: x.name, icon: <AgentIcon target={x.name} size={15} /> }));
-  const skills = [...current.skills].sort((a, b) => b.body_tokens - a.body_tokens);
+  const hasLocal = current.skills.some((s) => s.local);
+  const skills = current.skills.filter((s) => !(managedOnly && s.local)).sort((a, b) => b.body_tokens - a.body_tokens);
+  // Summed here rather than read from the API totals so they follow the managed-only switch.
+  const alwaysLoaded = skills.reduce((n, s) => n + s.description_tokens, 0);
+  const onDemand = skills.reduce((n, s) => n + s.body_tokens, 0);
+  const toggleManagedOnly = (on: boolean) => {
+    setManagedOnly(on);
+    setLimit(STEP);
+    try { localStorage.setItem(MANAGED_ONLY_KEY, on ? '1' : '0'); } catch { /* storage unavailable */ }
+  };
   const issueCount = skills.filter((s) => s.lint_issues?.length).length;
   const heaviest = skills[0]?.body_tokens ?? 0;
   const term = search.trim().toLowerCase();
-  const filtered = skills.filter((s) => (!onlyIssues || s.lint_issues?.length) && (!term || formatSkillDisplayName(s.name).toLowerCase().includes(term)));
+  const filtered = skills.filter((s) => (!onlyIssues || s.lint_issues?.length) && (!term || skillLabel(s).toLowerCase().includes(term)));
 
   return (
     <div className="flex flex-col gap-5">
@@ -73,13 +89,13 @@ export default function AnalyzePanel() {
       <div className="ss-counts !grid-cols-3">
         <div>
           <span className="flex flex-col gap-[3px]">
-            <b>{kTokens(current.always_loaded.estimated_tokens)}</b>
+            <b>{kTokens(alwaysLoaded)}</b>
             <span className="text-[13px] text-ink-2">{t('analyze.stat.alwaysLoaded')}</span>
           </span>
         </div>
         <div>
           <span className="flex flex-col gap-[3px]">
-            <b>{kTokens(current.on_demand_max.estimated_tokens)}</b>
+            <b>{kTokens(onDemand)}</b>
             <span className="text-[13px] text-ink-2">{t('analyze.stat.onDemand')}</span>
           </span>
         </div>
@@ -105,6 +121,7 @@ export default function AnalyzePanel() {
             {issueCount > 0 && <span className="ss-cnt">{issueCount}</span>}
           </button>
         </div>
+        {hasLocal && <Checkbox size="sm" className="ml-2" label={t('analyze.filter.managedOnly')} checked={managedOnly} onChange={toggleManagedOnly} />}
       </div>
 
       {filtered.length === 0 ? (
@@ -120,7 +137,7 @@ export default function AnalyzePanel() {
           {filtered.slice(0, limit).map((s) => (
             <button key={s.name} type="button" className="ss-r w-full text-left" onClick={() => setDetail(s)}>
               <span className="ss-cat sm skill"><Puzzle size={14} /></span>
-              <span className="nm m truncate">{formatSkillDisplayName(s.name)}</span>
+              <span className="nm m truncate" title={s.local ? s.path : undefined}>{skillLabel(s)}</span>
               {s.lint_issues?.length ? (
                 <span className="ss-tag warn shrink-0" title={s.lint_issues.map((i) => i.message).join(' · ')}>{ruleLabel(s.lint_issues[0].rule)}</span>
               ) : null}
@@ -155,7 +172,8 @@ function SkillDialog({ skill, onClose }: { skill: AnalyzeSkill; onClose: () => v
     <DialogShell open onClose={onClose} padding="none" ariaLabel={skill.name} className="!max-w-[560px]">
       <div className="dh">
         <div className="flex flex-col gap-1">
-            <h2 className="ss-h2 font-mono">{formatSkillDisplayName(skill.name)}</h2>
+            <h2 className="ss-h2 font-mono">{skillLabel(skill)}</h2>
+          {skill.local && <p className="font-mono text-[12.5px] text-ink-3 break-all">{skill.path}</p>}
           <p className="text-[13px] text-ink-2">{t('analyze.detail.subtitle')}</p>
         </div>
         <button type="button" className="ss-ib" aria-label={t('common.close')} onClick={onClose}><X size={16} /></button>

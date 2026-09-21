@@ -354,6 +354,7 @@
   "analyze.empty.title": "No targets configured",
   "analyze.filter.all": "All",
   "analyze.filter.issues": "With issues",
+  "analyze.filter.managedOnly": "Only skillshare-managed",
   "analyze.loading": "Loading skill analysis...",
   "analyze.target": "Target",
   "analyze.search": "Search skills",

@@ -79,6 +79,7 @@
   "analyze.empty.title": "Aucune cible configurée",
   "analyze.filter.all": "Tous",
   "analyze.filter.issues": "Avec problèmes",
+  "analyze.filter.managedOnly": "Uniquement gérées par skillshare",
   "analyze.loading": "Chargement de l'analyse des skills...",
   "analyze.target": "Cible",
   "analyze.search": "Rechercher des skills",

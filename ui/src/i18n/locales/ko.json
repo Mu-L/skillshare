@@ -79,6 +79,7 @@
   "analyze.empty.title": "설정된 대상 없음",
   "analyze.filter.all": "전체",
   "analyze.filter.issues": "문제 있음",
+  "analyze.filter.managedOnly": "skillshare 관리 항목만",
   "analyze.loading": "Skill 분석 로드 중...",
   "analyze.target": "대상",
   "analyze.search": "Skills 검색",

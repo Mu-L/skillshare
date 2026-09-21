@@ -79,6 +79,7 @@
   "analyze.empty.title": "尚未設定目標",
   "analyze.filter.all": "全部",
   "analyze.filter.issues": "有問題",
+  "analyze.filter.managedOnly": "只看 skillshare 管理的",
   "analyze.loading": "載入 skill 分析中…",
   "analyze.target": "目標",
   "analyze.search": "搜尋 skills",

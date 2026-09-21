@@ -79,6 +79,7 @@
   "analyze.empty.title": "ターゲットが設定されていません",
   "analyze.filter.all": "すべて",
   "analyze.filter.issues": "問題あり",
+  "analyze.filter.managedOnly": "skillshare 管理のみ",
   "analyze.loading": "スキル分析を読み込み中...",
   "analyze.target": "ターゲット",
   "analyze.search": "スキルを検索",

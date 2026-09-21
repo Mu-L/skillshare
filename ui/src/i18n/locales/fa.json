@@ -79,6 +79,7 @@
   "analyze.empty.title": "هیچ هدفی پیکربندی نشده",
   "analyze.filter.all": "همه",
   "analyze.filter.issues": "دارای مشکل",
+  "analyze.filter.managedOnly": "فقط موارد مدیریت‌شده توسط skillshare",
   "analyze.loading": "در حال بارگذاری تحلیل اسکیل‌ها...",
   "analyze.target": "هدف",
   "analyze.search": "جستجوی اسکیل‌ها",

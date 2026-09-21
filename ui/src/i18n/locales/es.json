@@ -79,6 +79,7 @@
   "analyze.empty.title": "No hay destinos configurados",
   "analyze.filter.all": "Todos",
   "analyze.filter.issues": "Con problemas",
+  "analyze.filter.managedOnly": "Solo gestionadas por skillshare",
   "analyze.loading": "Cargando análisis de skills...",
   "analyze.target": "Destino",
   "analyze.search": "Buscar skills",

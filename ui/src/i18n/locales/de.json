@@ -79,6 +79,7 @@
   "analyze.empty.title": "Keine Ziele konfiguriert",
   "analyze.filter.all": "Alle",
   "analyze.filter.issues": "Mit Problemen",
+  "analyze.filter.managedOnly": "Nur von skillshare verwaltete",
   "analyze.loading": "Skill-Analyse wird geladen...",
   "analyze.target": "Ziel",
   "analyze.search": "Skills suchen",

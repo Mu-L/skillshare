@@ -79,6 +79,7 @@
   "analyze.empty.title": "Tidak ada target yang dikonfigurasi",
   "analyze.filter.all": "Semua",
   "analyze.filter.issues": "Ada masalah",
+  "analyze.filter.managedOnly": "Hanya yang dikelola skillshare",
   "analyze.loading": "Memuat analisis skill...",
   "analyze.target": "Target",
   "analyze.search": "Cari skill",
