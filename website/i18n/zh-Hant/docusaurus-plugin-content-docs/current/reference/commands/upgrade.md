@@ -89,6 +89,12 @@ skillshare sync  # 分發到所有 targets
 
 `skillshare` 執行檔本身。從 GitHub releases 下載。
 
+在終端機中，下載時會顯示已下載的大小，因此連線較慢時不會看起來像是卡住。下方的 Web UI 資源也會顯示相同的進度。
+
+```
+Downloading v0.21.4...  3.2 MB / 9.1 MB
+```
+
 若執行檔位於受保護的目錄（例如 `/usr/local/bin`），skillshare 會自動以 `sudo` 重新執行升級 — 不需要手動加上前綴。
 
 ### Web UI 資源

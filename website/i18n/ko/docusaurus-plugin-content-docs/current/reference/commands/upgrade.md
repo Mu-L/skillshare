@@ -89,6 +89,13 @@ skillshare sync  # 모든 target으로 배포
 
 `skillshare` 실행 파일 자체입니다. GitHub 릴리스에서 다운로드합니다.
 
+터미널에서는 다운로드가 얼마나 받아졌는지 표시하므로, 연결이 느려도 멈춘 것처럼
+보이지 않습니다. 아래의 Web UI 에셋도 동일하게 표시합니다.
+
+```
+Downloading v0.21.4...  3.2 MB / 9.1 MB
+```
+
 binary가 보호된 디렉터리(예: `/usr/local/bin`)에 있으면, skillshare는 별도의 접두사 없이 자동으로 `sudo`를 사용해 업그레이드를 재실행합니다.
 
 ### Web UI 에셋

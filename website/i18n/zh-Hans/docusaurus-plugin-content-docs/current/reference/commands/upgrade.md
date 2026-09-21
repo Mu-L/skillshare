@@ -89,6 +89,13 @@ skillshare sync  # 分发到所有 targets
 
 `skillshare` 可执行文件本身。从 GitHub releases 下载。
 
+在终端中，下载时会显示已经下载了多少，这样网络较慢时就不会看起来像是卡住了。
+下面的 Web UI 资源也会以同样的方式显示。
+
+```
+Downloading v0.21.4...  3.2 MB / 9.1 MB
+```
+
 如果该二进制文件位于受保护的目录中（例如 `/usr/local/bin`），skillshare 会自动使用 `sudo` 重新执行升级——无需手动加前缀。
 
 ### Web UI 资源

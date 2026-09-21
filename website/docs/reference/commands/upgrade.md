@@ -89,6 +89,13 @@ skillshare sync  # Distribute to all targets
 
 The `skillshare` executable itself. Downloads from GitHub releases.
 
+In a terminal, the download shows how much has arrived, so a slow connection does not
+look like a hang. The Web UI assets below show the same.
+
+```
+Downloading v0.21.4...  3.2 MB / 9.1 MB
+```
+
 If the binary is in a protected directory (e.g., `/usr/local/bin`), skillshare automatically re-runs the upgrade with `sudo` — no manual prefix needed.
 
 When there is no terminal to ask for a password on (the dashboard's **Update now** button, CI), the upgrade stops right away and tells you to run `sudo skillshare upgrade` in a terminal instead of waiting for input. Cached `sudo` credentials and `NOPASSWD` setups still upgrade without a prompt.
