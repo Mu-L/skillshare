@@ -9,6 +9,31 @@ All notable changes to skillshare are documented here. For the full commit histo
 
 ---
 
+## [0.21.3] - 2026-09-21
+
+### New Features
+
+#### Dashboard
+
+- **Analyze only the skills Skillshare manages** — when a target also holds skills you added by hand, an **Only skillshare-managed** switch on the Analyze tab hides them, and the always-loaded and on-demand totals follow the switch. The dashboard remembers your choice. Local skills now show their folder name instead of an internal `synced/…` path; the full path appears on hover and in the skill's details.
+
+### Bug Fixes
+
+#### Plugins
+
+- **One bad entry no longer blocks a whole marketplace** — a marketplace failed to load when one entry used an external source, pointed at a missing folder, or had an invalid or duplicate name. Such an entry is now marked in its own row with the reason, in your language, and the rest of the marketplace can be installed. When one catalog points a plugin at an external source and another at a folder inside the repository, the folder is used.
+- **Claude Code plugins without `plugin.json` can be installed** — Claude Code does not require the manifest. Such a plugin is now read from its marketplace entry and its default folders, and a `SKILL.md` at the plugin root counts as its only skill. Definitions in the entry, such as `strict: false`, `skills` and `lspServers`, and its version, are carried into the install.
+- **Entries that share one folder install their own skills** — when several entries in a marketplace pointed at the same folder and each listed its own `skills`, every one of them installed the same content.
+- **Plugins whose marketplace name differs from their manifest install in Claude Code** — Claude Code installs such a plugin under the marketplace name, so it is no longer blocked there. Codex refuses the mismatch, so other Agents still show it as blocked.
+- **Each Agent installs from its own folder** — when a marketplace ships a separate copy of a plugin for each Agent, every Agent now gets the copy made for it instead of the first one found.
+- **Broken links no longer block a plugin source** — a single broken symlink anywhere in a repository, or one that pointed outside it, made every plugin in it fail. Such links are now left out of the install and listed in a warning. They are still never followed.
+- **Add plugin no longer preselects a plugin that cannot be installed** — when the only plugin in a source was blocked, the dialog chose it for you.
+- **Pi's version is shown** — Pi prints its version to stderr, so the plugin list showed it without one.
+
+#### MCP connections
+
+- **View what each Agent gets shows a spinner while it loads** — an empty dialog gave no sign whether the preview was still coming.
+
 ## [0.21.2] - 2026-09-21
 
 ### New Features
