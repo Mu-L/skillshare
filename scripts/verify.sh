@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Host verification environment: the real Agent CLIs, a throwaway config.
 #
-# Plugin and MCP work is only exercised properly where claude, codex and the
-# other CLIs actually live, which is the host rather than a container. So this
+# Plugin and MCP work is only exercised properly where the Agent CLIs actually
+# live. The devcontainer carries claude, codex and pi; the rest (Cursor,
+# Copilot, Antigravity, ...) exist only on the host. So this
 # runs a host build against a disposable HOME: every path skillshare and the
 # Agent CLIs resolve is redirected under $VERIFY_HOME, leaving the real
 # ~/.config/skillshare, ~/.claude and ~/.codex untouched. It defaults to

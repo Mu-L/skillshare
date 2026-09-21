@@ -36,6 +36,9 @@ fi
 if [ -x /workspace/.devcontainer/install-ssenv-shortcuts.sh ]; then
   /workspace/.devcontainer/install-ssenv-shortcuts.sh
 fi
+if [ -x /workspace/.devcontainer/ensure-agent-clis.sh ]; then
+  /workspace/.devcontainer/ensure-agent-clis.sh || true
+fi
 
 # Auto-detect GITHUB_TOKEN from gh CLI if not already set
 # (via .env, remoteEnv, or manual export).
