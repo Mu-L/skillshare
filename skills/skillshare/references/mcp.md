@@ -16,6 +16,7 @@ skillshare mcp import docs --from claude --target claude --sync --no-tui
 skillshare sync mcp --dry-run --json                 # Preview without executing servers
 skillshare sync mcp                                 # Apply native settings
 skillshare mcp remove docs --sync --no-tui           # Remove unchanged managed entries
+skillshare mcp remove docs --keep-files --no-tui     # Stop managing; Agent entries stay as they are
 skillshare mcp restore BACKUP_ID --dry-run --json     # Preview entry-level restoration
 skillshare mcp restore BACKUP_ID --no-tui            # Apply restoration; source stays unchanged
 ```

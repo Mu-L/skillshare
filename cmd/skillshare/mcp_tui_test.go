@@ -162,3 +162,21 @@ func TestMCPArgumentsPreserveLiterals(t *testing.T) {
 		t.Fatal("numeric argument accepted")
 	}
 }
+
+func TestMCPRemoveWizardCanStopManaging(t *testing.T) {
+	s := mcpTUIService(t)
+	if _, err := s.Mutate(mcp.Mutation{Name: "docs", Server: &mcp.Server{Command: "echo"}}, "", true); err != nil {
+		t.Fatal(err)
+	}
+	// Save and sync, Save only, Stop managing.
+	if err := mcpRemoveWizard(s, mcpOptions{name: "docs"}, &scriptedMCPPrompts{choices: [][]int{{2}}}); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(filepath.Join(s.Home, ".claude.json")); !strings.Contains(string(data), `"docs"`) {
+		t.Fatalf("Agent entry removed: %s", data)
+	}
+	p, err := s.Preview()
+	if err != nil || len(p.Changes) != 0 {
+		t.Fatalf("sync still plans %+v (%v)", p, err)
+	}
+}

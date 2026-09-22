@@ -24,6 +24,7 @@ type mcpOptions struct {
 	targets                                      []string
 	command                                      []string
 	sync, dryRun, json, replace, noTUI, disabled bool
+	keepFiles                                    bool
 }
 
 func parseMCPOptions(args []string) (mcpOptions, error) {
@@ -78,6 +79,8 @@ func parseMCPOptions(args []string) (mcpOptions, error) {
 			o.replace = true
 		case "--disabled":
 			o.disabled = true
+		case "--keep-files":
+			o.keepFiles = true
 		default:
 			if strings.HasPrefix(a, "-") || o.name != "" {
 				return o, fmt.Errorf("unknown MCP argument %q", a)
@@ -127,6 +130,9 @@ func cmdMCP(args []string) (resultErr error) {
 	if o.disabled && sub != "add" {
 		return fmt.Errorf("--disabled only applies to mcp add")
 	}
+	if o.keepFiles && (sub != "remove" || o.sync) {
+		return fmt.Errorf("--keep-files only applies to mcp remove without --sync: it leaves Agent files as they are")
+	}
 	start := time.Now()
 	switch sub {
 	case "list":
@@ -168,9 +174,9 @@ func cmdMCP(args []string) (resultErr error) {
 			return mcpRemoveWizard(service, o, terminalMCPPrompts{})
 		}
 		if o.name == "" {
-			return fmt.Errorf("usage: skillshare mcp remove <name> [--sync]")
+			return fmt.Errorf("usage: skillshare mcp remove <name> [--sync | --keep-files]")
 		}
-		return finishMCPMutation(service, mcp.Mutation{Name: o.name, Remove: true}, o, start)
+		return finishMCPMutation(service, mcp.Mutation{Name: o.name, Remove: true, Unmanage: o.keepFiles}, o, start)
 	case "restore":
 		return runMCPRestore(service, o, terminalMCPPrompts{})
 	default:
@@ -191,7 +197,7 @@ func cmdSyncMCP(args []string) error {
 	if err != nil {
 		return err
 	}
-	if o.piExtension != "" || o.name != "" || o.url != "" || o.from != "" || o.file != "" || len(o.command) > 0 || o.targets != nil || o.replace || o.sync || o.disabled {
+	if o.piExtension != "" || o.name != "" || o.url != "" || o.from != "" || o.file != "" || len(o.command) > 0 || o.targets != nil || o.replace || o.sync || o.disabled || o.keepFiles {
 		return fmt.Errorf("sync mcp accepts only --dry-run, --json, --revision and scope flags")
 	}
 	if o.dryRun {
@@ -304,7 +310,8 @@ Commands:
   edit [name]       Interactive editor, or update --url / --target / -- command
   import [name]     Import --from <client> or --file <JSON/TOML/YAML file>
   list             Browse connections and per-client sync status (default)
-  remove [name]     Select and remove a source entry; optionally sync removal
+  remove [name]     Select and remove a source entry; optionally sync removal,
+                    or stop managing it and keep its Agent entries (--keep-files)
   restore [id]      Browse backups, preview and restore Agent entries
 
 Options:
@@ -319,6 +326,8 @@ Options:
   --disabled        Project mode: turn off a server from the Agent's global config
                     (add NAME --disabled --target opencode; claude, opencode, kilocode, pi)
   --sync            Save and synchronize (non-interactive default: save only)
+  --keep-files      remove only: stop managing the server; its Agent entries stay
+                    and sync no longer removes or updates them
   --replace         Replace an existing source entry; on import, also rewrite
                     the imported client's entry when it differs
   --dry-run, -n     Preview without writing

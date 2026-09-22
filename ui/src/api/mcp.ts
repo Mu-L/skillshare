@@ -33,6 +33,8 @@ export interface MCPMutation {
   name?: string;
   server?: MCPServer;
   remove?: boolean;
+  /** With `remove`: also forget which Agent entries it wrote. Files stay as they are and sync leaves them alone. */
+  unmanage?: boolean;
   replace?: boolean;
   resolutions?: { target: string; name: string; action: 'replace' | 'adopt' }[];
 }

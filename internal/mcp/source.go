@@ -33,10 +33,12 @@ type Source struct {
 	// What a draft changed, so save re-encodes nothing else.
 	touched                         map[string]bool
 	serversChanged, settingsChanged bool
-	configDoc                       yaml.Node
-	doc                             yaml.Node
-	configBytes                     []byte
-	bytes                           []byte
+	// unmanaged are the servers a draft stops managing, keyed by project root and name.
+	unmanaged   map[string]bool
+	configDoc   yaml.Node
+	doc         yaml.Node
+	configBytes []byte
+	bytes       []byte
 }
 
 // Project is what a project's own config.yaml would hold under mcp, declared in the
@@ -126,7 +128,7 @@ func LoadSource(configPath string) (*Source, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Source{ConfigPath: path, Path: path, Servers: map[string]Server{}, projectKeys: map[string]string{}, touched: map[string]bool{}}
+	s := &Source{ConfigPath: path, Path: path, Servers: map[string]Server{}, projectKeys: map[string]string{}, touched: map[string]bool{}, unmanaged: map[string]bool{}}
 	s.configBytes, err = os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read MCP config: %w", err)

@@ -171,11 +171,23 @@ func reviewMCPMutations(service *mcp.Service, mutations []mcp.Mutation, o mcpOpt
 	} else {
 		choices = append([]checklistItemData{{label: "Save and sync", desc: "Apply the previewed changes to Agent files"}}, choices...)
 	}
+	if len(mutations) == 1 && mutations[0].Remove && mutations[0].Name != "" {
+		keep := checklistItemData{label: mcpStopManaging, desc: "Remove from the source; Agent entries stay and sync leaves them alone"}
+		if mutations[0].Unmanage {
+			choices = []checklistItemData{keep}
+		} else {
+			choices = append(choices, keep)
+		}
+	}
 	selected, err := chooseMCP(prompts, checklistConfig{title: "Review complete — save these MCP changes?", items: choices, singleSelect: true})
 	if err != nil {
 		return err
 	}
-	sync := !p.Blocked && selected[0] == 0
+	choice := choices[selected[0]].label
+	sync := choice == "Save and sync"
+	if choice == mcpStopManaging {
+		mutations[0].Unmanage = true
+	}
 	start := time.Now()
 	result, err := service.MutateBatch(mutations, p.Revision, sync)
 	logMCPOp(service.ConfigPath, "mcp configure", start, err)
@@ -186,6 +198,9 @@ func reviewMCPMutations(service *mcp.Service, mutations []mcp.Mutation, o mcpOpt
 	}
 	return err
 }
+
+// mcpStopManaging removes a server from the source and keeps its Agent entries.
+const mcpStopManaging = "Stop managing"
 
 func mcpRemoveWizard(service *mcp.Service, o mcpOptions, prompts mcpPrompts) error {
 	source, err := mcp.LoadSource(service.ConfigPath)
@@ -199,8 +214,8 @@ func mcpRemoveWizard(service *mcp.Service, o mcpOptions, prompts mcpPrompts) err
 	if err := source.CheckUnchanged(); err != nil {
 		return err
 	}
-	fmt.Printf("Remove %s from the source. Sync also removes its managed Agent entries.\n", name)
-	return reviewMCPMutations(service, []mcp.Mutation{{Name: name, Remove: true}}, o, prompts)
+	fmt.Printf("Remove %s from the source. Sync also removes its managed Agent entries; Stop managing keeps them.\n", name)
+	return reviewMCPMutations(service, []mcp.Mutation{{Name: name, Remove: true, Unmanage: o.keepFiles}}, o, prompts)
 }
 
 func mcpBackupLabel(b mcp.BackupInfo) string {

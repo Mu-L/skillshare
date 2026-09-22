@@ -29,12 +29,13 @@ export default function MCPRemoveDialog({ name, project, inScope = () => true, o
   const changes = plan?.changes.filter((c) => c.name === name && inScope(c)) ?? [];
   const title = t('mcp.removeTitle', { name });
 
-  const save = async (sync: boolean) => {
+  // unmanage keeps the Agent entries and forgets them, so it never syncs.
+  const save = async (sync: boolean, unmanage = false) => {
     if (!plan) return;
     setBusy(true);
     setSaveError('');
     try {
-      await mcpApi.configure({ project, name, remove: true }, plan.revision, sync);
+      await mcpApi.configure({ project, name, remove: true, ...(unmanage && { unmanage }) }, plan.revision, sync);
       onSaved();
     } catch (e) {
       setSaveError((e as Error).message);
@@ -43,7 +44,7 @@ export default function MCPRemoveDialog({ name, project, inScope = () => true, o
   };
 
   return (
-    <DialogShell open onClose={onClose} padding="none" preventClose={busy} ariaLabel={title} className="!max-w-[460px]">
+    <DialogShell open onClose={onClose} padding="none" preventClose={busy} ariaLabel={title} className="!max-w-[600px]">
       <div className="dh">
         <h2 className="ss-h2">{title}</h2>
         <button type="button" className="ss-ib" aria-label={t('common.close')} onClick={onClose} disabled={busy}><X size={16} /></button>
@@ -77,6 +78,7 @@ export default function MCPRemoveDialog({ name, project, inScope = () => true, o
       <div className="df">
         <Button variant="ghost" onClick={onClose} disabled={busy}>{t('common.cancel')}</Button>
         <span className="flex-1" />
+        <Button variant="secondary" disabled={!plan} loading={busy} onClick={() => save(false, true)}>{t('mcp.removeUnmanage')}</Button>
         <Button variant="secondary" disabled={!plan} loading={busy} onClick={() => save(false)}>{t('mcp.removeSourceOnly')}</Button>
         <Button variant="primary" disabled={!plan || plan.blocked} loading={busy} onClick={() => save(true)}>{t('mcp.removeSync')}</Button>
       </div>

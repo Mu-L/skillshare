@@ -154,6 +154,18 @@ func (s *Service) loadLedger() (ledger, []byte, error) {
 	return state, data, nil
 }
 
+// forget drops this config's ownership of the servers a draft stops managing, in their own
+// scope only: a global server's entries, or one project's. A plan then reads those Agent
+// entries as the user's own and neither removes nor updates them.
+func (s *Source) forget(state ledger) {
+	roots := sortedKeys(s.Projects)
+	for key, owned := range state.Entries {
+		if owned.Owner == s.ConfigPath && s.unmanaged[changeRoot(owned.Target, owned.Path, roots)+"\x00"+owned.Name] {
+			delete(state.Entries, key)
+		}
+	}
+}
+
 // Preview reads source, ownership and native files without writing. Writes
 // recover an interrupted operation first, while holding the lock.
 func (s *Service) Preview() (*Plan, error) {
@@ -458,6 +470,8 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 			desired[key] = map[string]map[string]any{}
 		}
 	}
+	// After the files are known, so stopping to manage a server keeps the revision of removing it.
+	source.forget(state)
 	proposal, _ := json.Marshal(struct {
 		Servers     map[string]Server
 		Targets     []string

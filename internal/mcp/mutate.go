@@ -22,10 +22,13 @@ type Mutation struct {
 	// project; with Remove and no Name, the project itself is dropped.
 	Project string `json:"project,omitempty"`
 	// Settings replaces targets and directTools of the scope, so a value left out is cleared.
-	Settings    *Settings    `json:"settings,omitempty"`
-	Name        string       `json:"name,omitempty"`
-	Server      *Server      `json:"server,omitempty"`
-	Remove      bool         `json:"remove,omitempty"`
+	Settings *Settings `json:"settings,omitempty"`
+	Name     string    `json:"name,omitempty"`
+	Server   *Server   `json:"server,omitempty"`
+	Remove   bool      `json:"remove,omitempty"`
+	// Unmanage, with Remove and a Name, also forgets which Agent entries the server wrote.
+	// No Agent file changes, and sync then leaves those entries alone as the user's own.
+	Unmanage    bool         `json:"unmanage,omitempty"`
 	Resolutions []Resolution `json:"resolutions,omitempty"`
 	Replace     bool         `json:"replace,omitempty"`
 }
@@ -70,6 +73,9 @@ func (s *Source) draftProject(m Mutation) error {
 			return fmt.Errorf("MCP server %q not found in %s", m.Name, m.Project)
 		}
 		delete(project.Servers, m.Name)
+		if m.Unmanage {
+			s.unmanaged[root+"\x00"+m.Name] = true
+		}
 	case m.Server != nil:
 		if _, ok := project.Servers[m.Name]; ok && !m.Replace {
 			return fmt.Errorf("MCP server %q already exists in %s; explicitly choose edit or replace", m.Name, m.Project)
@@ -113,6 +119,9 @@ func (s *Service) draftMutations(mutations []Mutation) (*Source, error) {
 		if m.Remove && m.Server != nil {
 			return nil, fmt.Errorf("cannot add and remove the same server")
 		}
+		if m.Unmanage && (!m.Remove || m.Name == "") {
+			return nil, fmt.Errorf("stop managing applies only to removing a named server")
+		}
 		if m.Project != "" {
 			if s.ProjectRoot != "" {
 				return nil, fmt.Errorf("mcp.projects belongs in the global config")
@@ -134,6 +143,9 @@ func (s *Service) draftMutations(mutations []Mutation) (*Source, error) {
 				return nil, fmt.Errorf("MCP server %q not found", m.Name)
 			}
 			delete(source.Servers, m.Name)
+			if m.Unmanage {
+				source.unmanaged["\x00"+m.Name] = true
+			}
 		}
 		if m.Server != nil {
 			if _, exists := source.Servers[m.Name]; exists && !m.Replace {
@@ -309,6 +321,11 @@ func (s *Service) Mutate(m Mutation, revision string, sync bool) (*Result, error
 // MutateBatch preflights every entry and saves the source once under one lock.
 // Native writes use the existing recovery journal, just like a single mutation.
 func (s *Service) MutateBatch(mutations []Mutation, revision string, sync bool) (*Result, error) {
+	for _, m := range mutations {
+		if m.Unmanage && sync {
+			return nil, fmt.Errorf("stop managing keeps Agent files as they are, so it cannot be combined with sync")
+		}
+	}
 	lock, err := s.lock()
 	if err != nil {
 		return nil, err
@@ -353,35 +370,39 @@ func (s *Service) MutateBatch(mutations []Mutation, revision string, sync bool) 
 	if !sync {
 		// Saving an explicit import also records the native baseline. The next
 		// sync can update it, but still detects any edits made in the meantime.
-		if len(resolutions) > 0 {
-			if preview.Blocked {
-				return nil, fmt.Errorf("source saved; unresolved conflicts prevented adoption")
-			}
+		if len(resolutions) > 0 && preview.Blocked {
+			return nil, fmt.Errorf("source saved; unresolved conflicts prevented adoption")
+		}
+		// Stopping to manage a server drops those records instead, so sync leaves its entries be.
+		if len(resolutions) > 0 || len(source.unmanaged) > 0 {
 			state, stateBytes, err := s.loadLedger()
 			if err != nil {
 				return nil, err
 			}
-			if !bytes.Equal(stateBytes, preview.stateBytes) {
+			if preview != nil && !bytes.Equal(stateBytes, preview.stateBytes) {
 				return nil, fmt.Errorf("source saved; ownership changed, preview again")
 			}
-			for _, f := range preview.files {
-				_, _, _, native, err := refreshFile(f)
-				if err != nil {
-					return nil, fmt.Errorf("source saved; %w", err)
-				}
-				for _, r := range resolutions {
-					if r.Target != s.shownAs(f.target, f.path, source.Accounts) || native.Entries[r.Name] == nil {
-						continue
+			if len(resolutions) > 0 {
+				for _, f := range preview.files {
+					_, _, _, native, err := refreshFile(f)
+					if err != nil {
+						return nil, fmt.Errorf("source saved; %w", err)
 					}
-					approved, ok := preview.state.Entries[ownershipKey(f.target, f.path, r.Name)]
-					if !ok || approved.Owner != source.ConfigPath {
-						continue
+					for _, r := range resolutions {
+						if r.Target != s.shownAs(f.target, f.path, source.Accounts) || native.Entries[r.Name] == nil {
+							continue
+						}
+						approved, ok := preview.state.Entries[ownershipKey(f.target, f.path, r.Name)]
+						if !ok || approved.Owner != source.ConfigPath {
+							continue
+						}
+						state.Entries[ownershipKey(f.target, f.path, r.Name)] = ownership{Owner: source.ConfigPath, Target: f.target, Path: f.path, Name: r.Name, Hash: entryHash(managedEntry(f.target, native.Entries[r.Name]))}
 					}
-					state.Entries[ownershipKey(f.target, f.path, r.Name)] = ownership{Owner: source.ConfigPath, Target: f.target, Path: f.path, Name: r.Name, Hash: entryHash(managedEntry(f.target, native.Entries[r.Name]))}
 				}
 			}
+			source.forget(state)
 			if err := writeJSONFile(s.statePath(), state); err != nil {
-				return nil, fmt.Errorf("source saved; adoption failed: %w", err)
+				return nil, fmt.Errorf("source saved; ownership update failed: %w", err)
 			}
 		}
 		return &Result{Applied: []string{}, BackupIDs: []string{}}, nil
