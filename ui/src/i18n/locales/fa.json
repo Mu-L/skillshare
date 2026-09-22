@@ -35,6 +35,8 @@
   "mcp.removeSourceOnly": "فقط حذف از منبع",
   "mcp.removeSync": "حذف و همگام‌سازی",
   "mcp.removeUnmanage": "توقف مدیریت",
+  "mcp.unmanaged.one": "۱ سرور در {targets} پیدا شد که skillshare آن را مدیریت نمی‌کند",
+  "mcp.unmanaged.other": "{count} سرور در {targets} پیدا شد که skillshare آن‌ها را مدیریت نمی‌کند",
   "mcp.removeTitle": "{name} حذف شود؟",
   "mcp.removedFromSource": "از منبع حذف شده",
   "mcp.removedHint": "در همگام‌سازی بعدی از فایل‌های پیکربندی Agent پاک می‌شود",

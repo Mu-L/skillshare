@@ -2,8 +2,11 @@ package mcp
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -94,5 +97,55 @@ func TestUnmanagedEntryConflictsWhenTheServerIsAddedBack(t *testing.T) {
 	}
 	if c := changeFor(plan, filepath.Join(tmp, ".cursor", "mcp.json"), "shared"); c == nil || !strings.HasPrefix(c.Message, "existing entry is not managed") {
 		t.Fatalf("want the not managed conflict, got %+v", c)
+	}
+}
+
+func addNativeEntry(t *testing.T, path, name string) {
+	t.Helper()
+	var document map[string]map[string]any
+	data, _ := os.ReadFile(path)
+	if json.Unmarshal(data, &document) != nil {
+		document = map[string]map[string]any{"mcpServers": {}}
+	}
+	document["mcpServers"][name] = map[string]any{"command": "mine"}
+	data, _ = json.Marshal(document)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestFindUnmanagedListsOnlyEntriesNoConfigManages(t *testing.T) {
+	s, tmp := projectsService(t, projectsConfig)
+	applyProjects(t, s)
+	global := filepath.Join(tmp, ".cursor", "mcp.json")
+	project := filepath.Join(tmp, "projA", ".cursor", "mcp.json")
+	addNativeEntry(t, global, "mine")
+	addNativeEntry(t, project, "local")
+	source, err := LoadSource(s.ConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Unmanaged{
+		{Target: "cursor", Path: global, Names: []string{"mine"}},
+		{Target: "cursor", Project: filepath.Join(tmp, "projA"), Path: project, Names: []string{"local"}},
+	}
+	if got := s.FindUnmanaged(source); !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %+v\nwant %+v", got, want)
+	}
+}
+
+func TestImportProjectClientReadsThatRootsFile(t *testing.T) {
+	s, tmp := projectsService(t, projectsConfig)
+	root := filepath.Join(tmp, "projA")
+	addNativeEntry(t, filepath.Join(root, ".cursor", "mcp.json"), "local")
+	candidates, err := s.ImportProjectClient(root, "cursor")
+	if err != nil || len(candidates) != 1 || candidates[0].Name != "local" {
+		t.Fatalf("candidates %+v, err %v", candidates, err)
+	}
+	if _, err := s.ImportProjectClient(filepath.Join(tmp, "nope"), "cursor"); !errors.Is(err, ErrUnknownProject) {
+		t.Fatalf("unknown root: %v", err)
 	}
 }

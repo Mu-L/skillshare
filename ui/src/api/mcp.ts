@@ -46,6 +46,8 @@ export interface MCPPlan {
   changes: { target: string; path: string; name: string; root?: string; switch?: boolean; action: string; message?: string }[];
 }
 export interface MCPResult { plan?: MCPPlan; applied: string[]; backupIds: string[] }
+/** Servers in one Agent file that skillshare does not manage; `project` is a root under mcp.projects. */
+export interface MCPUnmanaged { target: string; project?: string; path: string; names: string[] }
 export interface MCPCandidate { name: string; server: MCPServer; problems: string[]; warnings: string[]; from?: string }
 const post = <T,>(path: string, body: unknown) => apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body) });
 export const mcpApi = {
@@ -55,6 +57,7 @@ export const mcpApi = {
     projectConfigs: string[];
     paths: Record<string, string>; detected: string[]; plan: MCPPlan | null; previewError: string;
     backups: { id: string; target: string; path: string }[];
+    unmanaged: MCPUnmanaged[];
   }>('/mcp'),
   preview: (mutation: MCPMutation = {}) => post<MCPPlan>('/mcp/preview', { mutation }),
   configure: (mutation: MCPMutation, revision: string, sync: boolean) => post<MCPResult>('/mcp', { mutation, revision, sync }),
@@ -65,7 +68,8 @@ export const mcpApi = {
     post<MCPResult>('/mcp', { mutation, revision: (await post<MCPPlan>('/mcp/preview', { mutation })).revision, sync: false }),
   /** One server as each of its targets' config files would hold it. Reads and writes nothing, so an unsaved form can ask. */
   render: (mutation: MCPMutation) => post<{ rendered: { target: string; path: string; content?: string; error?: string }[] }>('/mcp/render', { mutation }),
-  import: (body: { from?: string; content?: string; name?: string }) => post<{ candidates: MCPCandidate[] }>('/mcp/import', body),
+  /** `root` reads the `from` target's file in that mcp.projects root. */
+  import: (body: { from?: string; content?: string; name?: string; root?: string }) => post<{ candidates: MCPCandidate[] }>('/mcp/import', body),
   previewRestore: (backupId: string) => post<MCPPlan>('/mcp/restore', { backupId, preview: true }),
   restore: (backupId: string, revision: string) => post<MCPResult>('/mcp/restore', { backupId, revision }),
 };

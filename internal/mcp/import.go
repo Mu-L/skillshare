@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -393,4 +394,90 @@ func (s *Service) ImportClient(target string) ([]Candidate, error) {
 		items[i].From = target
 	}
 	return items, nil
+}
+
+// ImportProjectClient is ImportClient reading a target's file in one mcp.projects root.
+func (s *Service) ImportProjectClient(root, target string) ([]Candidate, error) {
+	source, err := LoadSource(s.ConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	root = filepath.Clean(root)
+	if _, ok := source.Projects[root]; !ok || s.ProjectRoot != "" {
+		return nil, fmt.Errorf("%w: %s", ErrUnknownProject, root)
+	}
+	scoped := *s
+	scoped.ProjectRoot = root
+	return scoped.ImportClient(target)
+}
+
+// Unmanaged is one Agent file's servers that no Skillshare config manages and the source
+// does not define: ones added to the Agent directly, which an import can take over.
+type Unmanaged struct {
+	Target  string   `json:"target"`
+	Project string   `json:"project,omitempty"`
+	Path    string   `json:"path"`
+	Names   []string `json:"names"`
+}
+
+// FindUnmanaged reads the Agent files of this scope, its accounts and every mcp.projects
+// root. A file that cannot be read or parsed is skipped; sync reports it when it is used.
+func (s *Service) FindUnmanaged(source *Source) []Unmanaged {
+	state, _, err := s.loadLedger()
+	if err != nil {
+		return nil
+	}
+	found := []Unmanaged{}
+	scan := func(target, format, path, root string, defined map[string]Server) {
+		data, exists, _, err := safeRead(path)
+		if err != nil || !exists {
+			return
+		}
+		native, err := ParseNative(format, data)
+		if err != nil {
+			return
+		}
+		var names []string
+		for _, name := range sortedKeys(native.Entries) {
+			_, owned := state.Entries[ownershipKey(format, path, name)]
+			if _, ok := defined[name]; !ok && !owned && isServerEntry(native.Entries[name]) {
+				names = append(names, name)
+			}
+		}
+		if len(names) > 0 {
+			found = append(found, Unmanaged{Target: target, Project: root, Path: path, Names: names})
+		}
+	}
+	paths := s.ClientPaths()
+	for _, target := range Targets {
+		if path, ok := paths[target]; ok {
+			scan(target, target, path, "", source.Servers)
+		}
+	}
+	accounts := s.AccountPaths(source.Accounts)
+	for _, name := range sortedKeys(accounts) {
+		scan(name, source.Accounts[name].Agent, accounts[name], "", source.Servers)
+	}
+	for _, root := range sortedKeys(source.Projects) {
+		scoped := *s
+		scoped.ProjectRoot = root
+		paths := scoped.ClientPaths()
+		for _, target := range Targets {
+			if path, ok := paths[target]; ok {
+				scan(target, target, path, root, source.Projects[root].Servers)
+			}
+		}
+	}
+	return found
+}
+
+// isServerEntry leaves out what has nothing to connect to, such as Goose's built-in
+// extensions or a lone switch turning a global server off.
+func isServerEntry(entry map[string]any) bool {
+	for _, key := range []string{"command", "cmd", "url", "uri", "serverUrl", "httpUrl"} {
+		if entry[key] != nil {
+			return true
+		}
+	}
+	return false
 }

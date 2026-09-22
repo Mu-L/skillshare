@@ -35,6 +35,8 @@
   "mcp.removeSourceOnly": "Hapus dari sumber saja",
   "mcp.removeSync": "Hapus dan sinkronkan",
   "mcp.removeUnmanage": "Berhenti mengelola",
+  "mcp.unmanaged.one": "Ditemukan 1 server yang tidak dikelola skillshare di {targets}",
+  "mcp.unmanaged.other": "Ditemukan {count} server yang tidak dikelola skillshare di {targets}",
   "mcp.removeTitle": "Hapus {name}?",
   "mcp.removedFromSource": "Dihapus dari sumber",
   "mcp.removedHint": "Dibersihkan dari file konfigurasi Agent pada sinkronisasi berikutnya",

@@ -43,8 +43,11 @@ interface Props {
   detected: string[];
   /** A conflicting entry to take over: it may replace the source server of the same name. */
   conflict?: { target: string; name: string };
-  /** A root under mcp.projects: the import is written to that project instead of the global source. */
+  /** A root under mcp.projects: the import is written to that project instead of the global source,
+   *  and an import from an Agent reads that project's file of it. */
   project?: string;
+  /** The Agent file selected first, such as one found to hold servers skillshare does not manage. */
+  defaultFrom?: string;
   /** Overrides the targets offered, for a project where only some Agents have a file. */
   availableTargets?: readonly string[];
   /** Present when this is the paste half of "add a server", so the user can swap back to the form. */
@@ -53,15 +56,15 @@ interface Props {
   onImported: () => void;
 }
 
-export default function MCPImportDialog({ source, servers, defaultTargets, paths, detected, conflict, project, availableTargets: offered, onMode, onClose, onImported }: Props) {
+export default function MCPImportDialog({ source, servers, defaultTargets, paths, detected, conflict, project, defaultFrom, availableTargets: offered, onMode, onClose, onImported }: Props) {
   const t = useT();
   const { toast } = useToast();
   const tab = source;
   const order = useContext(MCPTargetOrder);
   const availableTargets = offered ?? order.filter((x) => paths[x]);
   // An account of an Agent has its own file, so it is an import source under its own name.
-  const sources = order.filter((x) => availableTargets.includes(x));
-  const [from, setFrom] = useState(conflict?.target ?? sources.find((x) => detected.includes(x)) ?? sources[0] ?? '');
+  const sources = order.filter((x) => paths[x]);
+  const [from, setFrom] = useState(conflict?.target ?? defaultFrom ?? sources.find((x) => detected.includes(x)) ?? sources[0] ?? '');
   const [content, setContent] = useState('');
   const [pasted, setPasted] = useState('');
   const [tomlFrom, setTomlFrom] = useState('codex');
@@ -81,7 +84,7 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
     return () => window.clearTimeout(id);
   }, [content]);
 
-  const fromTarget = useQuery({ queryKey: ['mcp-import', from], queryFn: () => mcpApi.import({ from }), enabled: tab === 'target' && from !== '', gcTime: 0, retry: false });
+  const fromTarget = useQuery({ queryKey: ['mcp-import', from, project], queryFn: () => mcpApi.import({ from, ...(project && { root: project }) }), enabled: tab === 'target' && from !== '', gcTime: 0, retry: false });
   const fromPaste = useQuery({
     queryKey: ['mcp-import-paste', pasted, toml && tomlFrom],
     queryFn: () => mcpApi.import({ content: pasted, ...(toml && { from: tomlFrom }) }),

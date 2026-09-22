@@ -15,6 +15,7 @@ import MCPRemoveDialog from './MCPRemoveDialog';
 import MCPServerDialog from './MCPServerDialog';
 import MCPServerList from './MCPServerList';
 import MCPSyncBox from './MCPSyncBox';
+import MCPUnmanagedNote from './MCPUnmanagedNote';
 import { TargetPill } from './TargetPicker';
 import { buildMatrix, describeEndpoint, describeError, projectOf, switchTargets, targetLabel } from './mcpView';
 
@@ -40,6 +41,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
   const [addingOff, setAddingOff] = useState(false); // the new entry is a switch, not a server
   const [removing, setRemoving] = useState('');
   const [dropping, setDropping] = useState(false);
+  const [importFrom, setImportFrom] = useState(''); // an Agent file of this project to import from
   const [busy, setBusy] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
 
@@ -53,6 +55,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
   const roots = Object.keys(data.source.projects ?? {});
   const changes = (data.plan?.changes ?? []).filter((c) => projectOf(roots, c) === root);
   const name = shortenHome(root);
+  const unmanaged = data.unmanaged.filter((u) => u.project === root);
   // A switch for a global server belongs to the list above; everything else is the project's own.
   const own = Object.fromEntries(Object.entries(servers).filter(([n, s]) => !(s.disabled && globals[n])));
   // A switch that names no targets follows the project, and Pi has one only with pi-mcp-adapter.
@@ -130,6 +133,8 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
               its 110px label column plus the 14px column gap of .ss-kv. */}
           {pickTargets && <div className="pl-[124px]"><ProjectTargets value={project.targets} defaults={defaults} offered={offered} disabled={busy} onChange={(next) => void save({ replace: true, settings: { targets: next, directTools: project.directTools } })} /></div>}
         </div>
+
+        <div className="mt-3 empty:hidden"><MCPUnmanagedNote entries={unmanaged} onImport={setImportFrom} /></div>
 
         <section className="mt-3 flex flex-col">
           <div className="ss-sec"><h2>{t('mcp.projects.globalServers')}</h2><span className="ss-cnt">{shownGlobals.length}</span><span className="text-[13px] text-ink-2">{t('mcp.projects.globalHint')}</span></div>
@@ -220,6 +225,20 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
           onSaved={() => { setEditing(null); onChanged(); toast(t('mcp.toast.saved'), 'success'); }}
         />
       ))}
+      {importFrom && (
+        <MCPImportDialog
+          source="target"
+          project={root}
+          servers={servers}
+          defaultTargets={targets}
+          availableTargets={offered}
+          paths={Object.fromEntries(unmanaged.map((u) => [u.target, u.path]))}
+          detected={unmanaged.map((u) => u.target)}
+          defaultFrom={importFrom}
+          onClose={() => setImportFrom('')}
+          onImported={() => { setImportFrom(''); onChanged(); }}
+        />
+      )}
       {removing && <MCPRemoveDialog name={removing} project={root} inScope={(c) => projectOf(roots, c) === root} onClose={() => setRemoving('')} onSaved={() => { const n = removing; setRemoving(''); onChanged(); toast(t('mcp.toast.removed', { name: n }), 'success'); }} />}
       <ConfirmDialog open={dropping} variant="danger" loading={busy} title={t('projects.mcp.stopTitle', { name })} message={t('projects.mcp.stopMessage')} confirmText={t('projects.mcp.stop')} onCancel={() => setDropping(false)} onConfirm={() => void drop()} />
       <SkillContextMenu open={!!menu} anchorPoint={menu ?? undefined} items={menu?.items ?? []} onClose={() => setMenu(null)} />

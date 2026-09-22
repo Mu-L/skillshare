@@ -35,6 +35,8 @@
   "mcp.removeSourceOnly": "소스에서만 제거",
   "mcp.removeSync": "제거 후 동기화",
   "mcp.removeUnmanage": "관리 중단",
+  "mcp.unmanaged.one": "{targets}에서 skillshare가 관리하지 않는 서버 1개를 찾았습니다",
+  "mcp.unmanaged.other": "{targets}에서 skillshare가 관리하지 않는 서버 {count}개를 찾았습니다",
   "mcp.removeTitle": "{name}을(를) 제거할까요?",
   "mcp.removedFromSource": "소스에서 제거됨",
   "mcp.removedHint": "다음 동기화 때 Agent 설정 파일에서 지워집니다",

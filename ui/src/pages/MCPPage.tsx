@@ -14,6 +14,7 @@ import { SkillContextMenu, type ContextMenuItem } from '../components/TargetMenu
 import { useToast } from '../components/Toast';
 import MCPDefaults from '../components/mcp/MCPDefaults';
 import MCPImportDialog from '../components/mcp/MCPImportDialog';
+import MCPUnmanagedNote from '../components/mcp/MCPUnmanagedNote';
 import { projectUrl } from '../components/projects/projectView';
 import MCPSyncBox from '../components/mcp/MCPSyncBox';
 import MCPServerList from '../components/mcp/MCPServerList';
@@ -44,7 +45,7 @@ export default function MCPPage() {
   const [editing, setEditing] = useState<string | null>(null); // '' adds a new server
   // Adding takes two shapes: fill the fields, or paste a snippet. Both end up saving one source server.
   const [addMode, setAddMode] = useState<'form' | 'paste'>('form');
-  const [importing, setImporting] = useState<{ conflict?: { target: string; name: string } } | null>(null);
+  const [importing, setImporting] = useState<{ conflict?: { target: string; name: string }; from?: string } | null>(null);
   const [removing, setRemoving] = useState('');
   const [viewing, setViewing] = useState('');
   const [backupsOpen, setBackupsOpen] = useState(false);
@@ -234,6 +235,7 @@ export default function MCPPage() {
               </div>
             </div>
           )}
+          <MCPUnmanagedNote entries={data.unmanaged.filter((u) => !u.project)} onImport={(from) => setImporting({ from })} />
           {rows.length > 0 ? (
             <MCPServerList rows={rows} targets={order.filter((x) => matrixTargets.has(x))} targetsOf={targetsOf} onToggle={(n, x, on) => void toggle(n, x, on)} onMenu={openMenu} onEdit={(n) => { setPiSetupName(null); setEditing(n); }} />
           ) : (
@@ -287,6 +289,7 @@ export default function MCPPage() {
           paths={data.paths}
           detected={data.detected}
           conflict={importing.conflict}
+          defaultFrom={importing.from}
           onClose={() => setImporting(null)}
           onImported={() => { setImporting(null); refresh(); }}
         />

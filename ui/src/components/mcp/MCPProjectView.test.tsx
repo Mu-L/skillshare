@@ -8,14 +8,14 @@ import { mcpApi } from '../../api/mcp';
 import { ToastProvider } from '../Toast';
 import MCPProjectView from './MCPProjectView';
 
-vi.mock('../../api/mcp', async (load) => ({ ...await load<typeof import('../../api/mcp')>(), mcpApi: { save: vi.fn().mockResolvedValue({}) } }));
+vi.mock('../../api/mcp', async (load) => ({ ...await load<typeof import('../../api/mcp')>(), mcpApi: { save: vi.fn().mockResolvedValue({}), import: vi.fn().mockResolvedValue({ candidates: [] }) } }));
 
 type Data = Parameters<typeof MCPProjectView>[0]['data'];
 
-const view = (servers: Data['source']['servers'], project: NonNullable<Data['source']['projects']>[string]) => {
+const view = (servers: Data['source']['servers'], project: NonNullable<Data['source']['projects']>[string], unmanaged: Data['unmanaged'] = []) => {
   const data = {
     source: { path: '', configPath: '', targets: null, servers, projects: { '/work/app': project } },
-    projectConfigs: [], paths: {}, detected: [], plan: null, previewError: '', backups: [],
+    projectConfigs: [], paths: {}, detected: [], plan: null, previewError: '', backups: [], unmanaged,
   } as Data;
   render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><I18nProvider><ToastProvider><MCPProjectView data={data} root="/work/app" offered={['claude', 'cursor', 'opencode', 'pi']} onChanged={vi.fn()} onRemoved={vi.fn()} /></ToastProvider></I18nProvider></QueryClientProvider></MemoryRouter>);
 };
@@ -51,6 +51,22 @@ describe('MCP project view', () => {
   it("leaves Pi out where the project's own servers use another Pi extension", () => {
     view({ docs: { command: 'npx', piExtension: 'pi-mcp-adapter', targets: ['opencode', 'pi'] } }, { targets: ['opencode', 'pi'], servers: { docs: { disabled: true }, mine: { command: 'npx', piExtension: 'pi-mcp-extension', targets: ['pi'] } } });
     expect(screen.getByText('Still loads in Pi, which has no per-project switch.')).toBeInTheDocument();
+  });
+
+  it("offers to import servers found in this project's Agent files, reading that project's file", async () => {
+    const user = userEvent.setup();
+    view({}, {}, [
+      { target: 'claude', path: '/.claude.json', names: ['global'] },
+      { target: 'cursor', project: '/work/app', path: '/work/app/.cursor/mcp.json', names: ['a', 'b'] },
+    ]);
+    expect(screen.getByText('Found 2 servers not managed by skillshare in Cursor')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(mcpApi.import).toHaveBeenCalledWith({ from: 'cursor', root: '/work/app' }));
+  });
+
+  it('shows no import note when every server in the project is managed', () => {
+    view({}, {}, [{ target: 'claude', path: '/.claude.json', names: ['global'] }]);
+    expect(screen.queryByText(/not managed by skillshare/)).not.toBeInTheDocument();
   });
 
   it('counts Pi for a switch only with pi-mcp-adapter, as sync does', () => {

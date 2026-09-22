@@ -35,6 +35,8 @@
   "mcp.removeSourceOnly": "Quitar solo del origen",
   "mcp.removeSync": "Quitar y sincronizar",
   "mcp.removeUnmanage": "Dejar de gestionar",
+  "mcp.unmanaged.one": "1 servidor en {targets} no está gestionado por skillshare",
+  "mcp.unmanaged.other": "{count} servidores en {targets} no están gestionados por skillshare",
   "mcp.removeTitle": "¿Quitar {name}?",
   "mcp.removedFromSource": "Quitado del origen",
   "mcp.removedHint": "Se borrará de los archivos de configuración de Agent en la próxima sincronización",

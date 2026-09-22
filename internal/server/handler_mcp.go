@@ -82,7 +82,7 @@ func (s *Server) handleMCPList(w http.ResponseWriter, r *http.Request) {
 	if !s.IsProjectMode() {
 		detected = append(detected, mcp.DetectedAccounts(source.Accounts)...)
 	}
-	writeJSON(w, map[string]any{"source": source, "paths": paths, "detected": detected, "plan": p, "previewError": message, "backups": backups, "projectConfigs": ownConfig})
+	writeJSON(w, map[string]any{"source": source, "paths": paths, "detected": detected, "plan": p, "previewError": message, "backups": backups, "projectConfigs": ownConfig, "unmanaged": service.FindUnmanaged(source)})
 }
 
 func (s *Server) handleMCPPreview(w http.ResponseWriter, r *http.Request) {
@@ -164,6 +164,8 @@ func (s *Server) handleMCPImport(w http.ResponseWriter, r *http.Request) {
 		From    string `json:"from"`
 		Content string `json:"content"`
 		Name    string `json:"name"`
+		// Root reads the target's file in that mcp.projects root instead of this scope.
+		Root string `json:"root"`
 	}
 	if !decodeMCPRequest(w, r, &body) {
 		return
@@ -174,6 +176,8 @@ func (s *Server) handleMCPImport(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if body.Content != "" {
 		candidates, err = mcp.Import(body.From, []byte(body.Content), body.Name)
+	} else if body.Root != "" {
+		candidates, err = s.mcpService().ImportProjectClient(body.Root, body.From)
 	} else {
 		candidates, err = s.mcpService().ImportClient(body.From)
 	}

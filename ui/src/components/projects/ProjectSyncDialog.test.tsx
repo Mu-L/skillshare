@@ -33,7 +33,7 @@ describe('Project sync dialog', () => {
       { target: 'app@claude', items: [{ skill: 'team-a', action: 'link', reason: 'new' }] },
       { target: 'claude', items: [{ skill: 'global-only', action: 'link', reason: 'new' }] },
     ] } as Awaited<ReturnType<typeof api.diff>>);
-    vi.mocked(mcpApi.list).mockResolvedValue({ source: { path: '', configPath: '', targets: null, servers: {}, projects: { '/work/app': {} } }, projectConfigs: [], paths: {}, detected: [], plan, previewError: '', backups: [] });
+    vi.mocked(mcpApi.list).mockResolvedValue({ source: { path: '', configPath: '', targets: null, servers: {}, projects: { '/work/app': {} } }, projectConfigs: [], paths: {}, detected: [], plan, previewError: '', backups: [], unmanaged: [] });
     vi.mocked(mcpApi.preview).mockResolvedValue({ ...plan, revision: 'r2' });
     vi.mocked(api.sync).mockResolvedValue({ results: [], warnings: [] } as unknown as Awaited<ReturnType<typeof api.sync>>);
     vi.mocked(mcpApi.syncProject).mockResolvedValue({ applied: [], backupIds: [] });

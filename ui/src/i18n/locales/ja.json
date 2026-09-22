@@ -35,6 +35,8 @@
   "mcp.removeSourceOnly": "ソースからのみ削除",
   "mcp.removeSync": "削除して同期",
   "mcp.removeUnmanage": "管理を停止",
+  "mcp.unmanaged.one": "{targets} に skillshare が管理していないサーバーが 1 件あります",
+  "mcp.unmanaged.other": "{targets} に skillshare が管理していないサーバーが {count} 件あります",
   "mcp.removeTitle": "{name} を削除しますか？",
   "mcp.removedFromSource": "ソースから削除済み",
   "mcp.removedHint": "次回の同期で Agent 設定ファイルから消去されます",

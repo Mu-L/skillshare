@@ -35,6 +35,8 @@
   "mcp.removeSourceOnly": "Remove from source only",
   "mcp.removeSync": "Remove and sync",
   "mcp.removeUnmanage": "Stop managing",
+  "mcp.unmanaged.one": "Found 1 server not managed by skillshare in {targets}",
+  "mcp.unmanaged.other": "Found {count} servers not managed by skillshare in {targets}",
   "mcp.removeTitle": "Remove {name}?",
   "mcp.removedFromSource": "Removed from source",
   "mcp.removedHint": "Cleared from config files on the next sync",

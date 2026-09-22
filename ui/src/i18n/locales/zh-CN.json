@@ -35,6 +35,8 @@
   "mcp.removeSourceOnly": "仅从来源移除",
   "mcp.removeSync": "移除并同步",
   "mcp.removeUnmanage": "停止管理",
+  "mcp.unmanaged.one": "在 {targets} 中发现 1 个不由 skillshare 管理的服务器",
+  "mcp.unmanaged.other": "在 {targets} 中发现 {count} 个不由 skillshare 管理的服务器",
   "mcp.removeTitle": "移除 {name}？",
   "mcp.removedFromSource": "已从来源移除",
   "mcp.removedHint": "同步后会从 Agent 配置文件中清除",
