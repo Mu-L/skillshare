@@ -3,10 +3,10 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import type { Components } from 'react-markdown';
 import {
-  ChevronDown, CircleArrowUp, CircleCheck, Copy, Ellipsis, ExternalLink, File, FileCode2, FileText, Folder,
+  ChevronDown, ChevronRight, CircleArrowUp, CircleCheck, Copy, Ellipsis, ExternalLink, File, FileCode2, FileText, Folder,
   FolderOpen, Github, Globe, Pencil, Power, RefreshCw, ShieldAlert, ShieldCheck, Trash2, TriangleAlert, X,
 } from 'lucide-react';
-import { api, type AuditResult, type Skill } from '../api/client';
+import { api, type AuditResult, type DiffTarget, type Skill, type SyncMatrixEntry } from '../api/client';
 import { queryKeys, staleTimes } from '../lib/queryKeys';
 import { clearAuditCache } from '../lib/auditCache';
 import { SEV, parseFindings, thresholdOf } from '../lib/auditMessage';
@@ -16,6 +16,7 @@ import { parseRemoteURL } from '../lib/parseRemoteURL';
 import { resourceHref } from '../lib/resourceNames';
 import { targetFilterPatch } from '../lib/targetFilter';
 import { useSyncMatrix } from '../hooks/useSyncMatrix';
+import { projectUrl } from '../components/projects/projectView';
 import { formatDateTime, formatRelativeTime, useI18n, useT } from '../i18n';
 import AgentIcon from '../components/AgentIcon';
 import Button from '../components/Button';
@@ -496,7 +497,7 @@ function TargetsSection({ resource }: { resource: Skill }) {
     }
   };
 
-  const label = (row: (typeof rows)[number]) => {
+  const label = (row: { entry?: SyncMatrixEntry; action?: string }) => {
     const { entry, action } = row;
     switch (entry?.status) {
       case 'synced':
@@ -558,7 +559,59 @@ function TargetsSection({ resource }: { resource: Skill }) {
         })}
       </div>
       <p className="mt-2.5 text-[13px] text-ink-3">{t(isAgent ? 'resourceDetail.targets.footnoteAgent' : 'resourceDetail.targets.footnote')}</p>
+      <ProjectsList resource={resource} diffs={diffQuery.data?.diffs} statusText={(entry, action) => label({ entry, action })} />
     </section>
+  );
+}
+
+/** Project targets, one row per project. Their filters are set per project, so each row links to its page instead of toggling. */
+export function ProjectsList({ resource, diffs, statusText }: {
+  resource: Skill;
+  diffs: DiffTarget[] | undefined;
+  statusText: (entry: SyncMatrixEntry, action: string | undefined) => React.ReactNode;
+}) {
+  const t = useT();
+  const { getSkillTargets } = useSyncMatrix();
+  const { data } = useQuery({ queryKey: queryKeys.targets.projects, queryFn: () => api.listTargets('projects'), staleTime: staleTimes.targets });
+  const entries = new Map(getSkillTargets(resource.flatName).filter((e) => (e.kind ?? 'skill') === resource.kind).map((e) => [e.target, e]));
+  const byProject = new Map<string, { name: string; path: string; rows: { target: string; entry: SyncMatrixEntry; action?: string }[] }>();
+  for (const target of data?.targets ?? []) {
+    const entry = entries.get(target.name);
+    if (!entry || !target.project) continue;
+    const action = diffs?.find((d) => d.target === target.name)?.items
+      .find((i) => i.skill === resource.flatName && (i.kind ?? 'skill') === resource.kind)?.action;
+    const project = byProject.get(target.project) ?? { name: target.name.slice(0, target.name.lastIndexOf('@')), path: target.project, rows: [] };
+    project.rows.push({ target: target.name, entry, action });
+    byProject.set(target.project, project);
+  }
+  const projects = [...byProject.values()].sort((a, b) => a.name.localeCompare(b.name));
+  if (projects.length === 0) return null;
+  const on = (p: (typeof projects)[number]) => p.rows.some((r) => r.entry.status === 'synced' || r.entry.status === 'na');
+
+  return (
+    <>
+      <div className="ss-sec mt-6">
+        <h2>{t('resourceDetail.projects.title')}</h2>
+        <span className="ss-cnt">{t('resourceDetail.targets.count', { on: projects.filter(on).length, total: projects.length })}</span>
+      </div>
+      <div className="ss-list">
+        {projects.map((p) => {
+          // One status per project: the first target that needs attention, else the first one.
+          const shown = p.rows.find((r) => r.entry.status !== 'synced' || r.action) ?? p.rows[0];
+          return (
+            <Link key={p.path} to={projectUrl(p.path, resource.kind === 'agent' ? 'agents' : undefined)} className="ss-r !min-h-[50px] hover:bg-sunken">
+              <span className="ss-stack shrink-0">{p.rows.map((r) => <span key={r.target} className="ss-at" title={r.target}><AgentIcon target={r.target} size={14} /></span>)}</span>
+              <div className="flex min-w-0 flex-1 flex-col gap-px">
+                <span className="truncate font-semibold">{p.name}</span>
+                <span className="text-xs text-ink-3">{shown.entry.status === 'not_included' ? t('resourceDetail.projects.notIncluded') : statusText(shown.entry, shown.action)}</span>
+              </div>
+              <ChevronRight size={16} className="shrink-0 text-ink-3" />
+            </Link>
+          );
+        })}
+      </div>
+      <p className="mt-2.5 text-[13px] text-ink-3">{t('resourceDetail.projects.footnote')}</p>
+    </>
   );
 }
 
