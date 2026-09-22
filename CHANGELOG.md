@@ -42,6 +42,58 @@
 
 - **Global errors say they are global** — when the global source folder was missing, `skillshare ui` said to run `skillshare init`, which only answered that Skillshare is already initialized. The error now says the global source folder is missing, names the config file, and suggests `mkdir -p` on that folder or pointing `sources.skills` at an existing one. The other global `init` and `ui` errors also say "global" and name the config file.
 
+## [0.21.5] - 2026-09-22
+
+### New Features
+
+#### Targets
+
+- **A second account of Claude Code, Codex or Pi as its own target** — when you run an Agent with a second config folder, such as a work account started with `CLAUDE_CONFIG_DIR=~/.claude-work`, add that folder as a target and Skillshare works out where its skills and agents go. Codex (`CODEX_HOME`) and Pi (`PI_CODING_AGENT_DIR`) work the same way. In the dashboard, choose **Add target** → **Another account**; in the terminal:
+  ```bash
+  skillshare target add claude-work --agent claude --config-dir ~/.claude-work
+  ```
+  In `config.yaml` the target only records the folder:
+  ```yaml
+  targets:
+    claude-work:
+      agent: claude
+      config_dir: ~/.claude-work
+  ```
+  Refs: #289.
+- **Accounts receive MCP servers and plugins too** — an account's name works wherever an Agent's does in `mcp.targets`, a server's `targets`, `--target` and `--from`. Servers are written into the account's own file (`.claude.json`, `config.toml` or `mcp.json` in its folder), and plugins are installed with the Agent's CLI pointed at that folder, so one account can have a server or plugin the other does not. `skillshare mcp import --from claude-work` reads that account's servers. A Pi account needs `piExtension: pi-mcp-adapter`, since `pi-mcp-extension` always reads `~/.pi/agent/mcp.json`. Refs: #289.
+- **Removing an account says where MCP still names it** — `skillshare target remove` and the dashboard remove the target, then warn when `mcp.targets` or a server's `targets` still lists it, since the next MCP sync would fail. Refs: #289.
+
+#### Sync
+
+- **Sync one part from its own page** — **Skills**, **Agents** and **MCP** each have a sync button that previews and writes only that part, and a project page has **Sync project**, which writes that project's skills, agents and MCP without touching global targets or other projects. The sync prompts after an update, uninstall or collect open the same dialog. Refs: #289.
+
+#### MCP connections
+
+- **Stop managing a server without touching Agent files** — removing a server always cleared its entries from the Agents on the next sync. **Stop managing** drops it from Skillshare and leaves the entries where they are, so the Agent keeps using it. It is the third choice in the dashboard's remove dialog and in the remove wizard:
+  ```bash
+  skillshare mcp remove context7 --keep-files
+  ```
+  Refs: #290.
+- **Servers added to an Agent directly are pointed out** — the MCP page and each project's MCP tab say which Agent files hold servers Skillshare does not manage, and **Import** opens on that file. Refs: #290.
+- **Pi adapter settings show on the server row** — **Direct tools** are listed on a line under the endpoint instead of only on hover. Other adapter settings only say that they are set. Refs: #289.
+
+### Bug Fixes
+
+#### MCP connections
+
+- **Importing a project's conflict uses that project's files** — **Import from** an Agent on a project's conflict read the Agent's global file and wrote to the global source, so the project's own entry could never be taken over. Refs: #290.
+- **Pi adapter settings survive unticking Pi** — unticking every Agent dropped **Direct tools** and `piOptions`, so ticking Pi again reset the adapter. Refs: #289.
+- **The MCP page no longer crashes on a cold load.**
+
+#### Dashboard
+
+- **Skill and agent pages list their projects** — the Skills and Agents lists counted project targets, but the detail page only showed global ones. It now lists each project the skill or agent syncs to, with a link.
+- **Skills and Agents sync previews match the Sync page** — they showed changes on targets that were already in sync.
+
+#### CLI
+
+- **Global setup errors say they are about the global config** — `skillshare ui -g` with a missing source folder said "source directory not found" and suggested `skillshare init`, which then said Skillshare was already initialized. The error now says it is the global source, names the config, and tells you to create the folder or point `sources.skills` at an existing one.
+
 ## [0.21.4] - 2026-09-22
 
 ### New Features
