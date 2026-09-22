@@ -39,7 +39,7 @@ export default function AddTargetDialog({ available, initial, existing, onClose,
   const [mode, setMode] = useState<'known' | 'custom' | 'account'>('known');
   const custom = mode !== 'known';
   // Another account is another config folder of an Agent; its paths follow the folder.
-  const accountAgents = available.filter((a) => a.configDir);
+  const accountAgents = available.filter((a) => a.configDir).sort((a, b) => a.name.localeCompare(b.name));
   const [account, setAccount] = useState({ agent: accountAgents[0]?.name ?? '', dir: '', named: false });
   const [draft, setDraft] = useState(() => {
     const first = pool.find((a) => a.name === initial) ?? pool.find((a) => a.detected);
