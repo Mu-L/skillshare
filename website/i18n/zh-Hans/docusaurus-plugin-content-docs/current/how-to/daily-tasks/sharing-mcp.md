@@ -54,7 +54,8 @@ Agent，并检查变更内容。**Save and sync** 会立即应用设置；
 `mcp import --file`。粘贴的 JSON 会被自动识别；对于
 TOML，则需要选择它来自 Codex 还是 Grok。**Import from a target** 是
 另一个独立功能，用于读取某个已安装 Agent 已有的服务器。无论哪种方式，
-控制台都使用与 CLI 相同的来源、验证、预览与冲突规则。Sync 页面也提供
+控制台都使用与 CLI 相同的来源、验证、预览与冲突规则。MCP 页面 Sync 框中的
+**Sync MCP** 只写入 MCP 配置文件。Sync 页面也提供
 **Sync all resources**，用于同步 Skill、Agent、extras 与 MCP。
 
 Config editor 在你保存时会使用两个空格缩进格式化 YAML，

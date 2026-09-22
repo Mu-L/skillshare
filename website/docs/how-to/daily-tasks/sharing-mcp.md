@@ -55,8 +55,8 @@ equivalent of `mcp import --file`. Pasted JSON is recognized automatically; for
 TOML, choose whether it came from Codex or Grok. **Import from a target** is
 separate and reads the servers an installed Agent already has. Either way the
 dashboard uses the same source, validation, preview and conflict rules as the
-CLI. The Sync page also has **Sync all resources** for skills, agents, extras
-and MCP.
+CLI. **Sync MCP**, in the MCP page's Sync box, writes the MCP config files only. The
+Sync page also has **Sync all resources** for skills, agents, extras and MCP.
 
 The Config editor formats YAML when you save, using two-space indentation and
 preserving comments. Click a field to see its explanation in the right panel,

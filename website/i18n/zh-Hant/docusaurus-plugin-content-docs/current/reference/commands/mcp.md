@@ -168,8 +168,9 @@ JSON 項目會依照檔案本身的縮排，一行寫入一個欄位。若 Skill
 
 Dashboard 只會提供目前 scope 與主機平台可用的目的地。每個 server 各佔一列；
 右側的計數按鈕會開啟該 server 的完整 client 清單。僅限 Global 的 clients 在 project mode 中無法選擇。
-右側的 **Sync** 框會列出尚未寫入的變更：勾選某個 client 只會編輯 source，
-確認後才會在 Sync 頁面寫入檔案。下方的 **Agents** 會列出這台機器上偵測到的 clients。
+右側的 **Sync** 框會列出尚未寫入的變更：勾選某個 client 只會編輯 source。
+**Sync MCP** 會列出這些變更，確認後只寫入 MCP 設定檔，並為每個檔案保留備份。
+下方的 **Agents** 會列出這台機器上偵測到的 clients。
 當某個 client 的 MCP 檔案存在，或該 client 用來存放設定的資料夾存在時，就算做偵測到，
 所以剛安裝、還沒有 MCP 檔案的 client 也會顯示出來。在 project mode 中，
 當 project 有自己的 MCP 檔案，或該 client 在 global 層級被偵測到時，就會列出該 client。
@@ -511,6 +512,9 @@ mcp:
   不支援個別 project 開關時，該列會說明這個 server 在那裡仍會載入。如果項目列出了
   自己的 `targets`，且與 project 的不同，就會出現 **改成跟專案一致**：它會把該項目
   重新儲存為不含 `targets` 的版本。
+- 分頁 Sync 框中的 **Sync MCP** 會寫入整份 MCP 計畫，並說明其中有多少變更不屬於
+  這個 project。專案頁面頂端的 **Sync project** 只會寫入這個 project 的 skills、
+  agents 與 MCP。
 - **預設值** 位於 MCP 頁面底部，用來編輯 `mcp.targets` 與
   `mcp.directTools`。
 
@@ -717,6 +721,9 @@ mcp:
 從指令列可以把 JSON 物件傳給 `mcp add` 或 `mcp edit`。它會取代整個
 `piOptions`，而 `{}` 會清除它。Dashboard 的 server 對話框中，**Direct tools**
 底下也有相同的輸入框，儲存前會檢查內容是否為 JSON 物件。
+有勾選 Pi 且設定了 **Direct tools** 或 **Other adapter settings** 的 server，該列會顯示
+一個圖示：滑鼠移上去可看到設定了哪些，點選則會開啟對話框。編輯時取消勾選 Pi，
+這兩項仍會保留在 source 中，因此重新勾選 Pi 就會恢復。
 
 ```bash
 skillshare mcp edit github --pi-options '{"excludeTools":["*emulator*"]}'

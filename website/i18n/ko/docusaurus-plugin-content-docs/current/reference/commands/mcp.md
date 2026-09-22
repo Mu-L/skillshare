@@ -197,8 +197,8 @@ JSON 항목은 파일 자체의 들여쓰기에 맞춰 필드마다 한 줄씩 �
 대시보드는 현재 scope와 호스트 플랫폼에서 사용 가능한 대상만 제공합니다. 각 서버는
 한 행이며, 오른쪽의 카운트 버튼은 해당 서버의 전체 client 목록을 엽니다. Global 전용
 client는 project mode에서 선택할 수 없습니다. 오른쪽의 **Sync** 박스는 아직 작성되지
-않은 변경 사항을 나열합니다: client를 체크하면 source만 편집되며, Sync 페이지에서
-확인한 후에 파일이 작성됩니다. 그 아래의 **Agents**는 이 머신에서 감지된 client를
+않은 변경 사항을 나열합니다: client를 체크하면 source만 편집됩니다. **Sync MCP**는 그
+변경 사항을 나열하고, 확인하면 MCP 설정 파일만 작성하며 각 파일의 백업을 남깁니다. 그 아래의 **Agents**는 이 머신에서 감지된 client를
 나열합니다. client의 MCP 파일이 존재하거나, 해당 client가 설정을 보관하는 폴더가
 존재하면 감지된 것으로 간주하므로, MCP 파일이 아직 없는 새 설치도 표시됩니다. project
 mode에서는 프로젝트에 MCP 파일이 있거나 client가 전역적으로 감지된 경우 나열됩니다.
@@ -543,6 +543,9 @@ Global mode에서는 대시보드에 **프로젝트** 페이지가 있습니다.
   프로젝트별 스위치가 없으면, 해당 행은 그 Agent에서는 서버가 여전히 로드된다고
   알려줍니다. 프로젝트의 target과 다른 자체 `targets`를 나열한 항목에는
   **프로젝트에 맞추기**가 표시되며, 이는 `targets` 없이 항목을 다시 저장합니다.
+- 탭의 Sync 박스에 있는 **Sync MCP**는 전체 MCP 계획을 작성하며, 그 변경 사항 중
+  몇 개가 이 프로젝트 밖에 있는지 알려줍니다. 프로젝트 페이지 상단의 **Sync project**는
+  이 프로젝트의 skill, agent, MCP만 작성합니다.
 - MCP 페이지 하단의 **기본값**은 `mcp.targets`와 `mcp.directTools`를 편집합니다.
 
 저장하면 변경한 프로젝트만 다시 씁니다. 다른 프로젝트는 anchor와 alias를 포함해
@@ -754,6 +757,10 @@ mcp:
 명령줄에서는 `mcp add` 또는 `mcp edit`에 JSON 객체를 전달하세요. 이 값은 `piOptions`
 전체를 대체하며, `{}`는 이를 비웁니다. 대시보드에서는 서버 대화 상자의 **Direct tools**
 아래에 동일한 입력란이 있으며, 저장하기 전에 입력한 텍스트가 JSON 객체인지 확인합니다.
+Pi에 체크되어 있고 **Direct tools** 또는 **Other adapter settings**가 설정된 서버는 행에
+아이콘이 표시됩니다: 마우스를 올리면 어떤 항목이 설정되었는지 보이고, 클릭하면 대화 상자가
+열립니다. 편집 중에 Pi 체크를 해제해도 두 값은 source에 유지되므로, Pi를 다시 체크하면
+되돌아옵니다.
 
 ```bash
 skillshare mcp edit github --pi-options '{"excludeTools":["*emulator*"]}'

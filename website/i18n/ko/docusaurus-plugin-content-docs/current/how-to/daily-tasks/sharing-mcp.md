@@ -51,7 +51,8 @@ MCP 제공자로부터 받은 URL이나 JSON을 붙여넣고, 이름을 지정�
 해당하는 기능입니다. 붙여넣은 JSON은 자동으로 인식되며, TOML의 경우 Codex에서 온 것인지 Grok에서
 온 것인지 선택해야 합니다. **Import from a target**은 별도 기능으로, 이미 설치된 Agent가 가진
 서버를 읽어옵니다. 어느 경우든 대시보드는 CLI와 동일한 소스, 검증, 미리보기, 충돌 규칙을
-사용합니다. Sync 페이지에는 Skill, Agent, 추가 항목, MCP를 위한 **Sync all resources**도 있습니다.
+사용합니다. MCP 페이지의 Sync 박스에 있는 **Sync MCP**는 MCP 설정 파일만 작성합니다.
+Sync 페이지에는 Skill, Agent, 추가 항목, MCP를 위한 **Sync all resources**도 있습니다.
 
 Config 편집기는 저장 시 두 칸 들여쓰기를 사용해 YAML을 포맷하며 주석을 보존합니다. 필드를
 클릭하면 `mcp`, `sources.mcp`, 연결 필드, 환경 변수 참조를 포함한 설명이 오른쪽 패널에

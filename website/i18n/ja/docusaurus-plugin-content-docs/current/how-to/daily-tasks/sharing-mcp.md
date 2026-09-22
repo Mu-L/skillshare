@@ -53,8 +53,9 @@ MCP プロバイダーから提供された URL または JSON を貼り付け�
 `mcp import --file` に相当します。貼り付けられた JSON は自動的に認識されます。TOML の場合は、
 Codex 由来か Grok 由来かを選択します。**Import from a target** は別の機能で、すでにインストールされて
 いる Agent が持つサーバーを読み込みます。いずれの方法でも、ダッシュボードは CLI と同じ source、検証、
-プレビュー、競合ルールを使用します。Sync ページには、skills、agents、extras、MCP をまとめて
-Sync するための **Sync all resources** もあります。
+プレビュー、競合ルールを使用します。MCP ページの Sync ボックスにある **Sync MCP** は、MCP の設定ファイルだけを
+書き込みます。Sync ページには、skills、agents、extras、MCP をまとめて Sync するための
+**Sync all resources** もあります。
 
 Config エディタは保存時に YAML を整形し、スペース2つのインデントを使い、コメントを保持します。
 フィールドをクリックすると、右パネルにその説明が表示されます。`mcp`、`sources.mcp`、接続フィールド、

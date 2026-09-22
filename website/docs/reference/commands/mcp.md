@@ -202,7 +202,8 @@ The dashboard only offers destinations available in the current scope and host
 platform. Each server is one row; the count button on the right opens the full
 client list for that server. Global-only clients cannot be selected in project mode.
 The **Sync** box on the right lists the changes not yet written: ticking a client
-only edits the source, and the files are written after you confirm on the Sync page.
+only edits the source. **Sync MCP** lists those changes and, after you confirm, writes
+only the MCP config files, keeping a backup of each.
 Below it, **Agents** lists the clients detected on this machine. A client counts as
 detected when its MCP file exists, or when the folder that client keeps its settings in
 exists, so a fresh install with no MCP file yet still appears. In project mode a client
@@ -549,6 +550,9 @@ project has an **MCP** tab.
   project's Agents has no per-project switch, the row says that the server still loads
   there. An entry that lists its own `targets`, which differ from the project's, gets
   **Match the project**: it saves the entry again without `targets`.
+- **Sync MCP** in the tab's Sync box writes the whole MCP plan, and says how many of
+  its changes are outside this project. **Sync project**, at the top of the project
+  page, writes only this project's skills, agents and MCP.
 - **Defaults**, at the bottom of the MCP page, edits `mcp.targets` and
   `mcp.directTools`.
 
@@ -759,6 +763,9 @@ mcp:
 From the command line, pass a JSON object to `mcp add` or `mcp edit`. It replaces the
 whole of `piOptions`, and `{}` clears it. The dashboard has the same box in the server
 dialog, under **Direct tools**, and checks that the text is a JSON object before saving.
+A server ticked for Pi with **Direct tools** or **Other adapter settings** set shows an
+icon in its row: hover it to see which are set, click it to open the dialog. Unticking
+Pi while editing keeps both in the source, so ticking Pi again brings them back.
 
 ```bash
 skillshare mcp edit github --pi-options '{"excludeTools":["*emulator*"]}'

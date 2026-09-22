@@ -90,12 +90,12 @@ skillshare ui start --clear-cache
 | **Sync** | 在寫入前預覽每個 target 的每項變更。選擇要包含的部分（Skills、Agents、Extras、MCP）。在 target 內編輯過的檔案，除非開啟 **Force**，否則會保留。只存在於 target 中的項目可以從這裡收集回 source。每次同步都會先備份 target 資料夾 |
 | **Git Sync** | Commit 並 push source repo、push 尚未在 remote 上的 commits，以及 pull。Pull 會同步 repo scope 所涵蓋的內容（`skills`、`agents`、`extras` 或 `root`），如同 [`pull`](/docs/reference/commands/pull)。當第一次 pull 無法與 remote 合併時，會提供強制 pull 以本機檔案取代 remote 分支 |
 | **Hubs** | 從 Skills 頁面進入。**Browse** 篩選 hub 並從中安裝；**My hubs** 從已安裝的 skills 組裝索引、驗證並匯出。參見 [`hub`](/docs/reference/commands/hub) |
-| **Skills** / **Agents** | 已安裝的項目、**Updates** 分頁與 **Trash** 分頁。Skills 還有一個 **Analyze** 分頁，用來估算每個 skill 為 target 的 context 增加多少 tokens。**Install** 可搜尋 GitHub，或從 URL 或路徑安裝。**+ New Skill** 開啟建立精靈。帶有 `disable-model-invocation: true` 的 skill 會在列表、其磚塊（tile）與詳細頁面上帶有 **manual only** 標籤，這與 [`list`](/docs/reference/commands/list) 中用 `M` 切換的狀態相同。在 skill 編輯器中，**Add field** 說明每個 frontmatter 欄位的作用 |
+| **Skills** / **Agents** | 已安裝的項目、**Updates** 分頁與 **Trash** 分頁。Skills 還有一個 **Analyze** 分頁，用來估算每個 skill 為 target 的 context 增加多少 tokens。**Install** 可搜尋 GitHub，或從 URL 或路徑安裝。**+ New Skill** 開啟建立精靈。帶有 `disable-model-invocation: true` 的 skill 會在列表、其磚塊（tile）與詳細頁面上帶有 **manual only** 標籤，這與 [`list`](/docs/reference/commands/list) 中用 `M` 切換的狀態相同。在 skill 編輯器中，**Add field** 說明每個 frontmatter 欄位的作用。**Sync skills** / **Sync agents** 會先預覽，再只把該類型同步到所有 targets；更新、解除安裝或 collect 之後，從 **Sync Now** 也會開啟同一個對話框 |
 | **Extras** | 與 skills 一同同步的 rules、commands 及其他資料夾 |
-| **MCP** | 每個 server 一列，並以切換開關顯示它同步至哪些 Agents。**新增伺服器** 接受 URL、指令、貼上的片段或檔案；**從 target 匯入** 讀取已安裝 Agent 目前的設定。每個 server 的選單都有 **檢視各 Agent 會寫入的設定**，可顯示各 Agent 的原生設定（含尚未儲存的編輯內容）。衝突時提供 **從該 Agent 匯入** 或 **以來源覆寫**，備份可在還原前先預覽。對於搭配 `pi-mcp-adapter` 的 Pi server，server 對話框還有 **Direct tools**，以及一個 **其他 adapter 設定** 欄位，以 JSON 填入 [`piOptions`](./mcp.md#pi-options)。**預設值** 用來編輯 `mcp.targets` 與 `mcp.directTools`。 |
+| **MCP** | 每個 server 一列，並以切換開關顯示它同步至哪些 Agents。**新增伺服器** 接受 URL、指令、貼上的片段或檔案；**從 target 匯入** 讀取已安裝 Agent 目前的設定。每個 server 的選單都有 **檢視各 Agent 會寫入的設定**，可顯示各 Agent 的原生設定（含尚未儲存的編輯內容）。衝突時提供 **從該 Agent 匯入** 或 **以來源覆寫**，備份可在還原前先預覽。對於搭配 `pi-mcp-adapter` 的 Pi server，server 對話框還有 **Direct tools**，以及一個 **其他 adapter 設定** 欄位，以 JSON 填入 [`piOptions`](./mcp.md#pi-options)。**預設值** 用來編輯 `mcp.targets` 與 `mcp.directTools`。Sync 框中的 **Sync MCP** 會列出待寫入的變更，只寫入 MCP 設定檔，並為每個檔案保留備份。 |
 | **Plugins** | 每個 plugin 一列，並以其 Agents 作為切換開關。展開一列還會列出來源支援的其他 Agents；勾選其中之一即可預覽安裝內容。列選單可以同步、更新、移除，或開啟 **View files**，也就是唯讀瀏覽 Skillshare 已檢視過的本機副本。參見 [跨工具管理 plugins](/docs/how-to/daily-tasks/sharing-plugins) |
 | **Targets** | 附帶狀態的 target 列表。**新增目標** 也接受 **另一個帳號**：你已在使用的某個 Agent 的第二個 config 資料夾，並會預覽它寫入的位置。每個 target 的頁面可編輯 include/exclude 篩選條件，並將僅存於本機的 skills 收集回 source |
-| **Projects** | 僅限 global mode。global config 會同步進去的 project 資料夾，來自 [`projects`](/docs/reference/targets/configuration#projects) 與 [`mcp.projects`](./mcp.md#projects-in-the-dashboard)。**新增專案** 會要求填入資料夾、它的 targets，以及要同步的內容。每個 project 都有 **Skills** 與 **Agents** 分頁，附帶篩選條件、預覽畫面與會被寫入的資料夾，還有一個 **MCP** 分頁可在該資料夾中關閉 global servers 或給它專屬的 servers。已經指向某個 project 資料夾的 target 可以被轉換 |
+| **Projects** | 僅限 global mode。global config 會同步進去的 project 資料夾，來自 [`projects`](/docs/reference/targets/configuration#projects) 與 [`mcp.projects`](./mcp.md#projects-in-the-dashboard)。**新增專案** 會要求填入資料夾、它的 targets，以及要同步的內容。每個 project 都有 **Skills** 與 **Agents** 分頁，附帶篩選條件、預覽畫面與會被寫入的資料夾，還有一個 **MCP** 分頁可在該資料夾中關閉 global servers 或給它專屬的 servers。**Sync project** 會先預覽，再只同步該 project 的 skills、agents 與 MCP。已經指向某個 project 資料夾的 target 可以被轉換 |
 | **Audit** | 對 skills 與 agents 進行安全掃描，依嚴重程度列出發現項目。**Rules** 分頁可依分類瀏覽每一項規則：關閉某項、變更其嚴重程度、對整個分類套用嚴重程度、選擇掃描設定檔（`default`、`strict`、`permissive`），或開啟編輯器自訂 `audit-rules.yaml` |
 | **Settings** | 分頁式：**General**（source 路徑、同步模式、外觀）、**Backup**（快照與還原）、**Log**（操作歷史）、**Health**（與 [`doctor`](/docs/reference/commands/doctor) 相同的檢查）、**Extensions**（同步時的檔案轉換）、**Files**（直接編輯 `config.yaml`、`.skillignore` 與 `.agentignore`） |
 
@@ -153,7 +153,7 @@ Web dashboard 在 `/api/` 上提供 REST API。所有端點皆回傳 JSON。
 | GET | `/api/targets` | 列出 targets 及其狀態、include/exclude 篩選條件，以及每個 target 的預期數量 |
 | POST | `/api/targets` | 新增一個 target |
 | DELETE | `/api/targets/{name}` | 移除一個 target |
-| POST | `/api/sync` | 執行同步（支援 `dryRun`、`force`、`kind`）。除非設定 `dryRun`，否則會先備份 targets |
+| POST | `/api/sync` | 執行同步（支援 `dryRun`、`force`、`kind`，以及 `project`：一個已宣告的 project 根目錄，會把同步範圍限定在該 project 的 targets）。除非設定 `dryRun`，否則會先備份 targets |
 | POST | `/api/git/commit` | 從 source repo 建立本機 git commit，但不 push |
 | GET | `/api/git/status` | Source repo 狀態，包含尚未 push 的 commits（`ahead`） |
 | POST | `/api/push` | Commit 所有變更後再 push。首次 push 時會設定 upstream |

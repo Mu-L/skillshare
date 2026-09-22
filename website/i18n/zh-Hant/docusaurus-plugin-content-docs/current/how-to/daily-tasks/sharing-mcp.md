@@ -49,8 +49,8 @@ skillshare mcp add
 貼上這一側也支援載入檔案，等同於瀏覽器版的 `mcp import --file`。貼上的 JSON 會自動被辨識；
 若是 TOML，則需選擇它來自 Codex 還是 Grok。**Import from a target** 是另一個獨立功能，
 會讀取已安裝的 Agent 目前已有的伺服器設定。無論哪種方式，dashboard 都使用與 CLI 相同的來源、
-驗證、預覽與衝突規則。Sync 頁面也提供 **Sync all resources**，可同步 Skills、agents、
-extras 與 MCP。
+驗證、預覽與衝突規則。MCP 頁面 Sync 框中的 **Sync MCP** 只會寫入 MCP 設定檔。
+Sync 頁面也提供 **Sync all resources**，可同步 Skills、agents、extras 與 MCP。
 
 儲存時 Config 編輯器會以兩個空格縮排格式化 YAML，並保留註解。點選某個欄位即可在右側面板
 看到其說明，包括 `mcp`、`sources.mcp`、連線欄位與環境變數參照。
