@@ -1,46 +1,24 @@
 # Changelog
 
-## [0.21.5] - 2026-09-22
+## [0.21.6] - 2026-09-23
 
 ### New Features
 
 #### Targets
 
-- **Another account of Claude Code, Codex or Pi** — if you run a second account of an Agent from its own config folder, such as Claude Code with `CLAUDE_CONFIG_DIR=~/.claude-work`, add that folder as a target and Skillshare works out the skills and agents paths from it:
-  ```bash
-  skillshare target add claude-work --agent claude --config-dir ~/.claude-work
-  ```
-  In `config.yaml`, the target only records `agent` and `config_dir`. The same name works as an MCP target, as a plugin target and with `mcp import --from`, so one sync reaches the skills, agents and MCP servers of every account. In the dashboard, **Add target** has an **Another account** mode, and the MCP and Plugins pages list accounts next to the Agents. Removing such a target warns when MCP config still names it. Refs: #289.
+- **MCP servers on each target's page** — a target whose Agent has an MCP config file now has an **MCP** tab with one row per server: its endpoint, whether this Agent gets it, and whether a change is waiting to be synced. Clicking a row adds the server to that Agent or takes it out, saved right away. As on the MCP page, this only changes the source; **Sync all targets** then writes the MCP files of every target at once. Adding and importing servers, resolving conflicts and restoring backups stay on the MCP page. The Targets list also counts the MCP servers each Agent gets, next to its skills.
+- **A project's MCP on its targets in project mode** — with `skillshare ui -p`, the tab lists the project's servers, which go to its own files such as `.mcp.json`. For Claude Code, OpenCode, Kilo Code and Pi, it also lists the switches that turn a global server off in this project.
 
 #### Sync
 
-- **Sync from the page you are on** — the Skills, Agents and MCP pages each have their own sync button, which previews and writes only that part in a dialog. The **Go to Sync** spots after an update, uninstall or collect open the same dialog instead of leaving the page. Refs: #289.
-- **Sync one project** — **Sync project** on a project's page previews and writes just that project's skills, agents and MCP, leaving global targets and other projects alone. Refs: #289.
-
-#### MCP connections
-
-- **Stop managing a server without touching the Agent files** — removing a server always cleared its entries from the Agent config files on the next sync, so there was no way to hand a server back to the Agent. **Stop managing** in the remove dialog drops it from Skillshare and leaves the files as they are; sync leaves those entries alone from then on. In the terminal:
-  ```bash
-  skillshare mcp remove context7 --keep-files
-  ```
-  Refs: #290.
-- **See servers Skillshare does not manage yet** — servers added to an Agent directly never showed up in the dashboard. The MCP page and each project's MCP tab now say which Agent files hold them, such as **Found 2 servers not managed by skillshare in Cursor**, and **Import** opens on that file. A project's import reads the file in that project's folder. Refs: #290.
-- **Pi adapter settings on the server row** — a server sent to Pi with **Direct tools** or other `pi-mcp-adapter` settings shows them on a line under its endpoint, so you can check them without opening **Edit**. Other adapter settings only say that they are set, since they may hold anything. Refs: #289.
+- **MCP and project sync dialogs look like the Skills one** — the dialogs behind **Sync MCP** and **Sync project** show one row per target instead of one line per item, as the Skills sync dialog does. An MCP row names the project of the Agent file and the servers that change, with counts such as **1 to add** or **1 to turn off**. **Sync project** still says which MCP entry is in conflict and why. The Sync page keeps the item-by-item list.
 
 ### Bug Fixes
 
 #### MCP connections
 
-- **Pi adapter settings survive unticking Pi** — unticking every Agent dropped **Direct tools** and the other adapter settings from the source, so ticking Pi again brought the server back with the adapter reset. They now stay until the adapter itself is changed. Refs: #289.
-- **Import from an Agent works for a project's conflict** — on a conflict in a project's file, **Import from** read the Agent's global file and imported into the global source, so the project's own entry could not be taken over there. It now reads that project's file and imports into the project. Refs: #290.
-
-#### Dashboard
-
-- **A skill or agent's page lists its project targets** — the Skills and Agents lists counted project targets, but the detail page showed only global ones, so the two disagreed. The detail page now lists each project the resource syncs to, with a link to it.
-
-#### CLI
-
-- **Global errors say they are global** — when the global source folder was missing, `skillshare ui` said to run `skillshare init`, which only answered that Skillshare is already initialized. The error now says the global source folder is missing, names the config file, and suggests `mkdir -p` on that folder or pointing `sources.skills` at an existing one. The other global `init` and `ui` errors also say "global" and name the config file.
+- **Quick clicks on Agent toggles no longer undo each other** — ticking two Agents in quick succession on the MCP page or a project's MCP tab could fail with an error and untick the first one again. Each toggle now waits until the previous one is saved.
+- **Turning a server off in a project for another Agent is saved** — on the MCP page of `skillshare ui -p`, ticking an Agent on a server that is off in this project also listed the project's other Agents, including ones that cannot turn a server off, such as Cursor, so the save was refused. Only Agents that can turn a server off in a project are listed now.
 
 ## [0.21.5] - 2026-09-22
 
