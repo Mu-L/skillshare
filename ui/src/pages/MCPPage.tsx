@@ -238,7 +238,7 @@ export default function MCPPage() {
           )}
           <MCPUnmanagedNote entries={data.unmanaged.filter((u) => !u.project)} onImport={(from) => setImporting({ from })} />
           {rows.length > 0 ? (
-            <MCPServerList rows={rows} targets={order.filter((x) => matrixTargets.has(x))} targetsOf={targetsOf} onToggle={(n, x, on) => void toggle(n, x, on)} onMenu={openMenu} onEdit={(n) => { setPiSetupName(null); setEditing(n); }} />
+            <MCPServerList rows={rows} targets={order.filter((x) => matrixTargets.has(x))} targetsOf={targetsOf} onToggle={(n, x, on) => void toggle(n, x, on)} onMenu={openMenu} />
           ) : (
             <EmptyState
               icon={Plug}

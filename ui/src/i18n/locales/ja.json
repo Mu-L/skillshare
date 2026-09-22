@@ -1658,8 +1658,6 @@
   "mcp.piOptionsHint": "Skillshare に設定項目がない pi-mcp-adapter のフィールドを JSON オブジェクトで指定します（例: excludeTools）。内容はそのまま Pi のファイルに書き込まれるため、シークレットは入れないでください。ここで削除したフィールドは Pi のファイルに残るので、そちらで削除してください。",
   "mcp.piOptionsInvalid": "JSON オブジェクトを入力してください。",
   "mcp.piOptionsTaken": "{field} は Skillshare がこのサーバー自身の設定から書き込みます。ここからは削除してください。",
-  "mcp.piOptionsSet": "設定あり",
-  "mcp.piSettingsLabel": "{name} の Pi アダプター設定",
   "mcp.defaults": "デフォルト",
   "mcp.defaults.targetsHint": "自分で target を選んでいないサーバーは、これらの Agent に同期されます。",
   "mcp.defaults.directToolsHint": "独自の設定がない pi-mcp-adapter のサーバーに適用されます。プロジェクトごとに上書きできます。",

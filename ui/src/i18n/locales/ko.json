@@ -1658,8 +1658,6 @@
   "mcp.piOptionsHint": "Skillshare에 설정 항목이 없는 pi-mcp-adapter 필드를 JSON 객체로 입력합니다(예: excludeTools). 내용은 그대로 Pi 파일에 기록되므로 비밀 값은 넣지 마세요. 여기서 제거한 필드는 Pi 파일에 남으므로 그쪽에서 직접 삭제해야 합니다.",
   "mcp.piOptionsInvalid": "JSON 객체를 입력하세요.",
   "mcp.piOptionsTaken": "{field}은(는) Skillshare가 이 서버의 자체 설정으로 기록합니다. 여기서는 제거하세요.",
-  "mcp.piOptionsSet": "설정됨",
-  "mcp.piSettingsLabel": "{name}의 Pi 어댑터 설정",
   "mcp.defaults": "기본값",
   "mcp.defaults.targetsHint": "target을 직접 고르지 않은 서버는 이 Agent들에 동기화됩니다.",
   "mcp.defaults.directToolsHint": "자체 설정이 없는 pi-mcp-adapter 서버에 적용됩니다. 프로젝트에서 재정의할 수 있습니다.",

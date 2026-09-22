@@ -192,7 +192,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
             <Button size="sm" variant="secondary" onClick={() => { setAddingOff(false); setAddMode('form'); setEditing(''); }}><Plus size={14} />{t('mcp.addServer')}</Button>
           </div>
           {ownRows.length > 0
-            ? <MCPServerList rows={ownRows} targets={shown} targetsOf={targetsOf} offTargets={offTargets} onToggle={toggleOwn} onMenu={openMenu} onEdit={setEditing} />
+            ? <MCPServerList rows={ownRows} targets={shown} targetsOf={targetsOf} offTargets={offTargets} onToggle={toggleOwn} onMenu={openMenu} />
             : <p className="text-[13px] text-ink-3">{t('mcp.projects.noOnlyHere')}</p>}
         </section>
         <Button className="flush mt-6 self-start" size="sm" variant="ghost" onClick={() => setDropping(true)}><Trash2 size={14} />{t('projects.mcp.stop')}</Button>

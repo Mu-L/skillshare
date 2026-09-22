@@ -1658,8 +1658,6 @@
   "mcp.piOptionsHint": "A JSON object of pi-mcp-adapter fields Skillshare has no setting for, such as excludeTools. It is written into Pi's file as it is, so keep secrets out of it. A field you remove here stays in Pi's file until you delete it there.",
   "mcp.piOptionsInvalid": "Enter a JSON object.",
   "mcp.piOptionsTaken": "Skillshare writes {field} from this server's own settings. Remove it here.",
-  "mcp.piOptionsSet": "Set",
-  "mcp.piSettingsLabel": "Pi adapter settings for {name}",
   "mcp.defaults": "Defaults",
   "mcp.defaults.targetsHint": "Servers that pick no target of their own sync to these Agents.",
   "mcp.defaults.directToolsHint": "Applies to pi-mcp-adapter servers without their own setting. A project can override it.",

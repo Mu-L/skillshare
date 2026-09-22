@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
-import { Ellipsis, Plug, SlidersHorizontal } from 'lucide-react';
+import { Ellipsis, Plug } from 'lucide-react';
 import { useT } from '../../i18n';
-import Tooltip from '../Tooltip';
+import AgentIcon from '../AgentIcon';
 import { mcpOffTargets } from '../../api/mcp';
 import { describeEndpoint, type MatrixRow } from './mcpView';
 import { TargetPill, TargetToggles } from './TargetPicker';
@@ -13,8 +13,6 @@ interface Props {
   targetsOf: (name: string) => string[];
   onToggle: (name: string, target: string, on: boolean) => void;
   onMenu: (e: React.MouseEvent<HTMLButtonElement>, name: string) => void;
-  /** Opens the server's edit dialog, where the Pi settings live. */
-  onEdit?: (name: string) => void;
   /** Agents a switch-only entry can go to. mcp.projects cannot reach Claude's off list. */
   offTargets?: readonly string[];
 }
@@ -23,7 +21,7 @@ interface Props {
  * One row per server. The agents it writes to are chips inside the row, not columns:
  * the list grows downwards as more CLIs gain MCP support, so it never scrolls sideways.
  */
-export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMenu, onEdit, offTargets = mcpOffTargets }: Props) {
+export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMenu, offTargets = mcpOffTargets }: Props) {
   const t = useT();
   const [open, setOpen] = useState<string[]>([]);
   const directToolsLabel = useDirectToolsLabel();
@@ -52,26 +50,18 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
                 </span>
                 {/* Transport and endpoint on one quiet line, the same shape as a plugin row. */}
                 <span className="truncate text-xs text-ink-3">{!row.server ? t('mcp.removedHint') : row.server.disabled ? t('mcp.offHere') : <>{http ? 'http' : 'stdio'} · <span className="font-mono">{describeEndpoint(row.server)}</span></>}</span>
+                {/* Only whether other Pi settings exist, never their contents: piOptions may hold anything. */}
+                {piSettings && (
+                  <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs text-ink-2">
+                    <AgentIcon target="pi" size={12} />
+                    {direct !== undefined && <><span className="text-ink-3">{t('mcp.directTools')}</span><span className={`truncate ${Array.isArray(direct) ? 'font-mono' : ''}`} title={directToolsLabel(direct)}>{directToolsLabel(direct)}</span></>}
+                    {direct !== undefined && piOptions && <span className="text-ink-3">·</span>}
+                    {piOptions && <span>{t('mcp.piOptions')}</span>}
+                  </span>
+                )}
               </span>
               {row.server && (
                 <>
-                  {/* Only which Pi settings exist, never their contents: piOptions may hold anything. */}
-                  {piSettings && (
-                    <Tooltip
-                      block
-                      content={
-                        <span className="flex flex-col gap-1">
-                          <span className="font-semibold">Pi · pi-mcp-adapter</span>
-                          {direct !== undefined && <span>{t('mcp.directTools')}: {directToolsLabel(direct)}</span>}
-                          {piOptions && <span>{t('mcp.piOptions')}: {t('mcp.piOptionsSet')}</span>}
-                        </span>
-                      }
-                    >
-                      <button type="button" className="ss-ib" aria-label={t('mcp.piSettingsLabel', { name: row.name })} onClick={() => onEdit?.(row.name)}>
-                        <SlidersHorizontal size={16} />
-                      </button>
-                    </Tooltip>
-                  )}
                   <TargetPill selected={selected} text={`${selected.length}/${offered.length}`} expanded={expanded} label={t('mcp.chooseAgents', { name: row.name })} onClick={() => setOpen((prev) => (expanded ? prev.filter((x) => x !== row.name) : [...prev, row.name]))} />
                   <button type="button" className="ss-ib" aria-label={t('mcp.moreActions', { name: row.name })} onClick={(e) => onMenu(e, row.name)}>
                     <Ellipsis size={16} />

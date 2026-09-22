@@ -1658,8 +1658,6 @@
   "mcp.piOptionsHint": "Um objeto JSON com campos do pi-mcp-adapter para os quais o Skillshare não tem configuração, como excludeTools. Ele é gravado como está no arquivo do Pi, então não inclua segredos. Um campo removido aqui permanece no arquivo do Pi até você apagá-lo lá.",
   "mcp.piOptionsInvalid": "Informe um objeto JSON.",
   "mcp.piOptionsTaken": "O Skillshare grava {field} a partir das configurações próprias deste servidor. Remova-o daqui.",
-  "mcp.piOptionsSet": "Definido",
-  "mcp.piSettingsLabel": "Configurações do adaptador do Pi para {name}",
   "mcp.defaults": "Padrões",
   "mcp.defaults.targetsHint": "Servidores que não escolhem um target próprio são sincronizados com estes Agents.",
   "mcp.defaults.directToolsHint": "Vale para servidores pi-mcp-adapter sem configuração própria. Um projeto pode sobrescrever.",

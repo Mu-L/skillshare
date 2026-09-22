@@ -1658,8 +1658,6 @@
   "mcp.piOptionsHint": "用 JSON 物件填 Skillshare 沒有對應欄位的 pi-mcp-adapter 設定，例如 excludeTools。內容會原樣寫進 Pi 的檔案，請不要放密鑰。在這裡拿掉的欄位會留在 Pi 的檔案裡，要到那邊自己刪除。",
   "mcp.piOptionsInvalid": "請輸入 JSON 物件。",
   "mcp.piOptionsTaken": "{field} 由 Skillshare 依這個伺服器自己的設定寫入，請從這裡移除。",
-  "mcp.piOptionsSet": "已設定",
-  "mcp.piSettingsLabel": "{name} 的 Pi 轉接器設定",
   "mcp.defaults": "預設值",
   "mcp.defaults.targetsHint": "伺服器沒有自己選 target 時，同步到這些 Agent。",
   "mcp.defaults.directToolsHint": "套用到沒有自己設定的 pi-mcp-adapter 伺服器。專案可以各自覆寫。",
