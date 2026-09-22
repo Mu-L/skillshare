@@ -504,7 +504,8 @@ Agent ファイルがすでに使っている名前でサーバーを追加し�
 
 - その Agent からインポートする: `skillshare mcp import NAME --from CLIENT`、またはダッシュボードの
   競合にある **Import from** ボタン（**Import from Cursor** など）。source と一致するエントリはそのまま
-  採用されます。
+  採用されます。`mcp.projects` 配下のフォルダーでの競合では、ボタンはそのフォルダーのファイルを読み込み、
+  その project にインポートします。
 - source の定義で置き換える: ダッシュボードの **Replace with source**、またはインポート時の `--replace`。
 
 ## 安全性と制限事項

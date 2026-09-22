@@ -567,7 +567,8 @@ dashboard 會讀取目前範圍的 Agent 設定檔，以及 `mcp.projects` 底�
 衝突 `existing entry is not managed`，並在你為該項目做出選擇前不寫入任何檔案：
 
 - 從該 Agent 匯入：`skillshare mcp import NAME --from CLIENT`，或 dashboard 中該衝突的
-  **Import from** 按鈕，例如 **Import from Cursor**。與 source 相符的項目會直接被採用。
+  **Import from** 按鈕，例如 **Import from Cursor**。與 source 相符的項目會直接被採用。若 conflict 位於
+  `mcp.projects` 底下的資料夾，按鈕會讀取該資料夾的檔案，並匯入到那個 project。
 - 以 source 定義取代它：dashboard 中的 **Replace with source**，或匯入時加上
   `--replace`。
 
@@ -758,8 +759,8 @@ mcp:
 從指令列可以把 JSON 物件傳給 `mcp add` 或 `mcp edit`。它會取代整個
 `piOptions`，而 `{}` 會清除它。Dashboard 的 server 對話框中，**Direct tools**
 底下也有相同的輸入框，儲存前會檢查內容是否為 JSON 物件。
-有勾選 Pi 且設定了 **Direct tools** 或 **Other adapter settings** 的 server，該列會顯示
-一個圖示：滑鼠移上去可看到設定了哪些，點選則會開啟對話框。編輯時取消勾選 Pi，
+有勾選 Pi 且設定了 **Direct tools** 或 **Other adapter settings** 的 server，會在該列
+端點下方多一行顯示這些設定；其他 adapter 設定只會標示已設定，不顯示內容。編輯時取消勾選 Pi，
 這兩項仍會保留在 source 中，因此重新勾選 Pi 就會恢復。
 
 ```bash

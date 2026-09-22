@@ -598,7 +598,8 @@ server，反之亦然。若要重新管理某个条目，请 import 它。
 不会写入任何文件：
 
 - 从该 Agent 导入：`skillshare mcp import NAME --from CLIENT`，或仪表盘中该冲突的
-  **Import from** 按钮，例如 **Import from Cursor**。与 source 相符的条目会按原样被接管。
+  **Import from** 按钮，例如 **Import from Cursor**。与 source 相符的条目会按原样被接管。若 conflict 位于
+  `mcp.projects` 下的文件夹，按钮会读取该文件夹的文件，并导入到那个 project。
 - 用 source 定义替换它：仪表盘中的 **Replace with source**，或在 import 时使用
   `--replace`。
 

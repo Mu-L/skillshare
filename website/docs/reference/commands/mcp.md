@@ -612,7 +612,8 @@ and writes no files until you choose for that entry:
 
 - Import it from that Agent: `skillshare mcp import NAME --from CLIENT`, or the
   conflict's **Import from** button in the dashboard, such as **Import from Cursor**.
-  An entry that matches the source is adopted as it is.
+  An entry that matches the source is adopted as it is. For a conflict in a folder under
+  `mcp.projects`, the button reads that folder's file and imports into that project.
 - Replace it with the source definition: **Replace with source** in the dashboard, or
   `--replace` on import.
 
@@ -806,8 +807,8 @@ mcp:
 From the command line, pass a JSON object to `mcp add` or `mcp edit`. It replaces the
 whole of `piOptions`, and `{}` clears it. The dashboard has the same box in the server
 dialog, under **Direct tools**, and checks that the text is a JSON object before saving.
-A server ticked for Pi with **Direct tools** or **Other adapter settings** set shows an
-icon in its row: hover it to see which are set, click it to open the dialog. Unticking
+A server ticked for Pi with **Direct tools** or **Other adapter settings** set shows them
+on a line under its endpoint; other adapter settings only say that they are set. Unticking
 Pi while editing keeps both in the source, so ticking Pi again brings them back.
 
 ```bash

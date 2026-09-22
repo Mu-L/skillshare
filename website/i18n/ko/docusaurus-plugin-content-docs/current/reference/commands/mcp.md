@@ -602,7 +602,8 @@ plan은 `existing entry is not managed` 충돌을 보고하고, 그 항목에 �
 
 - 그 Agent에서 import: `skillshare mcp import NAME --from CLIENT`, 또는 대시보드에서
   충돌의 **Import from** 버튼(예: **Import from Cursor**). source와 일치하는 항목은
-  그대로 채택됩니다.
+  그대로 채택됩니다. `mcp.projects` 아래 폴더의 충돌이라면 버튼은 그 폴더의 파일을 읽고
+  해당 project로 가져옵니다.
 - source 정의로 교체: 대시보드의 **Replace with source**, 또는 import의 `--replace`.
 
 ## Safety and limitations
