@@ -19,6 +19,7 @@ vi.mock('../api/client', async (importOriginal) => {
       updateAllStream: vi.fn(),
       missingTrackedRepos: vi.fn(),
       rehydrateTrackedRepos: vi.fn(),
+      sync: vi.fn().mockResolvedValue({ results: [] }),
     },
   };
 });
@@ -199,6 +200,28 @@ describe('UpdatePage', () => {
 
     await waitFor(() => expect(row.getByText('Updated')).toBeInTheDocument());
     expect(row.getByText('Up to date')).toBeInTheDocument();
+  });
+
+  it('syncs the updated kind in place after an update', async () => {
+    const updatedResult = { name: 'tools/agent-browser', action: 'updated', message: '', isRepo: false };
+    vi.mocked(api.listSkills).mockResolvedValue({ resources: [nestedSkill] });
+    cacheStatus('agent-browser', 'update-available');
+    vi.mocked(api.updateAllStream).mockImplementation((onStart, onResult, onDone) => {
+      queueMicrotask(() => {
+        onStart(1);
+        onResult(updatedResult);
+        onDone({ results: [updatedResult], summary: { updated: 1, upToDate: 0, blocked: 0, errors: 0, skipped: 0 } });
+      });
+      return { close: vi.fn() } as unknown as EventSource;
+    });
+
+    const user = userEvent.setup();
+    renderUpdatePage();
+    const row = await findRow('agent-browser');
+    await user.click(row.getByRole('button', { name: /^update$/i }));
+    await user.click(await screen.findByRole('button', { name: 'Sync Now' }));
+
+    await waitFor(() => expect(api.sync).toHaveBeenCalledWith({ dryRun: true, kind: 'skill' }));
   });
 
   it('warns about missing tracked repos and rehydrates on click (issue #212)', async () => {

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDownToLine, Bot, CircleCheck, CircleMinus, CircleX, Puzzle, RefreshCw, X } from 'lucide-react';
 import { api, type LocalSkillInfo } from '../api/client';
@@ -13,6 +12,7 @@ import DialogShell from './DialogShell';
 import { Checkbox } from './Input';
 import SegmentedControl from './SegmentedControl';
 import Spinner from './Spinner';
+import SyncPreviewModal from './SyncPreviewModal';
 
 type Kind = 'skill' | 'agent';
 type Outcome = { item: LocalSkillInfo; outcome: 'pulled' | 'skipped' | 'failed'; error?: string };
@@ -26,13 +26,13 @@ const KindMark = ({ kind }: { kind?: string }) => (
 /** Moves skills and agents created inside targets into the source. Without `target` it scans every target. */
 export default function CollectDialog({ target, kind, onClose }: { target?: string; kind?: Kind; onClose: () => void }) {
   const t = useT();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [scope, setScope] = useState<Kind | 'both'>(kind ?? 'both');
   const [picked, setPicked] = useState<Set<string> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [results, setResults] = useState<Outcome[] | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const scan = useQuery({
     queryKey: [...queryKeys.collectScan(target), scope],
@@ -81,6 +81,9 @@ export default function CollectDialog({ target, kind, onClose }: { target?: stri
     }
   };
 
+  // Replaces the results dialog rather than stacking a second one on top.
+  if (syncing) return <SyncPreviewModal open onClose={onClose} kind={kind} />;
+
   if (results) {
     const count = (o: Outcome['outcome']) => results.filter((r) => r.outcome === o).length;
     const pulled = count('pulled');
@@ -110,7 +113,7 @@ export default function CollectDialog({ target, kind, onClose }: { target?: stri
         </div>
         <div className="df">
           <Button variant="ghost" onClick={onClose}>{t('common.close')}</Button>
-          {pulled > 0 && <Button variant="primary" onClick={() => { onClose(); navigate('/sync'); }}><RefreshCw size={15} />{t('collectDialog.goToSync')}</Button>}
+          {pulled > 0 && <Button variant="primary" onClick={() => setSyncing(true)}><RefreshCw size={15} />{t('syncPreview.syncNowButton')}</Button>}
         </div>
       </DialogShell>
     );

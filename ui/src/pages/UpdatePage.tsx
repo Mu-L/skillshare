@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bot, CircleAlert, CircleArrowUp, CircleCheck, FolderX, GitBranch, Loader2, Puzzle, RefreshCw, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
@@ -12,6 +11,7 @@ import { formatRelativeTime, useI18n, useT } from '../i18n';
 import Button from '../components/Button';
 import { Checkbox } from '../components/Checkbox';
 import EmptyState from '../components/EmptyState';
+import SyncPreviewModal from '../components/SyncPreviewModal';
 import { useToast } from '../components/Toast';
 
 /* -- Types ---------------------------------------- */
@@ -116,7 +116,6 @@ export function countUpdates(statuses: CheckStatuses, units: UpdateUnit[]) {
 export default function UpdatePage({ kind }: { kind: Kind }) {
   const t = useT();
   const { locale } = useI18n();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -146,6 +145,7 @@ export default function UpdatePage({ kind }: { kind: Kind }) {
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
   const [rehydrating, setRehydrating] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => () => esRef.current?.close(), []);
@@ -471,7 +471,7 @@ export default function UpdatePage({ kind }: { kind: Kind }) {
             {tally.success > 0 && <div>{t('update.done.syncHint')}</div>}
           </div>
           {tally.success > 0 && (
-            <Button variant="secondary" size="sm" onClick={() => navigate('/sync')}>{t('batchUninstall.results.goToSync')}</Button>
+            <Button variant="secondary" size="sm" onClick={() => setSyncOpen(true)}><RefreshCw size={14} />{t('syncPreview.syncNowButton')}</Button>
           )}
         </div>
       )}
@@ -535,6 +535,7 @@ export default function UpdatePage({ kind }: { kind: Kind }) {
           {troubled && <p className="text-[13px] text-ink-3">{t('update.tab.footer')}</p>}
         </div>
       )}
+      <SyncPreviewModal open={syncOpen} onClose={() => setSyncOpen(false)} kind={kind} />
     </>
   );
 }

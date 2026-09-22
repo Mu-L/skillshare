@@ -1,9 +1,11 @@
 import { Fragment, useState } from 'react';
-import { Ellipsis, Plug } from 'lucide-react';
+import { Ellipsis, Plug, SlidersHorizontal } from 'lucide-react';
 import { useT } from '../../i18n';
+import Tooltip from '../Tooltip';
 import { mcpOffTargets } from '../../api/mcp';
 import { describeEndpoint, type MatrixRow } from './mcpView';
 import { TargetPill, TargetToggles } from './TargetPicker';
+import { useDirectToolsLabel } from './MCPProjectSettings';
 
 interface Props {
   rows: MatrixRow[];
@@ -11,6 +13,8 @@ interface Props {
   targetsOf: (name: string) => string[];
   onToggle: (name: string, target: string, on: boolean) => void;
   onMenu: (e: React.MouseEvent<HTMLButtonElement>, name: string) => void;
+  /** Opens the server's edit dialog, where the Pi settings live. */
+  onEdit?: (name: string) => void;
   /** Agents a switch-only entry can go to. mcp.projects cannot reach Claude's off list. */
   offTargets?: readonly string[];
 }
@@ -19,9 +23,10 @@ interface Props {
  * One row per server. The agents it writes to are chips inside the row, not columns:
  * the list grows downwards as more CLIs gain MCP support, so it never scrolls sideways.
  */
-export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMenu, offTargets = mcpOffTargets }: Props) {
+export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMenu, onEdit, offTargets = mcpOffTargets }: Props) {
   const t = useT();
   const [open, setOpen] = useState<string[]>([]);
+  const directToolsLabel = useDirectToolsLabel();
 
   return (
     <div className="ss-list">
@@ -31,6 +36,9 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
         const selected = row.server ? targetsOf(row.name).filter((x) => offered.includes(x)) : [];
         const expanded = open.includes(row.name);
         const http = Boolean(row.server?.url);
+        const direct = row.server?.directTools;
+        const piOptions = Object.keys(row.server?.piOptions ?? {}).length > 0;
+        const piSettings = row.server?.piExtension === 'pi-mcp-adapter' && selected.includes('pi') && (direct !== undefined || piOptions);
         return (
           <Fragment key={row.name}>
             <div className="ss-r">
@@ -47,6 +55,23 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
               </span>
               {row.server && (
                 <>
+                  {/* Only which Pi settings exist, never their contents: piOptions may hold anything. */}
+                  {piSettings && (
+                    <Tooltip
+                      block
+                      content={
+                        <span className="flex flex-col gap-1">
+                          <span className="font-semibold">Pi · pi-mcp-adapter</span>
+                          {direct !== undefined && <span>{t('mcp.directTools')}: {directToolsLabel(direct)}</span>}
+                          {piOptions && <span>{t('mcp.piOptions')}: {t('mcp.piOptionsSet')}</span>}
+                        </span>
+                      }
+                    >
+                      <button type="button" className="ss-ib" aria-label={t('mcp.piSettingsLabel', { name: row.name })} onClick={() => onEdit?.(row.name)}>
+                        <SlidersHorizontal size={16} />
+                      </button>
+                    </Tooltip>
+                  )}
                   <TargetPill selected={selected} text={`${selected.length}/${offered.length}`} expanded={expanded} label={t('mcp.chooseAgents', { name: row.name })} onClick={() => setOpen((prev) => (expanded ? prev.filter((x) => x !== row.name) : [...prev, row.name]))} />
                   <button type="button" className="ss-ib" aria-label={t('mcp.moreActions', { name: row.name })} onClick={(e) => onMenu(e, row.name)}>
                     <Ellipsis size={16} />

@@ -21,4 +21,5 @@ export function formatSyncToast(results: SyncResult[]): string {
 export function invalidateAfterSync(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: queryKeys.targets.all });
   queryClient.invalidateQueries({ queryKey: queryKeys.overview });
+  queryClient.invalidateQueries({ queryKey: queryKeys.diff() });
 }

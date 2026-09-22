@@ -186,7 +186,7 @@ export default function MCPPage() {
 
       {data && (
         <RailLayout rail={<>
-          {data.plan && (rows.length > 0 || roots.length > 0) && (changes.some((c) => ['add', 'update', 'remove'].includes(c.action)) || conflicts.length === 0) && <MCPSyncBox changes={changes} roots={roots} />}
+          {data.plan && (rows.length > 0 || roots.length > 0) && (changes.some((c) => ['add', 'update', 'remove'].includes(c.action)) || conflicts.length === 0) && <MCPSyncBox changes={changes} roots={roots} plan={data.plan} />}
 
           <RailSection title={t('layout.nav.agents')} count={files.length}>
             {/* The file name is enough to recognise; the full path is one hover or one copy away. */}
@@ -235,7 +235,7 @@ export default function MCPPage() {
             </div>
           )}
           {rows.length > 0 ? (
-            <MCPServerList rows={rows} targets={order.filter((x) => matrixTargets.has(x))} targetsOf={targetsOf} onToggle={(n, x, on) => void toggle(n, x, on)} onMenu={openMenu} />
+            <MCPServerList rows={rows} targets={order.filter((x) => matrixTargets.has(x))} targetsOf={targetsOf} onToggle={(n, x, on) => void toggle(n, x, on)} onMenu={openMenu} onEdit={(n) => { setPiSetupName(null); setEditing(n); }} />
           ) : (
             <EmptyState
               icon={Plug}

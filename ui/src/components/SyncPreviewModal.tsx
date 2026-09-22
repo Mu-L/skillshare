@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, CircleCheck, RefreshCw, TriangleAlert } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 
 import type { SyncResult } from '../api/client';
 
@@ -9,17 +10,20 @@ import { invalidateAfterSync } from '../lib/sync';
 import Button from './Button';
 import DialogShell from './DialogShell';
 import Spinner from './Spinner';
-import SyncResultList from './SyncResultList';
+import SyncResultList, { SyncUpToDate } from './SyncResultList';
 import { useT } from '../i18n';
 
 interface SyncPreviewModalProps {
   open: boolean;
   onClose: () => void;
+  /** Syncs only this kind and says so; unset syncs skills and agents together. */
+  kind?: 'skill' | 'agent';
 }
 
-export default function SyncPreviewModal({ open, onClose }: SyncPreviewModalProps) {
+export default function SyncPreviewModal({ open, onClose, kind }: SyncPreviewModalProps) {
   const t = useT();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -33,7 +37,7 @@ export default function SyncPreviewModal({ open, onClose }: SyncPreviewModalProp
     setError(null);
     setWarnings([]);
     try {
-      const res = await api.sync({ dryRun: true });
+      const res = await api.sync({ dryRun: true, kind });
       setResults(res.results);
       setWarnings(res.warnings ?? []);
     } catch (e: unknown) {
@@ -41,12 +45,12 @@ export default function SyncPreviewModal({ open, onClose }: SyncPreviewModalProp
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [kind]);
 
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const res = await api.sync({ dryRun: false });
+      const res = await api.sync({ dryRun: false, kind });
       setResults(res.results);
       setSynced(true);
       invalidateAfterSync(queryClient);
@@ -78,91 +82,60 @@ export default function SyncPreviewModal({ open, onClose }: SyncPreviewModalProp
         !r.dir_created,
     );
 
-  const noTargets = results !== null && results.length === 0;
+  // Agent results list only targets with something to do, so an empty list means up to date.
+  const noTargets = results !== null && results.length === 0 && kind !== 'agent';
 
+  const title = synced ? t('syncPreview.titleComplete') : kind ? t(`syncPreview.title.${kind}`) : t('syncPreview.titlePreview');
+  const canSync = !allUpToDate && !noTargets && results && !error;
   return (
-    <DialogShell open={open} onClose={onClose} maxWidth="2xl" preventClose={syncing}>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-pencil">{synced ? t('syncPreview.titleComplete') : t('syncPreview.titlePreview')}</h2>
-            {results !== null && !loading && !synced && (
-              <button
-                onClick={runDryRun}
-                className="text-pencil-light hover:text-pencil transition-colors"
-                title={t('syncPreview.refreshPreview')}
-              >
-                <RefreshCw size={16} />
-              </button>
-            )}
-          </div>
-
-          {synced && (
-            <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-sm font-medium text-success">
-              <CheckCircle size={16} className="shrink-0" />
-              {t('syncPreview.completed')}
-            </div>
-          )}
-
-          {warnings.length > 0 && (
-            <div className="flex items-start gap-2 rounded-lg border border-warning bg-warning-light px-3 py-2 text-sm text-pencil">
-              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning" />
-              <div className="space-y-1">
-                {warnings.map((w, i) => <p key={i}>{w}</p>)}
-              </div>
-            </div>
-          )}
-
-          {loading && (
-            <div className="flex items-center justify-center py-8">
-              <Spinner />
-              <span className="ml-3 text-pencil-light">{t('syncPreview.dryRunning')}</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="text-center py-4 space-y-3">
-              <p className="text-danger text-sm">{error}</p>
-              <Button variant="secondary" size="sm" onClick={runDryRun}>
-                {t('syncPreview.retryButton')}
-              </Button>
-            </div>
-          )}
-
-          {!loading && !error && noTargets && (
-            <p className="text-pencil-light text-center py-4">
-              {t('syncPreview.noTargets')}
-            </p>
-          )}
-
-          {!loading && !error && allUpToDate && !noTargets && (
-            <p className="text-pencil-light text-center py-4">
-              {t('syncPreview.allUpToDate')}
-            </p>
-          )}
-
-          {!loading && !error && results && !allUpToDate && !noTargets && (
-            <SyncResultList results={results} />
-          )}
-
-          <div className="flex justify-end gap-3 pt-2">
-            {synced ? (
-              <Button variant="primary" onClick={onClose}>
-                {t('syncPreview.closeButton')}
-              </Button>
-            ) : (
-              <>
-                <Button variant="secondary" onClick={onClose} disabled={syncing}>
-                  {t('syncPreview.cancelButton')}
-                </Button>
-                {!allUpToDate && !noTargets && results && !error && (
-                  <Button onClick={handleSync} loading={syncing}>
-                    {t('syncPreview.syncNowButton')}
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
+    <DialogShell open={open} onClose={onClose} maxWidth="2xl" padding="none" preventClose={syncing} ariaLabel={title}>
+      <div className="dh">
+        <div className="flex flex-col gap-1">
+          <h2 className="ss-h2">{title}</h2>
+          {kind && !synced && <p className="text-[13px] text-ink-2">{t(`syncPreview.scope.${kind}`)}</p>}
         </div>
+        {results !== null && !loading && !synced && (
+          <button type="button" className="ss-ib" onClick={runDryRun} title={t('syncPreview.refreshPreview')} aria-label={t('syncPreview.refreshPreview')}>
+            <RefreshCw size={16} />
+          </button>
+        )}
+      </div>
+
+      <div className="db">
+        {synced && <div className="ss-note inf"><CircleCheck size={16} /><span className="flex-1">{t('syncPreview.completed')}</span></div>}
+        {warnings.map((w) => <div key={w} className="ss-note warn"><TriangleAlert size={16} /><span className="flex-1">{w}</span></div>)}
+
+        {loading && <div className="ss-list"><div className="ss-r gap-2 text-[13px] text-ink-2"><Spinner size="sm" />{t('syncPreview.dryRunning')}</div></div>}
+
+        {error && (
+          <div className="ss-note bad">
+            <AlertCircle size={16} />
+            <span className="flex-1">{error}</span>
+            <Button variant="secondary" size="sm" onClick={runDryRun}>{t('syncPreview.retryButton')}</Button>
+          </div>
+        )}
+
+        {!loading && !error && noTargets && <SyncUpToDate text={t('syncPreview.noTargets')} />}
+        {!loading && !error && allUpToDate && !noTargets && <SyncUpToDate text={t('syncPreview.allUpToDate')} />}
+
+        {!loading && !error && results && !allUpToDate && !noTargets && (
+          // One row per target can outgrow the dialog; scroll the list so the buttons stay reachable
+          <SyncResultList results={results} className="max-h-[50vh] !overflow-y-auto" />
+        )}
+      </div>
+
+      <div className="df">
+        {synced || (!loading && results !== null && !canSync && !error) ? (
+          <Button variant="primary" onClick={onClose}>{t('syncPreview.closeButton')}</Button>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={onClose} disabled={syncing}>{t('syncPreview.cancelButton')}</Button>
+            {canSync && <Button onClick={handleSync} loading={syncing}>{t('syncPreview.syncNowButton')}</Button>}
+          </>
+        )}
+        {/* Last in DOM so the dialog's initial focus lands on a button; order-first keeps it on the left. */}
+        {kind && <button type="button" className="ss-more order-first mr-auto" onClick={() => { onClose(); navigate('/sync'); }} disabled={syncing}>{t('syncPreview.openSyncPage')}</button>}
+      </div>
     </DialogShell>
   );
 }

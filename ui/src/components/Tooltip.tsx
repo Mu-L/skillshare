@@ -44,9 +44,12 @@ export default function Tooltip({ children, content, side = 'bottom', followCurs
     el.style.visibility = 'visible';
   }, [pos]);
 
-  const show = useCallback((e: React.MouseEvent) => {
+  const show = useCallback((e: React.MouseEvent | React.FocusEvent) => {
+    // Hover and focus can both start one; only the latest timer may fire.
+    if (timerRef.current) clearTimeout(timerRef.current);
     if (followCursor) {
-      latestCursor.current = { x: e.clientX + OFFSET, y: e.clientY + OFFSET };
+      const { clientX, clientY } = e as React.MouseEvent;
+      latestCursor.current = { x: clientX + OFFSET, y: clientY + OFFSET };
       timerRef.current = setTimeout(() => {
         visibleRef.current = true;
         setPos({ ...latestCursor.current });
@@ -87,12 +90,13 @@ export default function Tooltip({ children, content, side = 'bottom', followCurs
 
   return (
     <>
-      <span className={block ? 'block' : undefined} onMouseEnter={show} onMouseLeave={hide} onMouseMove={followCursor ? move : undefined}>
+      <span className={block ? 'block' : undefined} onMouseEnter={show} onMouseLeave={hide} onMouseMove={followCursor ? move : undefined} onFocus={followCursor ? undefined : show} onBlur={hide}>
         {children}
       </span>
       {pos && createPortal(
         <div
           ref={tooltipRef}
+          role="tooltip"
           className="ss-tip fixed z-[9999] max-w-sm whitespace-pre-line pointer-events-none animate-fade-in"
           style={{ left: 0, top: 0, visibility: 'hidden' }}
         >

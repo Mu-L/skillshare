@@ -49,6 +49,8 @@ import DialogShell from '../components/DialogShell';
 import AnalyzePanel from '../components/analyze/AnalyzePanel';
 import EmptyState from '../components/EmptyState';
 import InstallDialog from '../components/InstallDialog';
+import SyncPreviewModal from '../components/SyncPreviewModal';
+import { countChanges, resourceGroups } from '../components/sync/syncView';
 import PageHeader from '../components/PageHeader';
 import SegmentedControl from '../components/SegmentedControl';
 import { Select } from '../components/Select';
@@ -326,6 +328,11 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     queryFn: () => api.listTrash(),
     staleTime: staleTimes.trash,
   });
+  // Same queries as the sidebar Sync badge, so the dot costs no extra requests.
+  const { data: diffData } = useQuery({ queryKey: queryKeys.diff(), queryFn: () => api.diff(), staleTime: staleTimes.diff });
+  const { data: targetsData } = useQuery({ queryKey: queryKeys.targets.synced, queryFn: () => api.listTargets('all'), staleTime: staleTimes.targets });
+  const syncPending = diffData ? countChanges(resourceGroups(diffData.diffs, targetsData?.targets ?? [], new Set([kind]), false).groups) > 0 : false;
+  const [syncOpen, setSyncOpen] = useState(false);
   const { matrix, getSkillTargets } = useSyncMatrix();
   const { updating, update } = useRepoUpdate();
   const [checks] = useCheckStatuses();
@@ -747,6 +754,11 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
         subtitle={isAgent ? t('resources.agents.subtitle') : t('resources.skills.subtitle', { count: items.length })}
         actions={tab === 'installed' && (
           <>
+            <Button variant="secondary" onClick={() => setSyncOpen(true)}>
+              <RefreshCw size={15} />
+              {t(`syncPreview.title.${kind}`)}
+              {syncPending && <span className="size-1.5 rounded-full bg-warn" role="img" aria-label={t('plugins.pending')} />}
+            </Button>
             {!isAgent && <Link to="/hubs" className="ss-btn">{t('hubs.title')}</Link>}
             {!isAgent && (
               <Link to="/skills/new" className="ss-btn">
@@ -1006,6 +1018,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
       ) : (
         <TrashPage kind={kind} />
       )}
+      <SyncPreviewModal open={syncOpen} onClose={() => setSyncOpen(false)} kind={kind} />
       {installTab && <InstallDialog kind={kind} initialTab={installTab === 'url' ? 'url' : 'search'} initialSource={params.get('source') ?? undefined} onClose={() => setInstall(null)} />}
     </div>
   );
@@ -1020,10 +1033,10 @@ export function UninstallDialog({ kind, selection, all, onClose }: {
   onClose: (removed: boolean) => void;
 }) {
   const t = useT();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [force, setForce] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<BatchUninstallItemResult[] | null>(null);
 
@@ -1060,6 +1073,9 @@ export function UninstallDialog({ kind, selection, all, onClose }: {
     }
   };
 
+  // Replaces the results dialog rather than stacking a second one on top.
+  if (syncing) return <SyncPreviewModal open onClose={() => onClose(true)} kind={kind} />;
+
   if (results) {
     const failed = results.filter((r) => !r.success);
     return (
@@ -1093,9 +1109,9 @@ export function UninstallDialog({ kind, selection, all, onClose }: {
           )}
           <span className="flex-1" />
           <Button variant="secondary" onClick={() => onClose(true)}>{t('batchUninstall.results.continueButton')}</Button>
-          <Button variant="primary" onClick={() => navigate('/sync')}>
+          <Button variant="primary" onClick={() => setSyncing(true)}>
             <RefreshCw size={15} />
-            {t('batchUninstall.results.goToSync')}
+            {t('syncPreview.syncNowButton')}
           </Button>
         </div>
       </DialogShell>
