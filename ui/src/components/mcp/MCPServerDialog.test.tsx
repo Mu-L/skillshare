@@ -155,6 +155,17 @@ describe('MCP server dialog', () => {
     await waitFor(() => expect(mcpApi.save).toHaveBeenCalledWith(expect.objectContaining({ server })));
   });
 
+  // Refs: #289. Unticking Pi must not drop its adapter settings from the source.
+  it('keeps Pi adapter settings when Pi is unticked', async () => {
+    const user = userEvent.setup();
+    renderDialog({ initial: { name: 'docs', server: { command: 'npx', targets: ['pi'], piExtension: 'pi-mcp-adapter', directTools: true, piOptions: { excludeTools: ['x'] } } } });
+    await user.click(screen.getByRole('checkbox', { name: 'Pi' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mcpApi.save).toHaveBeenCalledWith(expect.objectContaining({
+      server: expect.objectContaining({ directTools: true, piOptions: { excludeTools: ['x'] } }),
+    })));
+  });
+
   it('takes other Pi adapter settings as a JSON object', async () => {
     const user = userEvent.setup();
     renderDialog({ initial: { name: 'docs', server: { command: 'docs', targets: ['pi'], piExtension: 'pi-mcp-adapter' } } });

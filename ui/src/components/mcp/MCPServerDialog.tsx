@@ -109,8 +109,10 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
   const taken = !initial && existingNames.includes(trimmed);
   const nameError = trimmed && !NAME.test(trimmed) ? t('mcp.nameHint') : taken ? t('mcp.nameTaken') : '';
   const words = splitCommand(command);
-  const adapter = targets.includes('pi') && !off && piExtension === 'pi-mcp-adapter';
-  const options = adapter ? parsePiOptions(piOptions) : {};
+  // Adapter settings stay in the source while Pi is unticked, so ticking it again brings them back (#289).
+  const keepsAdapter = !off && piExtension === 'pi-mcp-adapter';
+  const adapter = keepsAdapter && targets.includes('pi');
+  const options = keepsAdapter ? parsePiOptions(piOptions) : {};
   const optionsError = options.invalid ? t('mcp.piOptionsInvalid') : options.taken ? t('mcp.piOptionsTaken', { field: options.taken }) : '';
   const canSave = Boolean(trimmed) && !nameError && (targets.length > 0 || !off) && (off || (http ? url.trim() !== '' : words.length > 0)) && (!targets.includes('pi') || off || Boolean(piExtension)) && (piExtension !== 'pi-mcp-adapter' || directToolsComplete(directTools)) && !optionsError && !saving;
   const title = t(off ? (initial ? 'mcp.editOff' : 'mcp.addOff') : (initial ? 'mcp.editServer' : 'mcp.addServer'));
@@ -135,7 +137,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
     if (server?.transport === transport) next.transport = transport;
     if (piExtension) next.piExtension = piExtension;
     const direct = directToolsValue(directTools);
-    if (direct !== undefined && piExtension === 'pi-mcp-adapter' && targets.includes('pi')) next.directTools = direct;
+    if (direct !== undefined && keepsAdapter) next.directTools = direct;
     if (options.value && Object.keys(options.value).length > 0) next.piOptions = options.value;
     return next;
   };
