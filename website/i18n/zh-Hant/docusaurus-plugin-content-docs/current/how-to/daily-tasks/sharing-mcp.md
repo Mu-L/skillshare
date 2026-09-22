@@ -181,6 +181,15 @@ Agent 命名的匯入動作，例如 **Import from cursor**，用以採用該版
 **Replace with source** 以覆寫該項目。若某則衝突的項目由另一份仍然存在的 Skillshare
 設定檔所擁有，兩者都不會出現，因為只有那份設定檔能釋放該項目。
 
+接手某個 Agent 裡已有同名的伺服器，也是用這個方式：把它加進來源，下一次預覽會把
+該 Agent 的項目顯示為衝突，而不會覆寫它。匯入即可採用該 Agent 的版本，或以來源定義
+取代它。
+
+MCP dashboard 也會找出你的 Agents 設定檔中、Skillshare 沒有管理的伺服器。找到時，
+伺服器清單上方會有一則說明，告訴你有幾個、在哪些 Agents 中，**Import** 會針對其中
+第一個 Agent 開啟匯入。專案的 **MCP** 分頁也會對該專案的檔案做同樣的事，並匯入到
+該專案。請參閱 [Skillshare 未管理的伺服器](/docs/reference/commands/mcp#unmanaged-servers)。
+
 ## 在單一專案中關閉某個全域伺服器
 
 Agent 全域設定中的伺服器，會在每一個專案中載入。若要在某個專案中關閉它，
@@ -214,6 +223,16 @@ skillshare sync mcp
 在 dashboard 中，使用伺服器列上的刪除動作。對話框會列出每一個將會變動的 Agent 檔案。
 **Remove from source only** 等同於不同步的 `mcp remove`；**Remove and sync** 則
 也會清理 Agent 檔案，且在存在衝突時會被停用。
+
+若要停止管理某個伺服器，但保留它在各 Agents 中的設定，請加上 `--keep-files` 移除它，
+或在 dashboard 的移除對話框中選擇 **Stop managing**：
+
+```bash
+skillshare mcp remove company-docs --keep-files
+```
+
+Agent 檔案不會有任何變動，之後的同步也不會再碰這些項目。請參閱
+[停止管理某個伺服器](/docs/reference/commands/mcp#stop-managing-a-server)。
 
 每一次原生檔案的變更，都會為受影響的 MCP 項目建立一份私有備份。Skillshare 會為每個
 Agent 檔案保留最新的 20 份備份。輸出中會包含其 ID：

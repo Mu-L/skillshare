@@ -20,6 +20,7 @@ skillshare mcp import docs --from claude --target claude --target cursor --sync
 skillshare mcp import docs --file ./provider.json --target claude
 skillshare mcp list --json
 skillshare mcp remove docs --sync
+skillshare mcp remove docs --keep-files
 skillshare mcp restore BACKUP_ID --dry-run
 skillshare sync mcp --dry-run --json
 skillshare sync mcp
@@ -38,6 +39,7 @@ skillshare sync --all
 | `--from CLIENT` | インポート元の既存クライアント、または `--file` のフォーマット |
 | `--file PATH` | ネイティブの JSON/JSONC、TOML、または Goose の YAML。`.toml` はデフォルトで Codex とみなされ、他のフォーマットはその MCP セクションから検出される。明示的な方言を指定するには `--from` を使う |
 | `--sync` | 保存して同期する。非インタラクティブな add/import/remove ではそうしない限り保存のみ |
+| `--keep-files` | `remove` と併用: サーバーの管理をやめ、Agent のエントリはそのまま残す。`--sync` とは併用できない。[下記](#stop-managing-a-server)を参照 |
 | `--replace` | add/import 中に既存の source 定義を明示的に置き換える。import では、インポート元クライアントのエントリが異なる場合にそれも書き換える |
 | `--dry-run`, `-n` | 保存もネイティブ設定への書き込みも行わずにプレビュー |
 | `--json` | 構造化出力。sync/preview のレポートには name、path、action が含まれ、サーバーの値は含まれない |
@@ -68,7 +70,7 @@ skillshare sync --all
 
 `mcp edit`、`mcp remove`、`mcp restore` は、name またはバックアップ ID が省略された場合に選択メニューを提供します。エディタは command/URL、引数、環境変数、HTTP ヘッダー、bearer-token の環境変数参照、受け取り側の target をカバーします。引数は 1 行につき 1 つのリテラル引数、または JSON 配列で受け付けます。トランスポートを切り替えると、新しい接続タイプに適用されないフィールドはクリアされます。
 
-Add、edit、remove、import では、**Save and sync** または **Save only** の前にプレビューが表示されます。Escape で保留中のドラフトをキャンセルできます。Restore は Agent のエントリへの変更をプレビューし確認しますが、source 定義自体は書き換えません。
+Add、edit、remove、import では、**Save and sync** または **Save only** の前にプレビューが表示されます。Remove には **Stop managing** もあり、`--keep-files` と同じ動作です。Escape で保留中のドラフトをキャンセルできます。Restore は Agent のエントリへの変更をプレビューし確認しますが、source 定義自体は書き換えません。
 
 サーバー名を指定しないインポートは複数選択に対応しています（`Space` でトグル、`a` ですべて選択）。無効な候補はスキップされます。既存の source 名は `--replace` を指定しない限りスキップされます。バッチに対しては、互換性のある受け取り側クライアントを 1 セット選択してください。バッチ全体が検証された後、source は一度だけ保存されます。その後のネイティブファイル I/O 失敗については、既存の復旧動作が維持されます。
 
@@ -452,6 +454,8 @@ global mode では、ダッシュボードに **プロジェクト** ページ�
   あるかを表示します。project ページの上部にある **Sync project** は、この project の skills、agents、MCP だけを
   書き込みます。
 - MCP ページの一番下にある **デフォルト** では、`mcp.targets` と `mcp.directTools` を編集します。
+- project 自身の Agent ファイルに Skillshare が管理していないサーバーがある場合、タブの一覧の上にそのことが
+  **Import** 付きで表示されます。[下記](#unmanaged-servers)を参照してください。
 
 保存時に書き換えられるのは、変更した project だけです。他の project は、アンカーやエイリアスも含めて
 YAML が書かれたまま保持され、`~/work/app` と書かれたフォルダーは `~` のまま残ります。このページの他の箇所と同様に、
@@ -468,6 +472,40 @@ YAML が書かれたまま保持され、`~/work/app` と書かれたフォル�
   サーバー自体はそのままにされます。
 - フォルダーが同じエントリを管理する独自の `.skillshare/config.yaml` も持っている場合、プランは上書きせずに
   競合を報告します。
+
+## サーバーの管理をやめる {#stop-managing-a-server}
+
+```bash
+skillshare mcp remove docs --keep-files
+```
+
+これは source から `docs` を削除し、Skillshare がそのために書き込んだ Agent のエントリの記録を消去します。
+Agent ファイルは変更されません。以降、それらのエントリはあなたのものになり、sync は削除も更新もしません。
+`--keep-files` は `--sync` と併用できません。ターミナルの削除ウィザードでは **Stop managing** として表示され、
+ダッシュボードの削除ダイアログでも、MCP ページと project の **MCP** タブの両方で同じ選択肢が表示されます。
+
+変更されるのは削除したスコープだけです。global サーバーの管理をやめても、同じ名前の project のサーバーは
+管理されたままで、その逆も同様です。エントリを再び管理するには、それをインポートしてください。
+
+## Skillshare が管理していないサーバー {#unmanaged-servers}
+
+ダッシュボードは、現在のスコープと `mcp.projects` の下にあるすべてのフォルダーの Agent 設定ファイルを読み、
+この source が定義しておらず、どの Skillshare 設定も管理していないサーバーを探します。見つかった場合は、
+サーバー一覧の上に、その件数とどの Agent にあるかが表示されます。**Import** は、それらの Agent のうち
+最初のものを選択した状態でインポートを開きます。project の **MCP** タブでは、その project 自身のファイルに
+ついて同じ表示が出ます。そのインポートは project のファイルを読み、サーバーをその project に保存します。
+Goose の組み込み拡張機能のように接続先を持たないエントリは数に含まれません。
+
+### Agent がすでに持っているエントリを引き継ぐ
+
+Agent ファイルがすでに使っている名前でサーバーを追加しても、sync はそのエントリを上書きしません。
+プランは競合 `existing entry is not managed` を報告し、そのエントリについて次のどちらかを選ぶまで
+ファイルを書き込みません。
+
+- その Agent からインポートする: `skillshare mcp import NAME --from CLIENT`、またはダッシュボードの
+  競合にある **Import from** ボタン（**Import from Cursor** など）。source と一致するエントリはそのまま
+  採用されます。
+- source の定義で置き換える: ダッシュボードの **Replace with source**、またはインポート時の `--replace`。
 
 ## 安全性と制限事項
 

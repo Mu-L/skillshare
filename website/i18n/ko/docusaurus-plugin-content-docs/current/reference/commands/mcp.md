@@ -20,6 +20,7 @@ skillshare mcp import docs --from claude --target claude --target cursor --sync
 skillshare mcp import docs --file ./provider.json --target claude
 skillshare mcp list --json
 skillshare mcp remove docs --sync
+skillshare mcp remove docs --keep-files
 skillshare mcp restore BACKUP_ID --dry-run
 skillshare sync mcp --dry-run --json
 skillshare sync mcp
@@ -38,6 +39,7 @@ skillshare sync --all
 | `--from CLIENT` | import할 기존 client, 또는 `--file`의 형식 |
 | `--file PATH` | 네이티브 JSON/JSONC, TOML 또는 Goose YAML; `.toml`은 기본적으로 Codex로 처리되며, 다른 형식은 MCP 섹션에서 감지됨; 명시적인 방언을 지정하려면 `--from` 사용 |
 | `--sync` | 저장 후 동기화; noninteractive add/import/remove는 그렇지 않으면 저장만 함 |
+| `--keep-files` | `remove`와 함께 사용: 서버 관리를 멈추고 Agent 항목은 그대로 둡니다. `--sync`와 함께 쓸 수 없습니다. [아래](#stop-managing-a-server) 참고 |
 | `--replace` | add/import 중 기존 source 정의를 명시적으로 교체; import 시 가져온 client의 항목이 다르면 이것도 다시 작성 |
 | `--dry-run`, `-n` | 저장하거나 네이티브 구성을 작성하지 않고 미리보기 |
 | `--json` | 구조화된 출력; sync/preview 보고서에는 이름, 경로, 작업만 포함되며 서버 값은 포함되지 않음 |
@@ -82,7 +84,7 @@ noninteractive mode에서는 상태를 출력합니다. 이름 없이 noninterac
 있습니다. 전송 방식을 전환하면 새 연결 유형에 적용되지 않는 필드는 지워집니다.
 
 Add, edit, remove, import는 **Save and sync** 또는 **Save only** 전에 미리보기를
-표시합니다. Escape를 누르면 대기 중인 초안이 취소됩니다. Restore는 Agent 항목에 대한
+표시합니다. Remove는 `--keep-files`와 같은 **Stop managing**도 제공합니다. Escape를 누르면 대기 중인 초안이 취소됩니다. Restore는 Agent 항목에 대한
 변경 사항을 미리보고 확인하지만, source 정의는 다시 작성하지 않습니다.
 
 서버 이름 없이 import하면 여러 항목을 선택할 수 있습니다(`Space`로 토글, `a`로 전체
@@ -547,6 +549,8 @@ Global mode에서는 대시보드에 **프로젝트** 페이지가 있습니다.
   몇 개가 이 프로젝트 밖에 있는지 알려줍니다. 프로젝트 페이지 상단의 **Sync project**는
   이 프로젝트의 skill, agent, MCP만 작성합니다.
 - MCP 페이지 하단의 **기본값**은 `mcp.targets`와 `mcp.directTools`를 편집합니다.
+- 프로젝트 자체의 Agent 파일에 Skillshare가 관리하지 않는 서버가 있으면, 탭은 목록 위에
+  **Import**와 함께 이를 알려줍니다. [아래](#unmanaged-servers) 참고.
 
 저장하면 변경한 프로젝트만 다시 씁니다. 다른 프로젝트는 anchor와 alias를 포함해
 YAML이 작성된 그대로 유지되며, `~/work/app`으로 작성된 폴더는 `~`를 그대로
@@ -565,6 +569,41 @@ Sync가 작성합니다.
   때문입니다. 서버 자체는 그대로 둡니다.
 - 폴더에 같은 항목을 관리하는 자체 `.skillshare/config.yaml`도 있으면, plan은 이를
   덮어쓰지 않고 충돌로 보고합니다.
+
+## Stop managing a server {#stop-managing-a-server}
+
+```bash
+skillshare mcp remove docs --keep-files
+```
+
+source에서 `docs`를 제거하고, Skillshare가 이 서버를 위해 작성한 Agent 항목의 기록을
+지웁니다. Agent 파일은 바뀌지 않습니다. 이후 그 항목은 사용자의 것이며, sync는 이를
+제거하지도 업데이트하지도 않습니다. `--keep-files`는 `--sync`와 함께 쓸 수 없습니다.
+터미널 remove wizard는 이를 **Stop managing**으로 제공하며, MCP 페이지와 프로젝트의
+**MCP** 탭에 있는 대시보드 제거 대화상자도 마찬가지입니다.
+
+제거한 범위만 바뀝니다. global 서버의 관리를 멈춰도 같은 이름의 프로젝트 서버는 계속
+관리되며, 반대도 마찬가지입니다. 항목을 다시 관리하려면 import하세요.
+
+## Servers Skillshare does not manage {#unmanaged-servers}
+
+대시보드는 현재 범위의 Agent 설정 파일과 `mcp.projects` 아래 모든 폴더의 Agent 설정
+파일에서, 이 source가 정의하지 않고 어떤 Skillshare 설정도 관리하지 않는 서버를 찾습니다.
+찾으면 서버 목록 위의 안내가 몇 개인지, 어느 Agent에 있는지 알려줍니다. **Import**는 그중
+첫 번째 Agent가 선택된 상태로 import를 엽니다. 프로젝트의 **MCP** 탭은 그 프로젝트 자체
+파일에 대해 같은 안내를 표시하며, 그 import는 프로젝트의 파일을 읽어 서버를 그 프로젝트에
+저장합니다. Goose의 내장 확장처럼 연결할 대상이 없는 항목은 세지 않습니다.
+
+### Take over an entry an Agent already has
+
+Agent 파일이 이미 사용하는 이름으로 서버를 추가하면, sync는 그 항목을 덮어쓰지 않습니다.
+plan은 `existing entry is not managed` 충돌을 보고하고, 그 항목에 대해 선택할 때까지
+파일을 쓰지 않습니다:
+
+- 그 Agent에서 import: `skillshare mcp import NAME --from CLIENT`, 또는 대시보드에서
+  충돌의 **Import from** 버튼(예: **Import from Cursor**). source와 일치하는 항목은
+  그대로 채택됩니다.
+- source 정의로 교체: 대시보드의 **Replace with source**, 또는 import의 `--replace`.
 
 ## Safety and limitations
 

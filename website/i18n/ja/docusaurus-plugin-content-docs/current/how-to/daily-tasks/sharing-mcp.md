@@ -194,6 +194,16 @@ Source にすでにその名前が存在する場合は、ダッシュボード�
 **Replace with source** でそのエントリを上書きできます。まだ存在する別の Skillshare 設定が所有している
 競合には、そのどちらも表示されません。そのエントリを解放できるのはその設定だけだからです。
 
+Agent がすでに同じ名前で持っているサーバーを引き継ぐ方法も同じです。それを source に追加すると、次の
+プレビューでは Agent のエントリが上書きされずに競合として表示されます。Import して Agent のバージョンを
+採用するか、source の定義で置き換えてください。
+
+MCP ダッシュボードは、Agent の設定ファイルにすでにあり、Skillshare が管理していないサーバーも探します。
+見つかった場合は、サーバー一覧の上にその件数とどの Agent にあるかが表示され、**Import** でそのうち最初の
+Agent のインポートが開きます。プロジェクトの **MCP** タブも、そのプロジェクトのファイルについて同じことを行い、
+そのプロジェクトにインポートします。[Skillshare が管理していないサーバー](/docs/reference/commands/mcp#unmanaged-servers)
+を参照してください。
+
 ## 1つのプロジェクトだけで global サーバーをオフにする
 
 Agent の global config 内のサーバーは、すべてのプロジェクトで読み込まれます。1つのプロジェクトだけで
@@ -230,6 +240,16 @@ skillshare にそれを削除させたい場合は、先にそれを Import し�
 ダッシュボードでは、サーバー行の削除アクションを使います。ダイアログには変更される各 Agent ファイルが
 一覧表示されます。**Remove from source only** は Sync せずに `mcp remove` と同等の動作をします。
 **Remove and sync** は Agent ファイルもクリーンアップし、競合がある間は無効化されます。
+
+サーバーの管理をやめて Agent には残しておくには、`--keep-files` を付けて削除するか、ダッシュボードの
+削除ダイアログで **Stop managing** を選びます。
+
+```bash
+skillshare mcp remove company-docs --keep-files
+```
+
+Agent ファイルは変更されず、以降の Sync もそれらのエントリには触れません。
+[サーバーの管理をやめる](/docs/reference/commands/mcp#stop-managing-a-server)を参照してください。
 
 ネイティブファイルへの変更のたびに、影響を受ける MCP エントリのプライベートなバックアップが作成されます。
 skillshare は各 Agent ファイルについて最新20件のバックアップを保持します。出力にはその ID が含まれます。

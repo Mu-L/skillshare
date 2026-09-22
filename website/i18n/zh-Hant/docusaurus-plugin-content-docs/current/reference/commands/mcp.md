@@ -20,6 +20,7 @@ skillshare mcp import docs --from claude --target claude --target cursor --sync
 skillshare mcp import docs --file ./provider.json --target claude
 skillshare mcp list --json
 skillshare mcp remove docs --sync
+skillshare mcp remove docs --keep-files
 skillshare mcp restore BACKUP_ID --dry-run
 skillshare sync mcp --dry-run --json
 skillshare sync mcp
@@ -38,6 +39,7 @@ skillshare sync --all
 | `--from CLIENT` | 要匯入的既有 client，或 `--file` 的格式 |
 | `--file PATH` | 原生 JSON/JSONC、TOML 或 Goose YAML；`.toml` 預設為 Codex，其他格式會從其 MCP 區段偵測；使用 `--from` 可明確指定格式 |
 | `--sync` | 儲存並同步；非互動式的 add/import/remove 預設只會儲存 |
+| `--keep-files` | 搭配 `remove`：停止管理該 server，並讓它在各 Agent 中的項目維持原樣。不可與 `--sync` 併用。參見[下方說明](#stop-managing-a-server) |
 | `--replace` | 在 add/import 期間明確取代既有的 source 定義；在 import 時，若匯入的 client 項目不同也會一併改寫 |
 | `--dry-run`, `-n` | 只預覽，不儲存或寫入原生設定 |
 | `--json` | 結構化輸出；sync/preview 報告只包含名稱、路徑與動作，不含 server 的值 |
@@ -67,7 +69,7 @@ skillshare sync --all
 
 當省略名稱或 backup ID 時，`mcp edit`、`mcp remove` 與 `mcp restore` 會提供選單。編輯器涵蓋 command/URL、參數、環境變數、HTTP headers、bearer-token 環境參照與接收端 targets。參數接受一行一個字面參數，或一個 JSON 陣列。切換傳輸方式會清除不適用於新連線類型的欄位。
 
-Add、edit、remove 與 import 在 **Save and sync** 或 **Save only** 之前會顯示預覽。Escape 可取消待處理的草稿。Restore 會預覽並確認對 Agent 項目的變更；它不會改寫 source 定義。
+Add、edit、remove 與 import 在 **Save and sync** 或 **Save only** 之前會顯示預覽。Remove 另外提供 **Stop managing**，效果與 `--keep-files` 相同。Escape 可取消待處理的草稿。Restore 會預覽並確認對 Agent 項目的變更；它不會改寫 source 定義。
 
 不帶 server 名稱的 import 支援多重選取（`Space` 切換，`a` 全選）。無效的候選項會被跳過；除非指定 `--replace`，否則既有的 source 名稱會被跳過。此批次要選擇一組相容的接收端 clients。整個批次會先驗證完畢，source 才會一次儲存；後續原生檔案 I/O 失敗仍維持既有的復原行為。
 
@@ -517,6 +519,8 @@ mcp:
   agents 與 MCP。
 - **預設值** 位於 MCP 頁面底部，用來編輯 `mcp.targets` 與
   `mcp.directTools`。
+- 當 project 自己的 Agent 檔案中有 Skillshare 未管理的 servers 時，分頁會在清單上方
+  說明，並附上 **Import**。參見[下方說明](#unmanaged-servers)。
 
 儲存時只會改寫你變更的那個 project。其他 project 的 YAML 會維持原樣，包含
 anchor 與 alias，而寫成 `~/work/app` 的資料夾也會保留它的 `~`。與本頁其他地方
@@ -533,6 +537,39 @@ anchor 與 alias，而寫成 `~/work/app` 的資料夾也會保留它的 `~`。�
   servers 本身則維持原樣。
 - 如果某個資料夾也有自己的 `.skillshare/config.yaml` 在管理同一個項目，
   計畫會回報衝突，而不是覆寫它。
+
+## 停止管理某個 server {#stop-managing-a-server}
+
+```bash
+skillshare mcp remove docs --keep-files
+```
+
+這會把 `docs` 從 source 移除，並忘記 Skillshare 曾為它寫入哪些 Agent 項目。
+Agent 檔案不會有任何變動。從此之後，這些項目就歸你管理：sync 既不會移除，也不會更新
+它們。`--keep-files` 不可與 `--sync` 併用。終端機的 remove 精靈以 **Stop managing**
+提供這個選項，dashboard 的移除對話框也有，MCP 頁面與 project 的 **MCP** 分頁中都能使用。
+
+只有你移除它的那個範圍會變動。停止管理某個 global server，不影響 project 中同名的
+server，反之亦然。若要重新管理某個項目，請匯入它。
+
+## Skillshare 未管理的 servers {#unmanaged-servers}
+
+dashboard 會讀取目前範圍的 Agent 設定檔，以及 `mcp.projects` 底下每個資料夾的設定檔，
+找出這份 source 沒有定義、也沒有任何 Skillshare 設定在管理的 servers。找到時，server
+清單上方會有一則說明，告訴你有幾個、在哪些 Agents 中。**Import** 會開啟匯入，並預先
+選好其中第一個 Agent。project 的 **MCP** 分頁會針對該 project 自己的檔案顯示同樣的
+說明；它的匯入會讀取該 project 的檔案，並把 servers 儲存到該 project。沒有可連線對象
+的項目，例如 Goose 的內建 extensions，不會被計入。
+
+### 接手某個 Agent 已有的項目
+
+當你新增的 server 名稱已被某個 Agent 檔案使用時，sync 不會覆寫該項目。計畫會回報
+衝突 `existing entry is not managed`，並在你為該項目做出選擇前不寫入任何檔案：
+
+- 從該 Agent 匯入：`skillshare mcp import NAME --from CLIENT`，或 dashboard 中該衝突的
+  **Import from** 按鈕，例如 **Import from Cursor**。與 source 相符的項目會直接被採用。
+- 以 source 定義取代它：dashboard 中的 **Replace with source**，或匯入時加上
+  `--replace`。
 
 ## Safety and limitations
 

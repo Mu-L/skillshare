@@ -195,6 +195,16 @@ cursor**，用于采用该版本；或 **Replace with source**，用于覆写该
 如果某个冲突是由另一份仍然存在的 Skillshare 配置所拥有，则这两个
 操作都不会出现，因为只有那份配置才能释放该条目。
 
+如果某个 Agent 已经有同名的 server，也可以用这种方式接管它：
+把它加入 Source，下一次预览就会将该 Agent 的条目显示为冲突，
+而不会覆写它。你可以 import 它以采用该 Agent 的版本，或用 Source
+中的定义替换它。
+
+MCP 控制台也会查找 Agent 配置文件中已有、但 Skillshare 并未管理的 server。
+找到时，server 列表上方会有一条提示，说明有多少个、位于哪些 Agent 中；
+**Import** 会为其中第一个 Agent 打开导入。项目的 **MCP** 标签页也会对该项目的
+文件做同样的事，并导入到该项目。参见 [Skillshare 未管理的 server](/docs/reference/commands/mcp#unmanaged-servers)。
+
 ## 在单一项目中关闭某个全局 server
 
 Agent 全局配置中的某个 server，会在每个项目中都被加载。若要在
@@ -231,6 +241,16 @@ skillshare sync mcp
 将发生变更的 Agent 文件。**Remove from source only** 相当于不进行同步的
 `mcp remove`；**Remove and sync** 也会清理 Agent 文件，并且在存在
 冲突时会被停用。
+
+若要停止管理某个 server，但将它保留在 Agent 中，请使用 `--keep-files` 移除它，
+或在控制台的删除对话框中选择 **Stop managing**：
+
+```bash
+skillshare mcp remove company-docs --keep-files
+```
+
+不会有任何 Agent 文件被更改，之后的同步也不会动这些条目。参见
+[停止管理某个 server](/docs/reference/commands/mcp#stop-managing-a-server)。
 
 每一次原生文件的变更，都会为受影响的 MCP 条目建立一份私有备份。
 Skillshare 会为每个 Agent 文件保留最新的 20 份备份。输出内容包含

@@ -192,6 +192,16 @@ Agent 이름을 딴 import 작업을 제공하여 그 버전을 채택하거나,
 해당 항목을 덮어쓸 수 있습니다. 아직 존재하는 다른 Skillshare 설정이 소유한 충돌에는
 두 작업이 모두 제공되지 않습니다. 해당 설정만이 그 항목을 놓아줄 수 있기 때문입니다.
 
+Agent가 같은 이름으로 이미 가진 서버를 넘겨받을 때도 이 방법을 씁니다. 서버를 source에
+추가하면, 다음 미리보기는 Agent의 항목을 덮어쓰지 않고 충돌로 표시합니다. import해서
+Agent의 버전을 채택하거나, source 정의로 교체하세요.
+
+MCP 대시보드는 Agent 설정 파일에 이미 있지만 Skillshare가 관리하지 않는 서버도 찾습니다.
+찾으면 서버 목록 위의 안내가 몇 개인지, 어느 Agent에 있는지 알려주고, **Import**는 그중
+첫 번째 Agent의 import를 엽니다. 프로젝트의 **MCP** 탭도 그 프로젝트의 파일에 대해 같은
+일을 하며, 그 프로젝트로 import합니다.
+[Skillshare가 관리하지 않는 서버](/docs/reference/commands/mcp#unmanaged-servers)를 참고하세요.
+
 ## 한 프로젝트에서 글로벌 서버 끄기
 
 Agent의 글로벌 설정에 있는 서버는 모든 프로젝트에서 로드됩니다. 한 프로젝트에서만
@@ -229,6 +239,16 @@ Source와 이미 일치했던 경우(예: 프로젝트를 이동한 경우)에�
 나열됩니다. **Remove from source only**는 동기화 없이 `mcp remove`와 동일하게
 작동하고, **Remove and sync**는 Agent 파일도 정리하며 충돌이 있는 동안에는
 비활성화됩니다.
+
+서버 관리를 멈추되 Agent에는 남겨 두려면 `--keep-files`로 제거하거나, 대시보드의 제거
+대화상자에서 **Stop managing**을 선택하세요:
+
+```bash
+skillshare mcp remove company-docs --keep-files
+```
+
+Agent 파일은 바뀌지 않으며, 이후 sync도 그 항목을 건드리지 않습니다.
+[서버 관리 중지](/docs/reference/commands/mcp#stop-managing-a-server)를 참고하세요.
 
 모든 네이티브 파일 변경은 영향을 받는 MCP 항목의 비공개 백업을 생성합니다. Skillshare는
 각 Agent 파일마다 최신 20개의 백업을 유지합니다. 출력에는 해당 ID가 포함됩니다:

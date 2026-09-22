@@ -200,6 +200,17 @@ cursor**, to adopt that version, or **Replace with source** to overwrite that en
 A conflict held by another Skillshare configuration that still exists offers neither,
 because only that configuration can release the entry.
 
+This is also how you take over a server an Agent already has under the same name:
+add it to the source, and the next preview shows the Agent's entry as a conflict
+instead of overwriting it. Import it to adopt the Agent's version, or replace it with
+the source definition.
+
+The MCP dashboard also looks for servers already in your Agents' config files that
+Skillshare does not manage. When it finds some, a note above the server list says how
+many and in which Agents, and **Import** opens the import for the first of them. A
+project's **MCP** tab does the same for that project's files and imports into that
+project. See [Servers Skillshare does not manage](/docs/reference/commands/mcp#unmanaged-servers).
+
 ## Turn off a global server in one project
 
 A server in an Agent's global config loads in every project. To turn it off in
@@ -236,6 +247,16 @@ In the dashboard, use the delete action on a server row. The dialog lists each
 Agent file that will change. **Remove from source only** matches `mcp remove`
 without syncing; **Remove and sync** also cleans the Agent files and is disabled
 while a conflict is present.
+
+To stop managing a server but keep it in your Agents, remove it with `--keep-files`,
+or choose **Stop managing** in the dashboard's remove dialog:
+
+```bash
+skillshare mcp remove company-docs --keep-files
+```
+
+No Agent file changes, and later syncs leave those entries alone. See
+[Stop managing a server](/docs/reference/commands/mcp#stop-managing-a-server).
 
 Every native file change creates a private backup of the affected MCP entries.
 Skillshare keeps the newest 20 backups for each Agent file. The output includes

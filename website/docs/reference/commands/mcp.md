@@ -20,6 +20,7 @@ skillshare mcp import docs --from claude --target claude --target cursor --sync
 skillshare mcp import docs --file ./provider.json --target claude
 skillshare mcp list --json
 skillshare mcp remove docs --sync
+skillshare mcp remove docs --keep-files
 skillshare mcp restore BACKUP_ID --dry-run
 skillshare sync mcp --dry-run --json
 skillshare sync mcp
@@ -38,6 +39,7 @@ skillshare sync --all
 | `--from CLIENT` | Existing client to import, or the format of `--file` |
 | `--file PATH` | Native JSON/JSONC, TOML or Goose YAML; `.toml` defaults to Codex, other formats are detected from their MCP section; use `--from` for an explicit dialect |
 | `--sync` | Save and synchronize; noninteractive add/import/remove otherwise save only |
+| `--keep-files` | With `remove`: stop managing the server and leave its Agent entries as they are. Not with `--sync`. See [below](#stop-managing-a-server) |
 | `--replace` | Explicitly replace an existing source definition during add/import; on import, also rewrite the imported client's entry when it differs |
 | `--dry-run`, `-n` | Preview without saving or writing native configuration |
 | `--json` | Structured output; sync/preview reports contain names, paths and actions, not server values |
@@ -84,7 +86,8 @@ targets. Arguments accept one literal argument per line or a JSON array. Switchi
 transport clears fields that do not apply to the new connection type.
 
 Add, edit, remove and import show a preview before **Save and sync** or **Save
-only**. Escape cancels the pending draft. Restore previews and confirms changes
+only**. Remove also offers **Stop managing**, the same as `--keep-files`. Escape
+cancels the pending draft. Restore previews and confirms changes
 to Agent entries; it does not rewrite the source definition.
 
 Import without a server name supports multiple selections (`Space` toggles,
@@ -555,6 +558,8 @@ project has an **MCP** tab.
   page, writes only this project's skills, agents and MCP.
 - **Defaults**, at the bottom of the MCP page, edits `mcp.targets` and
   `mcp.directTools`.
+- When the project's own Agent files hold servers Skillshare does not manage, the tab
+  says so above the lists, with **Import**. See [below](#unmanaged-servers).
 
 Saving rewrites only the project you changed. Other projects keep their YAML as written,
 anchors and aliases included, and a folder written as `~/work/app` keeps its `~`. As
@@ -572,6 +577,44 @@ Limits:
   list. The servers themselves are left as they are.
 - If a folder also has its own `.skillshare/config.yaml` managing the same entry, the
   plan reports a conflict rather than overwriting it.
+
+## Stop managing a server {#stop-managing-a-server}
+
+```bash
+skillshare mcp remove docs --keep-files
+```
+
+This removes `docs` from the source and forgets which Agent entries Skillshare wrote
+for it. No Agent file changes. From then on those entries are yours: sync neither
+removes nor updates them. `--keep-files` cannot be combined with `--sync`. The
+terminal remove wizard offers it as **Stop managing**, and so does the dashboard's
+remove dialog, on the MCP page and in a project's **MCP** tab.
+
+Only the scope you remove it from changes. Stopping a global server leaves a project's
+server of the same name managed, and the other way round. To manage an entry again,
+import it.
+
+## Servers Skillshare does not manage {#unmanaged-servers}
+
+The dashboard reads the Agent config files of the current scope, and of every folder
+under `mcp.projects`, for servers that this source does not define and no Skillshare
+configuration manages. When it finds some, a note above the server list says how many
+and in which Agents. **Import** opens the import with the first of those Agents
+selected. A project's **MCP** tab shows the same note for that project's own files;
+its import reads the project's file and saves the servers to that project. Entries
+with nothing to connect to, such as Goose's built-in extensions, are not counted.
+
+### Take over an entry an Agent already has
+
+When you add a server under a name an Agent file already uses, sync does not
+overwrite that entry. The plan reports a conflict, `existing entry is not managed`,
+and writes no files until you choose for that entry:
+
+- Import it from that Agent: `skillshare mcp import NAME --from CLIENT`, or the
+  conflict's **Import from** button in the dashboard, such as **Import from Cursor**.
+  An entry that matches the source is adopted as it is.
+- Replace it with the source definition: **Replace with source** in the dashboard, or
+  `--replace` on import.
 
 ## Safety and limitations
 
