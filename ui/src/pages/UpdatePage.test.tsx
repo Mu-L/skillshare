@@ -221,7 +221,7 @@ describe('UpdatePage', () => {
     await user.click(row.getByRole('button', { name: /^update$/i }));
     await user.click(await screen.findByRole('button', { name: 'Sync Now' }));
 
-    await waitFor(() => expect(api.sync).toHaveBeenCalledWith({ dryRun: true, kind: 'skill' }));
+    expect(await screen.findByText('Only skills are written. Agents, extras and MCP stay as they are.')).toBeInTheDocument();
   });
 
   it('warns about missing tracked repos and rehydrates on click (issue #212)', async () => {

@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertCircle, CircleCheck, RefreshCw, TriangleAlert } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-
-import type { SyncResult } from '../api/client';
 
 import { api } from '../api/client';
 import { invalidateAfterSync } from '../lib/sync';
+import { queryKeys, staleTimes } from '../lib/queryKeys';
 import Button from './Button';
 import DialogShell from './DialogShell';
 import Spinner from './Spinner';
 import SyncResultList, { SyncUpToDate } from './SyncResultList';
+import { countChanges, resourceGroups, type Part } from './sync/syncView';
 import { useT } from '../i18n';
 
 interface SyncPreviewModalProps {
@@ -20,38 +20,37 @@ interface SyncPreviewModalProps {
   kind?: 'skill' | 'agent';
 }
 
+/**
+ * Previews from /api/diff, the same data as the Sync page and the pending dots, so the counts agree:
+ * a dry-run reports every existing link as linked again.
+ */
 export default function SyncPreviewModal({ open, onClose, kind }: SyncPreviewModalProps) {
   const t = useT();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const diff = useQuery({ queryKey: queryKeys.diff(), queryFn: () => api.diff(), staleTime: staleTimes.diff, enabled: open });
+  const targets = useQuery({ queryKey: queryKeys.targets.synced, queryFn: () => api.listTargets('all'), staleTime: staleTimes.targets, enabled: open });
 
-  const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [synced, setSynced] = useState(false);
-  const [results, setResults] = useState<SyncResult[] | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runDryRun = useCallback(async () => {
-    setLoading(true);
+  // Fresh numbers on every open; the cached diff may predate an install or uninstall.
+  useEffect(() => {
     setError(null);
     setWarnings([]);
-    try {
-      const res = await api.sync({ dryRun: true, kind });
-      setResults(res.results);
-      setWarnings(res.warnings ?? []);
-    } catch (e: unknown) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [kind]);
+    setSynced(false);
+    if (open) void diff.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleSync = async () => {
     setSyncing(true);
+    setError(null);
     try {
       const res = await api.sync({ dryRun: false, kind });
-      setResults(res.results);
+      setWarnings(res.warnings ?? []);
       setSynced(true);
       invalidateAfterSync(queryClient);
     } catch (e: unknown) {
@@ -61,32 +60,19 @@ export default function SyncPreviewModal({ open, onClose, kind }: SyncPreviewMod
     }
   };
 
-  // Clear stale data on open/close; auto-run dry-run when opening
-  useEffect(() => {
-    setResults(null);
-    setError(null);
-    setWarnings([]);
-    setSynced(false);
-    if (open) {
-      runDryRun();
-    }
-  }, [open, runDryRun]);
-
-  const allUpToDate =
-    results !== null &&
-    results.every(
-      (r) =>
-        (r.linked?.length ?? 0) === 0 &&
-        (r.updated?.length ?? 0) === 0 &&
-        (r.pruned?.length ?? 0) === 0 &&
-        !r.dir_created,
-    );
-
-  // Agent results list only targets with something to do, so an empty list means up to date.
-  const noTargets = results !== null && results.length === 0 && kind !== 'agent';
+  const list = targets.data?.targets ?? [];
+  const parts = new Set<Part>(kind ? [kind] : ['skill', 'agent']);
+  const ignored = { skill: diff.data?.ignored_skills, agent: diff.data?.agent_ignored_skills };
+  const { groups, inSync } = resourceGroups(diff.data?.diffs ?? [], list, parts, false, ignored);
+  // Targets without an agents folder never get agents, so they are not "up to date" for them.
+  const upToDate = kind === 'agent' ? inSync.filter((n) => list.find((tg) => tg.name === n)?.agentPath) : inSync;
+  const loading = diff.isFetching || targets.isPending;
+  const loadError = error ?? diff.error?.message ?? targets.error?.message;
+  const count = countChanges(groups);
+  const noTargets = !loading && list.length === 0;
+  const canSync = !loading && !loadError && count > 0;
 
   const title = synced ? t('syncPreview.titleComplete') : kind ? t(`syncPreview.title.${kind}`) : t('syncPreview.titlePreview');
-  const canSync = !allUpToDate && !noTargets && results && !error;
   return (
     <DialogShell open={open} onClose={onClose} maxWidth="2xl" padding="none" preventClose={syncing} ariaLabel={title}>
       <div className="dh">
@@ -94,38 +80,39 @@ export default function SyncPreviewModal({ open, onClose, kind }: SyncPreviewMod
           <h2 className="ss-h2">{title}</h2>
           {kind && !synced && <p className="text-[13px] text-ink-2">{t(`syncPreview.scope.${kind}`)}</p>}
         </div>
-        {results !== null && !loading && !synced && (
-          <button type="button" className="ss-ib" onClick={runDryRun} title={t('syncPreview.refreshPreview')} aria-label={t('syncPreview.refreshPreview')}>
+        {!loading && !synced && (
+          <button type="button" className="ss-ib" onClick={() => void diff.refetch()} title={t('syncPreview.refreshPreview')} aria-label={t('syncPreview.refreshPreview')}>
             <RefreshCw size={16} />
           </button>
         )}
       </div>
 
       <div className="db">
-        {synced && <div className="ss-note inf"><CircleCheck size={16} /><span className="flex-1">{t('syncPreview.completed')}</span></div>}
-        {warnings.map((w) => <div key={w} className="ss-note warn"><TriangleAlert size={16} /><span className="flex-1">{w}</span></div>)}
-
-        {loading && <div className="ss-list"><div className="ss-r gap-2 text-[13px] text-ink-2"><Spinner size="sm" />{t('syncPreview.dryRunning')}</div></div>}
-
-        {error && (
+        {synced ? (
+          <>
+            <div className="ss-note inf"><CircleCheck size={16} /><span className="flex-1">{t('syncPreview.completed')}</span></div>
+            {warnings.map((w) => <div key={w} className="ss-note warn"><TriangleAlert size={16} /><span className="flex-1">{w}</span></div>)}
+          </>
+        ) : loading ? (
+          <div className="ss-list"><div className="ss-r gap-2 text-[13px] text-ink-2"><Spinner size="sm" />{t('sync.checking')}</div></div>
+        ) : loadError ? (
           <div className="ss-note bad">
             <AlertCircle size={16} />
-            <span className="flex-1">{error}</span>
-            <Button variant="secondary" size="sm" onClick={runDryRun}>{t('syncPreview.retryButton')}</Button>
+            <span className="flex-1">{loadError}</span>
+            <Button variant="secondary" size="sm" onClick={() => { setError(null); void diff.refetch(); }}>{t('syncPreview.retryButton')}</Button>
           </div>
-        )}
-
-        {!loading && !error && noTargets && <SyncUpToDate text={t('syncPreview.noTargets')} />}
-        {!loading && !error && allUpToDate && !noTargets && <SyncUpToDate text={t('syncPreview.allUpToDate')} />}
-
-        {!loading && !error && results && !allUpToDate && !noTargets && (
+        ) : noTargets ? (
+          <SyncUpToDate text={t('syncPreview.noTargets')} />
+        ) : groups.length === 0 ? (
+          <SyncUpToDate text={t('syncPreview.allUpToDate')} />
+        ) : (
           // One row per target can outgrow the dialog; scroll the list so the buttons stay reachable
-          <SyncResultList results={results} className="max-h-[50vh] !overflow-y-auto" />
+          <SyncResultList groups={groups} inSync={upToDate} className="max-h-[50vh] !overflow-y-auto" />
         )}
       </div>
 
       <div className="df">
-        {synced || (!loading && results !== null && !canSync && !error) ? (
+        {synced || (!loading && !loadError && !canSync) ? (
           <Button variant="primary" onClick={onClose}>{t('syncPreview.closeButton')}</Button>
         ) : (
           <>
