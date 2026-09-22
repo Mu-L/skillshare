@@ -733,7 +733,7 @@ func (s *Server) handlePull(w http.ResponseWriter, r *http.Request) {
 		} else if scope == "agents" {
 			kind = kindAgent
 		}
-		if out, _, err := s.syncResources(start, false, false, kind); err != nil {
+		if out, _, err := s.syncResources(start, false, false, kind, ""); err != nil {
 			resp.Warnings = append(resp.Warnings, "sync after pull failed: "+err.Error())
 		} else {
 			resp.SyncResults = out.results

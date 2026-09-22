@@ -1,0 +1,54 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it, vi } from 'vitest';
+import { api } from '../../api/client';
+import type { Target } from '../../api/client';
+import { mcpApi } from '../../api/mcp';
+import type { MCPPlan } from '../../api/mcp';
+import { I18nProvider } from '../../i18n';
+import ProjectSyncDialog from './ProjectSyncDialog';
+import type { ProjectRow } from './projectView';
+
+vi.mock('../../api/client', async (load) => ({ ...await load<typeof import('../../api/client')>(), api: { diff: vi.fn(), sync: vi.fn() } }));
+vi.mock('../../api/mcp', async (load) => ({ ...await load<typeof import('../../api/mcp')>(), mcpApi: { list: vi.fn(), preview: vi.fn(), syncProject: vi.fn(), configure: vi.fn() } }));
+
+const project = { root: '~/work/app', path: '/work/app', name: 'app', declared: true, targets: ['claude'], skills: null, agents: null, groups: [], missing: false, hasOwnConfig: false } as ProjectRow;
+const targets = [
+  { name: 'app@claude', project: '/work/app', mode: 'merge', path: '/work/app/.claude/skills' },
+  { name: 'claude', mode: 'merge', path: '/home/me/.claude/skills' },
+] as Target[];
+const plan: MCPPlan = {
+  revision: 'r1', sourcePath: '', blocked: false,
+  changes: [
+    { target: 'cursor', path: '/work/app/.cursor/mcp.json', name: 'docs', root: '/work/app', action: 'add' },
+    { target: 'cursor', path: '/home/me/.cursor/mcp.json', name: 'shared', action: 'add' },
+  ],
+};
+
+describe('Project sync dialog', () => {
+  it('previews and syncs only this project, leaving global changes out', async () => {
+    vi.mocked(api.diff).mockResolvedValue({ diffs: [
+      { target: 'app@claude', items: [{ skill: 'team-a', action: 'link', reason: 'new' }] },
+      { target: 'claude', items: [{ skill: 'global-only', action: 'link', reason: 'new' }] },
+    ] } as Awaited<ReturnType<typeof api.diff>>);
+    vi.mocked(mcpApi.list).mockResolvedValue({ source: { path: '', configPath: '', targets: null, servers: {}, projects: { '/work/app': {} } }, projectConfigs: [], paths: {}, detected: [], plan, previewError: '', backups: [] });
+    vi.mocked(mcpApi.preview).mockResolvedValue({ ...plan, revision: 'r2' });
+    vi.mocked(api.sync).mockResolvedValue({ results: [], warnings: [] } as unknown as Awaited<ReturnType<typeof api.sync>>);
+    vi.mocked(mcpApi.syncProject).mockResolvedValue({ applied: [], backupIds: [] });
+    const user = userEvent.setup();
+    render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><I18nProvider><ProjectSyncDialog open onClose={vi.fn()} project={project} targets={targets} /></I18nProvider></QueryClientProvider></MemoryRouter>);
+
+    expect(await screen.findByText('team-a')).toBeInTheDocument();
+    expect(screen.getByText('docs')).toBeInTheDocument();
+    expect(screen.queryByText('global-only')).not.toBeInTheDocument();
+    expect(screen.queryByText('shared')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Sync 2 changes' }));
+    expect(await screen.findByText('app is synced.')).toBeInTheDocument();
+    expect(api.sync).toHaveBeenCalledWith({ force: false, project: '~/work/app' });
+    await waitFor(() => expect(mcpApi.syncProject).toHaveBeenCalledWith('/work/app', 'r2'));
+    expect(mcpApi.configure).not.toHaveBeenCalled();
+  });
+});

@@ -2,12 +2,14 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -26,6 +28,8 @@ type mcpRequest struct {
 	Sync     bool         `json:"sync"`
 	BackupID string       `json:"backupId"`
 	Preview  bool         `json:"preview"`
+	// Root, with sync and no mutation, applies only that mcp.projects root's changes.
+	Root string `json:"root"`
 }
 
 func decodeMCPRequest(w http.ResponseWriter, r *http.Request, value any) bool {
@@ -119,15 +123,31 @@ func (s *Server) handleMCPConfigure(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "preview the MCP changes before saving")
 		return
 	}
+	if body.Root != "" && (!body.Sync || !reflect.DeepEqual(body.Mutation, mcp.Mutation{})) {
+		writeError(w, 400, "a project sync takes no changes")
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	start := time.Now()
-	result, err := s.mcpService().Mutate(body.Mutation, body.Revision, body.Sync)
+	var result *mcp.Result
+	var err error
+	logArgs := map[string]any{"scope": "ui"}
+	if body.Root != "" {
+		logArgs["project"] = body.Root
+		result, err = s.mcpService().ApplyProject(body.Revision, body.Root)
+	} else {
+		result, err = s.mcpService().Mutate(body.Mutation, body.Revision, body.Sync)
+	}
 	status := "ok"
 	if err != nil {
 		status = "error"
 	}
-	s.writeOpsLog("mcp configure", status, start, map[string]any{"scope": "ui"}, "")
+	s.writeOpsLog("mcp configure", status, start, logArgs, "")
+	if errors.Is(err, mcp.ErrUnknownProject) {
+		writeError(w, 400, err.Error())
+		return
+	}
 	if err != nil {
 		writeMCPFailure(w, result, err)
 		return

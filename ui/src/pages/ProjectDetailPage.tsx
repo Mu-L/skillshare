@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Folder, Folders, Plug } from 'lucide-react';
+import { Folder, Folders, Plug, RefreshCw } from 'lucide-react';
 import { api, type ProjectList, type ProjectResource } from '../api/client';
 import { mcpApi, mcpTargets } from '../api/mcp';
 import AgentIcon from '../components/AgentIcon';
@@ -13,6 +13,7 @@ import { PageSkeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import MCPProjectView from '../components/mcp/MCPProjectView';
 import { targetLabel } from '../components/mcp/mcpView';
+import ProjectSyncDialog from '../components/projects/ProjectSyncDialog';
 import ProjectTools from '../components/projects/ProjectTools';
 import { projectHealth, projectRows, toolGroups, type ProjectRow } from '../components/projects/projectView';
 import FilterSection, { ModePicker } from '../components/targets/FilterSection';
@@ -64,6 +65,7 @@ function ProjectEditor({ project, tools, mcp }: { project: ProjectRow; tools: Pr
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const canSave = dirty && draft.targets.length > 0 && Boolean(draft.skills || draft.agents);
 
@@ -143,6 +145,11 @@ function ProjectEditor({ project, tools, mcp }: { project: ProjectRow; tools: Pr
         subtitle={<span className="font-mono">{shortenHome(project.path)}</span>}
         actions={
           <>
+            <Button variant="secondary" onClick={() => setSyncing(true)} disabled={project.missing}>
+              <RefreshCw size={16} />
+              {t('projects.sync.button')}
+              {health.state === 'pending' && <span className="size-2 rounded-full bg-warn" role="img" aria-label={t(health.count === 1 ? 'projects.note.pending.one' : 'projects.note.pending.other', { count: health.count })} />}
+            </Button>
             {tab === 'skills' && previewTool && (
               <Link to={`/skills?tab=analyze&target=${encodeURIComponent(`${project.name}@${previewTool}`)}`} className="ss-btn ghost">{t('analyze.open')}</Link>
             )}
@@ -158,7 +165,7 @@ function ProjectEditor({ project, tools, mcp }: { project: ProjectRow; tools: Pr
         {!dirty && health.state === 'pending' && (
           <div className="ss-note inf">
             <span className="flex-1">{t(health.count === 1 ? 'projects.note.pending.one' : 'projects.note.pending.other', { count: health.count })}</span>
-            <Link to="/sync" className="shrink-0 font-semibold underline underline-offset-2">{t('projects.note.sync')}</Link>
+            <button type="button" className="shrink-0 font-semibold underline underline-offset-2" onClick={() => setSyncing(true)}>{t('projects.sync.review')}</button>
           </div>
         )}
       </div>
@@ -220,6 +227,8 @@ function ProjectEditor({ project, tools, mcp }: { project: ProjectRow; tools: Pr
           </aside>
         </div>
       )}
+
+      <ProjectSyncDialog open={syncing} onClose={() => setSyncing(false)} project={project} targets={targets.data?.targets} />
 
       <ConfirmDialog
         open={removing}

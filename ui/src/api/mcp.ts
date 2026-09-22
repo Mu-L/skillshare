@@ -56,6 +56,8 @@ export const mcpApi = {
   }>('/mcp'),
   preview: (mutation: MCPMutation = {}) => post<MCPPlan>('/mcp/preview', { mutation }),
   configure: (mutation: MCPMutation, revision: string, sync: boolean) => post<MCPResult>('/mcp', { mutation, revision, sync }),
+  /** Apply only the changes of one mcp.projects root; the global scope and other projects stay pending. */
+  syncProject: (root: string, revision: string) => post<MCPResult>('/mcp', { mutation: {}, revision, sync: true, root }),
   /** Save to the source only. The server refuses a write it has not previewed; the revision also catches concurrent edits. */
   save: async (mutation: MCPMutation) =>
     post<MCPResult>('/mcp', { mutation, revision: (await post<MCPPlan>('/mcp/preview', { mutation })).revision, sync: false }),

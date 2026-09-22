@@ -1,7 +1,7 @@
 import { api, type DiffTarget, type ExtraDiffResult, type SyncResponse, type Target } from '../../api/client';
 import { mcpApi, type MCPPlan } from '../../api/mcp';
 import { formatAgentDisplayName } from '../../lib/resourceNames';
-import { groupByFile, type MCPChange } from '../mcp/mcpView';
+import { groupByFile, projectOf, type MCPChange } from '../mcp/mcpView';
 
 export type Part = 'skill' | 'agent' | 'extra' | 'mcp';
 export type RowIcon = 'add' | 'update' | 'remove' | 'kept' | 'conflict';
@@ -124,8 +124,11 @@ export const countEdited = (groups: ChangeGroup[]) => groups.reduce((n, g) => n 
 /** Thrown when the MCP plan no longer matches the one on screen. */
 export const MCP_CHANGED = 'mcp-changed';
 
+/** The plan's changes for one mcp.projects root. */
+export const projectChanges = (plan: MCPPlan | null | undefined, root: string) => (plan?.changes ?? []).filter((c) => projectOf([root], c) === root);
+
 // Revisions move on any config write, including the resource sync; only the reviewed changes must hold.
-const changeKey = (plan: MCPPlan) => plan.changes.filter((c) => c.action !== 'unchanged').map((c) => JSON.stringify([c.target, c.name, c.action])).sort().join();
+const changeKey = (plan: MCPPlan, root?: string) => (root ? projectChanges(plan, root) : plan.changes).filter((c) => c.action !== 'unchanged').map((c) => JSON.stringify([c.target, c.name, c.action])).sort().join();
 
 export interface SyncRun {
   resources: 'skill' | 'agent' | 'both' | null;
@@ -133,6 +136,8 @@ export interface SyncRun {
   /** The MCP plan the user reviewed, or null to leave MCP alone */
   mcp: MCPPlan | null;
   force: boolean;
+  /** Write one project only: `root` as declared under projects, `path` its folder (the mcp.projects key) */
+  project?: { root: string; path: string };
 }
 
 /** Writes each included part in order. MCP is checked before anything is written and again right before it applies. */
@@ -140,13 +145,15 @@ export async function runSync(run: SyncRun) {
   const reviewed = run.mcp;
   const recheck = async () => {
     const fresh = await mcpApi.preview();
-    if (fresh.blocked || changeKey(fresh) !== changeKey(reviewed!)) throw new Error(MCP_CHANGED);
+    const root = run.project?.path;
+    const blocked = root ? projectChanges(fresh, root).some((c) => c.action === 'conflict') : fresh.blocked;
+    if (blocked || changeKey(fresh, root) !== changeKey(reviewed!, root)) throw new Error(MCP_CHANGED);
     return fresh.revision;
   };
   if (reviewed) await recheck();
   let resources: SyncResponse | undefined;
   if (run.resources) {
-    resources = await api.sync({ force: run.force, ...(run.resources !== 'both' && { kind: run.resources }) });
+    resources = await api.sync({ force: run.force, ...(run.resources !== 'both' && { kind: run.resources }), ...(run.project && { project: run.project.root }) });
   }
   if (run.extras) {
     const extras = await api.syncExtras({ force: run.force });
@@ -154,7 +161,8 @@ export async function runSync(run: SyncRun) {
     if (failed) throw new Error(failed.error || failed.errors?.join('; '));
   }
   if (reviewed) {
-    await mcpApi.configure({}, await recheck(), true);
+    if (run.project) await mcpApi.syncProject(run.project.path, await recheck());
+    else await mcpApi.configure({}, await recheck(), true);
   }
   return { resources };
 }

@@ -317,7 +317,8 @@ export const api = {
     }),
 
   // Sync
-  sync: (opts: { dryRun?: boolean; force?: boolean; kind?: 'skill' | 'agent' }) =>
+  /** `project` (a root under projects) limits the sync to that project's targets. */
+  sync: (opts: { dryRun?: boolean; force?: boolean; kind?: 'skill' | 'agent'; project?: string }) =>
     apiFetch<SyncResponse>('/sync', {
       method: 'POST',
       body: JSON.stringify(opts),

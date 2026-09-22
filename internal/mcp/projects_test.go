@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -169,5 +170,75 @@ func TestProjectsRootExpandsHomeWithThePlatformSeparator(t *testing.T) {
 	projects, err := ParseProjects(node.Content[0])
 	if _, ok := projects[filepath.Join(home, "work")]; err != nil || !ok {
 		t.Fatalf("~ with the platform separator was not expanded: %v %v", projects, err)
+	}
+}
+
+func TestApplyProjectWritesOnlyThatRoot(t *testing.T) {
+	s, tmp := projectsService(t, projectsConfig)
+	root := filepath.Join(tmp, "projA")
+	plan, err := s.Preview()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ApplyProject(plan.Revision, root); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := os.ReadFile(filepath.Join(root, ".cursor", "mcp.json")); err != nil || !strings.Contains(string(data), "docs-server") {
+		t.Fatalf("projA not written: %s (%v)", data, err)
+	}
+	for _, file := range []string{".cursor/mcp.json", "projB/opencode.json"} {
+		if _, err := os.Stat(filepath.Join(tmp, file)); !os.IsNotExist(err) {
+			t.Fatalf("%s was written", file)
+		}
+	}
+	after, err := s.Preview()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range after.Changes {
+		if pending := c.Action != "unchanged"; pending == (c.Root == root) {
+			t.Fatalf("after project apply: %s %s %s (root %q)", c.Action, c.Name, c.Path, c.Root)
+		}
+	}
+}
+
+func TestApplyProjectKeepsClaudeUserServersPending(t *testing.T) {
+	s, tmp := projectsService(t, `mcp:
+  servers:
+    shared:
+      command: echo
+      targets: [claude]
+  projects:
+    $TMP/projA:
+      targets: [claude]
+      servers:
+        shared:
+          disabled: true
+`)
+	root := filepath.Join(tmp, "projA")
+	plan, err := s.Preview()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ApplyProject(plan.Revision, root); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(tmp, ".claude.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"shared"`) || strings.Contains(string(data), "echo") {
+		t.Fatalf("want only projA's off list in ~/.claude.json, got %s", data)
+	}
+}
+
+func TestApplyProjectRejectsUnknownRoot(t *testing.T) {
+	s, tmp := projectsService(t, projectsConfig)
+	plan, err := s.Preview()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ApplyProject(plan.Revision, filepath.Join(tmp, "nope")); !errors.Is(err, ErrUnknownProject) {
+		t.Fatalf("got %v", err)
 	}
 }

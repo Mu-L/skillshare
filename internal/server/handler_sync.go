@@ -6,6 +6,7 @@ import (
 	"maps"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -55,6 +56,8 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 		DryRun bool   `json:"dryRun"`
 		Force  bool   `json:"force"`
 		Kind   string `json:"kind"`
+		// Project limits the sync to one declared project's targets.
+		Project string `json:"project"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		// Default to non-dry-run, non-force, empty kind (both)
@@ -65,7 +68,16 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out, code, err := s.syncResources(start, body.DryRun, body.Force, body.Kind)
+	if body.Project != "" {
+		root := s.declaredProjectRoot(body.Project)
+		if _, ok := s.cfg.Projects[root]; !ok {
+			writeError(w, http.StatusBadRequest, "unknown project: "+body.Project)
+			return
+		}
+		body.Project = root
+	}
+
+	out, code, err := s.syncResources(start, body.DryRun, body.Force, body.Kind, body.Project)
 	if err != nil {
 		writeError(w, code, err.Error())
 		return
@@ -92,10 +104,28 @@ type syncOutcome struct {
 	ignoreStats *skillignore.IgnoreStats
 }
 
-// syncResources links skills and agents (kind "" means both) into every target
-// and logs the sync. On failure it returns the HTTP status to report; agent
-// failures only add warnings. Callers must hold s.mu.
-func (s *Server) syncResources(start time.Time, dryRun, force bool, kind string) (*syncOutcome, int, error) {
+// projectTargets returns the targets of the project declared under root.
+func (s *Server) projectTargets(root string) map[string]config.TargetConfig {
+	abs := filepath.Clean(config.ExpandPath(root))
+	targets := map[string]config.TargetConfig{}
+	for name, target := range s.cfg.Targets {
+		if target.ProjectRoot() != "" && filepath.Clean(target.ProjectRoot()) == abs {
+			targets[name] = target
+		}
+	}
+	return targets
+}
+
+// syncResources links skills and agents (kind "" means both) into every target,
+// or only the targets of the project declared under project, and logs the sync.
+// On failure it returns the HTTP status to report; agent failures only add
+// warnings. Callers must hold s.mu.
+func (s *Server) syncResources(start time.Time, dryRun, force bool, kind, project string) (*syncOutcome, int, error) {
+	targets := s.cfg.Targets
+	if project != "" {
+		targets = s.projectTargets(project)
+	}
+
 	globalMode := s.cfg.Mode
 	if globalMode == "" {
 		globalMode = "merge"
@@ -112,7 +142,7 @@ func (s *Server) syncResources(start time.Time, dryRun, force bool, kind string)
 	}
 
 	if !dryRun {
-		warnings = append(warnings, s.backupBeforeSync(kind != kindAgent, kind != kindSkill)...)
+		warnings = append(warnings, s.backupBeforeSync(targets, kind != kindAgent, kind != kindSkill)...)
 	}
 
 	results := make([]syncTargetResult, 0)
@@ -137,7 +167,7 @@ func (s *Server) syncResources(start time.Time, dryRun, force bool, kind string)
 		// Sync only manages symlinks — it must not prune registry entries
 		// for installed skills whose files may be missing from disk.
 
-		for name, target := range s.cfg.Targets {
+		for name, target := range targets {
 			sc := target.SkillsConfig()
 			mode := sc.Mode
 			if mode == "" {
@@ -153,12 +183,15 @@ func (s *Server) syncResources(start time.Time, dryRun, force bool, kind string)
 			}
 
 			syncErrArgs := map[string]any{
-				"targets_total":  len(s.cfg.Targets),
+				"targets_total":  len(targets),
 				"targets_failed": 1,
 				"target":         name,
 				"dry_run":        dryRun,
 				"force":          force,
 				"scope":          "ui",
+			}
+			if project != "" {
+				syncErrArgs["project"] = project
 			}
 
 			switch mode {
@@ -226,7 +259,7 @@ func (s *Server) syncResources(start time.Time, dryRun, force bool, kind string)
 			agents := discoverActiveAgents(agentsSource)
 			builtinAgents := s.builtinAgentTargets()
 
-			for name, target := range s.cfg.Targets {
+			for name, target := range targets {
 				agentPath := resolveAgentPath(target, builtinAgents, name, s.IsProjectMode())
 				if agentPath == "" {
 					continue
@@ -305,14 +338,18 @@ func (s *Server) syncResources(start time.Time, dryRun, force bool, kind string)
 	}
 
 	// Log the sync operation
-	s.writeOpsLog("sync", "ok", start, map[string]any{
+	logArgs := map[string]any{
 		"targets_total":  len(results),
 		"targets_failed": 0,
 		"dry_run":        dryRun,
 		"force":          force,
 		"kind":           kind,
 		"scope":          "ui",
-	}, "")
+	}
+	if project != "" {
+		logArgs["project"] = project
+	}
+	s.writeOpsLog("sync", "ok", start, logArgs, "")
 
 	return &syncOutcome{results: results, warnings: warnings, skills: allSkills, ignoreStats: ignoreStats}, 0, nil
 }
@@ -320,7 +357,7 @@ func (s *Server) syncResources(start time.Time, dryRun, force bool, kind string)
 // backupBeforeSync snapshots the target folders a sync may overwrite, as the
 // CLI does, then trims old snapshots. Project mode backs up agents only, like
 // `sync -p`. Failures come back as warnings. Callers must hold s.mu.
-func (s *Server) backupBeforeSync(skills, agents bool) []string {
+func (s *Server) backupBeforeSync(targets map[string]config.TargetConfig, skills, agents bool) []string {
 	var warnings []string
 	dir := backup.BackupDir()
 	if s.IsProjectMode() {
@@ -332,7 +369,7 @@ func (s *Server) backupBeforeSync(skills, agents bool) []string {
 		}
 	}
 	builtinAgents := s.builtinAgentTargets()
-	for name, target := range s.cfg.Targets {
+	for name, target := range targets {
 		if skills {
 			snapshot(name, target.SkillsConfig().Path)
 		}

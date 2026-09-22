@@ -3,9 +3,12 @@ package mcp
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 )
 
@@ -125,9 +128,52 @@ func (s *Service) Apply(revision string) (*Result, error) {
 	return s.applyPlan(p)
 }
 
-func (s *Service) applyPlan(p *Plan) (*Result, error) {
+// ErrUnknownProject is returned for a root that mcp.projects does not declare.
+var ErrUnknownProject = errors.New("unknown MCP project")
+
+// ApplyProject is Apply for one mcp.projects root: only the files written for that
+// root change, and the global scope and other roots stay pending. The revision
+// still covers the whole plan, so any change anywhere asks for a new preview.
+func (s *Service) ApplyProject(revision, root string) (*Result, error) {
+	if revision == "" {
+		return nil, fmt.Errorf("preview the MCP changes before saving")
+	}
+	lock, err := s.lock()
+	if err != nil {
+		return nil, err
+	}
+	defer lock.Unlock()
+	if err := s.recoverPending(); err != nil {
+		return nil, err
+	}
+	p, err := s.Preview()
+	if err != nil {
+		return nil, err
+	}
+	root = filepath.Clean(root)
+	if _, ok := p.source.Projects[root]; !ok {
+		return nil, fmt.Errorf("%w: %s", ErrUnknownProject, root)
+	}
+	if revision != p.Revision {
+		return nil, fmt.Errorf("MCP configuration changed since preview; preview again")
+	}
+	return s.applyScoped(p, &root)
+}
+
+func (s *Service) applyPlan(p *Plan) (*Result, error) { return s.applyScoped(p, nil) }
+
+// applyScoped writes the plan's files, or with root set only those that belong to
+// that mcp.projects root, along with their ownership entries.
+func (s *Service) applyScoped(p *Plan, root *string) (*Result, error) {
 	result := &Result{Plan: p, Applied: []string{}, BackupIDs: []string{}}
-	if p.Blocked {
+	roots := sortedKeys(p.source.Projects)
+	inScope := func(target, path string) bool { return root == nil || changeRoot(target, path, roots) == *root }
+	blocked := p.Blocked
+	if root != nil {
+		// A conflict elsewhere touches none of this root's files.
+		blocked = slices.ContainsFunc(p.Changes, func(c Change) bool { return c.Action == "conflict" && c.Root == *root })
+	}
+	if blocked {
 		return result, fmt.Errorf("MCP conflicts found; no files changed")
 	}
 	if err := p.source.CheckUnchanged(); err != nil {
@@ -142,12 +188,15 @@ func (s *Service) applyPlan(p *Plan) (*Result, error) {
 	}
 	// Check every file before the first write, and each file again at its write.
 	for _, f := range p.files {
+		if !inScope(f.target, f.path) {
+			continue
+		}
 		if _, _, _, _, err := refreshFile(f); err != nil {
 			return result, err
 		}
 	}
 	for _, f := range p.files {
-		if bytes.Equal(f.before, f.after) || len(f.changes) == 0 {
+		if !inScope(f.target, f.path) || bytes.Equal(f.before, f.after) || len(f.changes) == 0 {
 			continue
 		}
 		data, exists, mode, native, err := refreshFile(f)
@@ -201,13 +250,28 @@ func (s *Service) applyPlan(p *Plan) (*Result, error) {
 		}
 		s.pruneBackups(f.path)
 	}
-	finalState, err := json.Marshal(p.state)
+	final := p.state
+	if root != nil {
+		// Take the plan's ownership only for this root's entries.
+		final = ledger{Version: state.Version, Entries: maps.Clone(state.Entries)}
+		for key, owned := range state.Entries {
+			if _, kept := p.state.Entries[key]; !kept && inScope(owned.Target, owned.Path) {
+				delete(final.Entries, key)
+			}
+		}
+		for key, owned := range p.state.Entries {
+			if inScope(owned.Target, owned.Path) {
+				final.Entries[key] = owned
+			}
+		}
+	}
+	finalState, err := json.Marshal(final)
 	if err != nil {
 		return result, err
 	}
 	currentState, _ := json.Marshal(state)
 	if !bytes.Equal(finalState, currentState) {
-		if err := writeJSONFile(s.statePath(), p.state); err != nil {
+		if err := writeJSONFile(s.statePath(), final); err != nil {
 			return result, err
 		}
 	}

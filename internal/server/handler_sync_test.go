@@ -260,3 +260,71 @@ func TestHandleSync_AgentsPruneExcludedTargetAgent(t *testing.T) {
 		t.Fatalf("excluded synced agent should be pruned, got err=%v", err)
 	}
 }
+
+func TestHandleSync_ProjectSyncsOnlyThatProjectsSkills(t *testing.T) {
+	global := filepath.Join(t.TempDir(), "claude-skills")
+	s, src := newTestServerWithTargets(t, map[string]string{"claude": global})
+	addSkill(t, src, "team-a")
+	root := filepath.Join(filepath.Dir(src), "app")
+	addProject(t, s, root)
+
+	rr := projectRequest(t, s, http.MethodPost, "/api/sync", `{"project":"`+root+`"}`)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if _, err := os.Stat(filepath.Join(root, ".claude", "skills", "team-a")); err != nil {
+		t.Fatalf("project target not synced: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(global, "team-a")); !os.IsNotExist(err) {
+		t.Fatalf("global target was synced, err=%v", err)
+	}
+}
+
+func TestHandleSync_ProjectSyncsOnlyThatProjectsAgents(t *testing.T) {
+	s, src := newTestServer(t)
+	agentSource := filepath.Join(t.TempDir(), "agents")
+	globalAgents := filepath.Join(t.TempDir(), "claude-agents")
+	for _, dir := range []string{agentSource, globalAgents} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(agentSource, "tutor.md"), []byte("# Tutor"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s.cfg.AgentsSource = agentSource
+	s.cfg.Targets["claude"] = config.TargetConfig{
+		Skills: &config.ResourceTargetConfig{Path: filepath.Join(t.TempDir(), "claude-skills")},
+		Agents: &config.ResourceTargetConfig{Path: globalAgents},
+	}
+	if err := s.cfg.Save(); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(filepath.Dir(src), "app")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"create":true,"root":"` + root + `","targets":["claude"],"agents":{"mode":"merge","include":[],"exclude":[]}}`
+	if rr := projectRequest(t, s, http.MethodPut, "/api/projects", body); rr.Code != http.StatusOK {
+		t.Fatalf("add project: %d %s", rr.Code, rr.Body)
+	}
+
+	rr := projectRequest(t, s, http.MethodPost, "/api/sync", `{"kind":"agent","project":"`+root+`"}`)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if _, err := os.Lstat(filepath.Join(root, ".claude", "agents", "tutor.md")); err != nil {
+		t.Fatalf("project agent not synced: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(globalAgents, "tutor.md")); !os.IsNotExist(err) {
+		t.Fatalf("global agent was synced, err=%v", err)
+	}
+}
+
+func TestHandleSync_UnknownProjectIsRejected(t *testing.T) {
+	s, src := newTestServer(t)
+	rr := projectRequest(t, s, http.MethodPost, "/api/sync", `{"project":"`+filepath.Join(filepath.Dir(src), "nope")+`"}`)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
