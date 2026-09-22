@@ -8,7 +8,7 @@ import { Checkbox } from '../Checkbox';
 import { useT } from '../../i18n';
 import { canImportConflict, countActions, describeMessage, groupByFile, isResolvable, statusVariant } from './mcpView';
 
-export type MCPResolve = (target: string, name: string, action: 'import' | 'replace') => void;
+export type MCPResolve = (target: string, name: string, action: 'import' | 'replace', project?: string) => void;
 
 interface Props {
   plan: MCPPlan;

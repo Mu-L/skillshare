@@ -1,0 +1,26 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it, vi } from 'vitest';
+import { I18nProvider } from '../i18n';
+import { mcpApi } from '../api/mcp';
+import { ToastProvider } from '../components/Toast';
+import MCPPage from './MCPPage';
+
+vi.mock('../context/AppContext', () => ({ useAppContext: () => ({ isProjectMode: false }) }));
+vi.mock('../api/mcp', async (load) => ({ ...await load<typeof import('../api/mcp')>(), mcpApi: { list: vi.fn(), import: vi.fn().mockResolvedValue({ candidates: [] }) } }));
+
+describe('MCP page', () => {
+  it("imports a project's conflicting entry from that project's Agent file", async () => {
+    const user = userEvent.setup();
+    vi.mocked(mcpApi.list).mockResolvedValue({
+      source: { path: '', configPath: '', targets: ['claude'], servers: {}, projects: { '/work/app': { targets: ['cursor'], servers: { docs: { command: 'npx' } } } } },
+      projectConfigs: [], paths: { claude: '/.claude.json', cursor: '/.cursor/mcp.json' }, detected: ['claude', 'cursor'], previewError: '', backups: [], unmanaged: [],
+      plan: { revision: '', sourcePath: '', blocked: true, changes: [{ target: 'cursor', path: '/work/app/.cursor/mcp.json', name: 'docs', root: '/work/app', action: 'conflict', message: 'existing entry is not managed; import it to explicitly adopt it' }] },
+    } as Awaited<ReturnType<typeof mcpApi.list>>);
+    render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><I18nProvider><ToastProvider><MCPPage /></ToastProvider></I18nProvider></QueryClientProvider></MemoryRouter>);
+    await user.click(await screen.findByRole('button', { name: 'Import from Cursor' }));
+    await waitFor(() => expect(mcpApi.import).toHaveBeenCalledWith({ from: 'cursor', root: '/work/app' }));
+  });
+});

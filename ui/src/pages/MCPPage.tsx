@@ -45,7 +45,7 @@ export default function MCPPage() {
   const [editing, setEditing] = useState<string | null>(null); // '' adds a new server
   // Adding takes two shapes: fill the fields, or paste a snippet. Both end up saving one source server.
   const [addMode, setAddMode] = useState<'form' | 'paste'>('form');
-  const [importing, setImporting] = useState<{ conflict?: { target: string; name: string }; from?: string } | null>(null);
+  const [importing, setImporting] = useState<{ conflict?: { target: string; name: string }; from?: string; project?: string } | null>(null);
   const [removing, setRemoving] = useState('');
   const [viewing, setViewing] = useState('');
   const [backupsOpen, setBackupsOpen] = useState(false);
@@ -64,6 +64,9 @@ export default function MCPPage() {
     toast(message, 'success');
   };
 
+  // Accounts of an Agent follow the Agents, by name.
+  const order = useMemo(() => [...mcpTargets, ...Object.keys(data?.source.accounts ?? {}).sort()], [data?.source.accounts]);
+
   if (isPending) return <PageSkeleton />;
 
   const servers = data?.source.servers ?? {};
@@ -79,8 +82,6 @@ export default function MCPPage() {
   const roots = Object.keys(data?.source.projects ?? {});
   const conflicts = changes.filter((c) => c.action === 'conflict');
   const detected = new Set(data?.detected);
-  // Accounts of an Agent follow the Agents, by name.
-  const order = useMemo(() => [...mcpTargets, ...Object.keys(data?.source.accounts ?? {}).sort()], [data?.source.accounts]);
   const files = order.filter((x) => data?.paths[x]);
   const matrixTargets = new Set([...files, ...rows.flatMap((row) => [...targetsOf(row.name), ...Object.keys(row.cells)])]);
   const undetected = files.filter((x) => !detected.has(x));
@@ -113,9 +114,9 @@ export default function MCPPage() {
     refresh();
   };
 
-  const resolve: MCPResolve = async (target, name, action) => {
+  const resolve: MCPResolve = async (target, name, action, project) => {
     if (action === 'import') {
-      setImporting({ conflict: { target, name } });
+      setImporting({ conflict: { target, name }, project });
       return;
     }
     const mutation: MCPMutation = { resolutions: [{ target, name, action: 'replace' }] };
@@ -227,7 +228,7 @@ export default function MCPPage() {
                       {projectOf(roots, c) && <span className="text-ink-2"> · {shortenHome(projectOf(roots, c)!)}</span>}
                     </span>
                     {isResolvable(c) && <>
-                      {canImportConflict(c) && <Button size="sm" variant="secondary" disabled={busy} onClick={() => void resolve(c.target, c.name, 'import')}>{t('mcp.importFromAgent', { target: targetLabel(c.target) })}</Button>}
+                      {canImportConflict(c) && <Button size="sm" variant="secondary" disabled={busy} onClick={() => void resolve(c.target, c.name, 'import', projectOf(roots, c))}>{t('mcp.importFromAgent', { target: targetLabel(c.target) })}</Button>}
                       <Button size="sm" variant="secondary" disabled={busy} onClick={() => void resolve(c.target, c.name, 'replace')}>{t('mcp.replace')}</Button>
                     </>}
                   </div>
@@ -284,8 +285,10 @@ export default function MCPPage() {
       {importing && data && (
         <MCPImportDialog
           source="target"
-          servers={servers}
-          defaultTargets={defaults}
+          // A project's conflict is read from and imported into that project, not the global source.
+          project={importing.project}
+          servers={importing.project ? data.source.projects?.[importing.project]?.servers ?? {} : servers}
+          defaultTargets={importing.project ? data.source.projects?.[importing.project]?.targets ?? defaults : defaults}
           paths={data.paths}
           detected={data.detected}
           conflict={importing.conflict}
