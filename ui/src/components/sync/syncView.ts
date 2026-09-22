@@ -18,6 +18,8 @@ export interface ChangeRow {
   counts: boolean;
   /** Edited inside the target: sync keeps it unless Force is on */
   edited?: boolean;
+  /** An MCP switch: added, it turns a global server off in a project; removed, back on */
+  switch?: boolean;
 }
 
 export interface ChangeGroup {
@@ -109,6 +111,7 @@ export function mcpGroups(plan: MCPPlan | null | undefined): ChangeGroup[] {
       text: c.action === 'conflict' ? null : c.switch && c.action !== 'update' ? `sync.row.mcp.switch.${c.action}` : `sync.row.mcp.${c.action}`,
       detail: c.message,
       counts: c.action !== 'conflict',
+      switch: c.switch,
     })),
   }));
 }

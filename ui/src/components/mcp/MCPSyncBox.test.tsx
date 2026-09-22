@@ -16,7 +16,7 @@ const plan: MCPPlan = { revision: 'r1', sourcePath: '', blocked: false, changes:
 
 // The project view passes only its own changes; the plan still covers every file.
 const box = (p: MCPPlan = plan) =>
-  render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><I18nProvider><MCPSyncBox changes={[own]} roots={['/work/app']} plan={p} /></I18nProvider></QueryClientProvider></MemoryRouter>);
+  render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><I18nProvider><MCPSyncBox changes={[own]} roots={['/work', '/work/app']} plan={p} /></I18nProvider></QueryClientProvider></MemoryRouter>);
 
 describe('MCP sync box', () => {
   beforeEach(() => { vi.mocked(runSync).mockReset(); });
@@ -27,9 +27,41 @@ describe('MCP sync box', () => {
     box();
     await user.click(screen.getByRole('button', { name: 'Sync MCP' }));
     expect(screen.getByText('Also writes 1 change outside this project.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Sync 2 changes' }));
+    await user.click(screen.getByRole('button', { name: 'Sync Now' }));
     await waitFor(() => expect(runSync).toHaveBeenCalledWith({ resources: null, extras: false, mcp: plan, force: false }));
     expect(await screen.findByText('The MCP config files are written.')).toBeInTheDocument();
+  });
+
+  // Laid out like the Skills sync dialog, but a server is added or removed, never linked or pruned.
+  it('lists a row per Agent file with the MCP change counts', async () => {
+    const user = userEvent.setup();
+    box();
+    await user.click(screen.getByRole('button', { name: 'Sync MCP' }));
+    expect(screen.getByText('1 to update')).toBeInTheDocument();
+  });
+
+  // Claude's off list for a project sits in ~/.claude.json: adding to it turns a server off, it adds none.
+  it('counts a project switch as turning a server off', async () => {
+    const user = userEvent.setup();
+    box({ ...plan, changes: [own, { target: 'claude', path: '/home/me/.claude.json', name: 'context7', root: '/work/app', switch: true, action: 'add' }] });
+    await user.click(screen.getByRole('button', { name: 'Sync MCP' }));
+    expect(screen.getByText('1 to turn off')).toBeInTheDocument();
+  });
+
+  // Under nested roots the path fits both; the plan's root says which project the file is for.
+  it("names a file's project by the plan's root", async () => {
+    const user = userEvent.setup();
+    box();
+    await user.click(screen.getByRole('button', { name: 'Sync MCP' }));
+    expect(screen.getByText('app · docs')).toBeInTheDocument();
+  });
+
+  it('spells out projects whose folders share a name', async () => {
+    const user = userEvent.setup();
+    const at = (root: string) => ({ target: 'cursor', path: `${root}/.cursor/mcp.json`, root, name: 'docs', action: 'add' });
+    box({ ...plan, changes: [at('/a/app'), at('/b/app')] });
+    await user.click(screen.getByRole('button', { name: 'Sync MCP' }));
+    expect(screen.getByText('/b/app · docs')).toBeInTheDocument();
   });
 
   it('says so when the plan moved before it was written', async () => {
@@ -37,7 +69,7 @@ describe('MCP sync box', () => {
     vi.mocked(runSync).mockRejectedValue(new Error(MCP_CHANGED));
     box();
     await user.click(screen.getByRole('button', { name: 'Sync MCP' }));
-    await user.click(screen.getByRole('button', { name: 'Sync 2 changes' }));
+    await user.click(screen.getByRole('button', { name: 'Sync Now' }));
     expect(await screen.findByText(/The MCP changes shifted during the sync/)).toBeInTheDocument();
   });
 

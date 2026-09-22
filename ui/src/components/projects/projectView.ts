@@ -1,6 +1,6 @@
 import type { Project, ProjectList, Target } from '../../api/client';
 import type { mcpApi } from '../../api/mcp';
-import { projectOf } from '../mcp/mcpView';
+import { projectOf, writes } from '../mcp/mcpView';
 import { targetHealth } from '../targets/targetView';
 
 type MCPList = Awaited<ReturnType<typeof mcpApi.list>>;
@@ -10,7 +10,7 @@ export type ProjectRow = Project & { declared: boolean };
 
 export const projectUrl = (path: string, tab?: 'agents' | 'mcp') => `/projects/${encodeURIComponent(path)}${tab ? `?tab=${tab}` : ''}`;
 
-const baseName = (path: string) => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
+export const baseName = (path: string) => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
 
 /** Projects from the projects section, then the folders only mcp.projects names, in name order. */
 export function projectRows(list: ProjectList | undefined, mcp: MCPList | undefined): ProjectRow[] {
@@ -45,7 +45,7 @@ export function projectHealth(project: ProjectRow, targets: Target[], mcp: MCPLi
   const changes = (mcp?.plan?.changes ?? []).filter((c) => projectOf(roots, c) === project.path);
   const conflicts = changes.filter((c) => c.action === 'conflict').length + mine.filter((h) => h.state === 'problem').length;
   if (conflicts > 0) return { state: 'conflict', count: conflicts };
-  const pending = mine.reduce((n, h) => n + h.pending, 0) + changes.filter((c) => ['add', 'update', 'remove'].includes(c.action)).length;
+  const pending = mine.reduce((n, h) => n + h.pending, 0) + changes.filter(writes).length;
   if (pending > 0) return { state: 'pending', count: pending };
   return { state: mine.length > 0 || mcp?.source.projects?.[project.path] ? 'synced' : 'idle', count: 0 };
 }

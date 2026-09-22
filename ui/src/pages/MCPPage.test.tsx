@@ -9,7 +9,7 @@ import { ToastProvider } from '../components/Toast';
 import MCPPage from './MCPPage';
 
 vi.mock('../context/AppContext', () => ({ useAppContext: () => ({ isProjectMode: false }) }));
-vi.mock('../api/mcp', async (load) => ({ ...await load<typeof import('../api/mcp')>(), mcpApi: { list: vi.fn(), import: vi.fn().mockResolvedValue({ candidates: [] }) } }));
+vi.mock('../api/mcp', async (load) => ({ ...await load<typeof import('../api/mcp')>(), mcpApi: { list: vi.fn(), import: vi.fn().mockResolvedValue({ candidates: [] }), save: vi.fn() } }));
 
 describe('MCP page', () => {
   it("imports a project's conflicting entry from that project's Agent file", async () => {
@@ -22,5 +22,21 @@ describe('MCP page', () => {
     render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><I18nProvider><ToastProvider><MCPPage /></ToastProvider></I18nProvider></QueryClientProvider></MemoryRouter>);
     await user.click(await screen.findByRole('button', { name: 'Import from Cursor' }));
     await waitFor(() => expect(mcpApi.import).toHaveBeenCalledWith({ from: 'cursor', root: '/work/app' }));
+  });
+
+  // Each save sends the revision it previewed; a second one racing it would be refused.
+  it('holds the other toggles while a save is on its way', async () => {
+    const user = userEvent.setup();
+    vi.mocked(mcpApi.list).mockResolvedValue({
+      source: { path: '', configPath: '', targets: ['claude'], servers: { a: { command: 'npx' }, b: { command: 'npx' } } },
+      projectConfigs: [], paths: { claude: '/.claude.json' }, detected: ['claude'], previewError: '', backups: [], unmanaged: [], plan: null,
+    } as Awaited<ReturnType<typeof mcpApi.list>>);
+    vi.mocked(mcpApi.save).mockReturnValue(new Promise(() => {}));
+    render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><I18nProvider><ToastProvider><MCPPage /></ToastProvider></I18nProvider></QueryClientProvider></MemoryRouter>);
+    await user.click(await screen.findByRole('button', { name: 'Choose which agents get a' }));
+    await user.click(screen.getByRole('button', { name: 'Choose which agents get b' }));
+    const [first, second] = screen.getAllByRole('checkbox', { name: /Claude/ });
+    await user.click(first);
+    expect(second).toBeDisabled();
   });
 });

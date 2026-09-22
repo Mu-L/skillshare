@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Plus, Target as TargetIcon } from 'lucide-react';
 import { api, type Target } from '../api/client';
+import { mcpApi } from '../api/mcp';
 import AgentIcon from '../components/AgentIcon';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
@@ -10,6 +11,7 @@ import PageHeader from '../components/PageHeader';
 import { PageSkeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import AddTargetDialog from '../components/targets/AddTargetDialog';
+import { mcpClient, serverCount } from '../components/mcp/mcpView';
 import { refreshTargets, targetHealth, type TargetState } from '../components/targets/targetView';
 import { queryKeys, staleTimes } from '../lib/queryKeys';
 import { shortenHome } from '../lib/paths';
@@ -24,6 +26,7 @@ export default function TargetsPage() {
   const { toast } = useToast();
   const { data, isPending, error } = useQuery({ queryKey: queryKeys.targets.all, queryFn: () => api.listTargets(), staleTime: staleTimes.targets });
   const available = useQuery({ queryKey: queryKeys.targets.available, queryFn: () => api.availableTargets(), staleTime: staleTimes.targets });
+  const mcp = useQuery({ queryKey: queryKeys.mcp, queryFn: mcpApi.list });
   const [adding, setAdding] = useState<{ initial?: string } | null>(null);
 
   // The API walks a map, so the order changes between requests.
@@ -41,6 +44,11 @@ export default function TargetsPage() {
       pending > 0 && t('targets.syncing.pending', { count: pending }),
       tg.localCount > 0 && t('targets.syncing.local', { count: tg.localCount }),
     ].filter(Boolean).join(' · ');
+  };
+  // Beside the skills, never in the status: MCP files have their own sync, on the MCP page.
+  const content = (tg: Target, state: TargetState, pending: number) => {
+    const servers = mcp.data ? serverCount(mcp.data, mcpClient(tg.name)) : 0;
+    return [syncing(tg, state, pending), servers > 0 && t('projects.content.mcp', { count: servers })].filter(Boolean).join(' · ');
   };
   const addButton = <Button variant="primary" onClick={() => setAdding({})}><Plus size={15} />{t('targets.addTarget')}</Button>;
 
@@ -60,7 +68,7 @@ export default function TargetsPage() {
             <span className="w-[30px]" />
             <span className="flex-1">{t('targets.col.target')}</span>
             <span className="w-[92px]">{t('targets.col.mode')}</span>
-            <span className="w-[210px]">{t('targets.col.syncing')}</span>
+            <span className="w-[250px]">{t('targets.col.syncing')}</span>
             <span className="w-[130px]">{t('targets.col.status')}</span>
             <span className="w-4" />
           </div>
@@ -78,7 +86,7 @@ export default function TargetsPage() {
                   <span className="truncate font-mono text-[12px] text-ink-3" title={tg.path}>{shortenHome(tg.path)}</span>
                 </span>
                 <span className="w-[92px] shrink-0"><span className="ss-tag">{tg.mode}</span></span>
-                <span className="w-[210px] shrink-0 truncate text-[13px] text-ink-2">{syncing(tg, state, pending)}</span>
+                <span className="w-[250px] shrink-0 truncate text-[13px] text-ink-2">{content(tg, state, pending)}</span>
                 <span className="w-[130px] shrink-0">
                   <span className={`ss-st ${TONE[state]}`}>
                     {state === 'pending' ? t('targets.state.pending', { count: pending }) : state === 'unknown' ? tg.status : t(`targets.state.${state}`)}

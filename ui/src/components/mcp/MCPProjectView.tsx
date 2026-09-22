@@ -17,7 +17,7 @@ import MCPServerList from './MCPServerList';
 import MCPSyncBox from './MCPSyncBox';
 import MCPUnmanagedNote from './MCPUnmanagedNote';
 import { TargetPill } from './TargetPicker';
-import { buildMatrix, describeEndpoint, describeError, projectOf, switchTargets, targetLabel } from './mcpView';
+import { buildMatrix, describeEndpoint, describeError, projectOf, switchTargets, targetLabel, writes } from './mcpView';
 
 type MCPList = Awaited<ReturnType<typeof mcpApi.list>>;
 
@@ -163,7 +163,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
                       <span className="flex items-center gap-2">
                         <span title={n} className="truncate font-mono font-semibold">{n}</span>
                         {off && <span className="ss-tag warn">{t('mcp.projects.offBadge')}</span>}
-                        {changes.some((c) => c.name === n && ['add', 'update', 'remove'].includes(c.action)) && <span className="ss-tag warn">{t('plugins.pending')}</span>}
+                        {changes.some((c) => c.name === n && writes(c)) && <span className="ss-tag warn">{t('plugins.pending')}</span>}
                       </span>
                       <span className="truncate text-xs text-ink-3">{server.url ? 'http' : 'stdio'} · <span className="font-mono">{describeEndpoint(server)}</span></span>
                       <span id={`mcp-sw-${n}`} className="flex flex-col text-xs">
@@ -192,7 +192,7 @@ export default function MCPProjectView({ data, root, offered, onChanged, onRemov
             <Button size="sm" variant="secondary" onClick={() => { setAddingOff(false); setAddMode('form'); setEditing(''); }}><Plus size={14} />{t('mcp.addServer')}</Button>
           </div>
           {ownRows.length > 0
-            ? <MCPServerList rows={ownRows} targets={shown} targetsOf={targetsOf} offTargets={offTargets} onToggle={toggleOwn} onMenu={openMenu} />
+            ? <MCPServerList rows={ownRows} targets={shown} targetsOf={targetsOf} offTargets={offTargets} onToggle={toggleOwn} onMenu={openMenu} disabled={busy} />
             : <p className="text-[13px] text-ink-3">{t('mcp.projects.noOnlyHere')}</p>}
         </section>
         <Button className="flush mt-6 self-start" size="sm" variant="ghost" onClick={() => setDropping(true)}><Trash2 size={14} />{t('projects.mcp.stop')}</Button>

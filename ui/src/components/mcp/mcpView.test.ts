@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MCPPlan } from '../../api/mcp';
-import { buildMatrix, describeError, describeMessage, canImportConflict, groupByFile, isResolvable, joinCommand, parsePiOptions, splitCommand, switchTargets, targetLabel } from './mcpView';
+import { buildMatrix, describeError, describeMessage, canImportConflict, groupByFile, isResolvable, joinCommand, parsePiOptions, serverCount, splitCommand, switchTargets, targetLabel } from './mcpView';
 import { mcpTargets } from '../../api/mcp';
 
 const change = (name: string, target: string, action: string, message?: string) => ({ name, target, action, message, path: `/${target}.json` });
@@ -102,5 +102,10 @@ describe('parsePiOptions', () => {
 
   it('names a field Skillshare writes itself', () => {
     expect(parsePiOptions('{"excludeTools": [], "directTools": true}')).toEqual({ taken: 'directTools' });
+  });
+
+  it('counts the servers an Agent gets, inherited ones too, but not a switch that turns one off', () => {
+    const servers = { own: { command: 'a', targets: ['claude'] }, inherited: { command: 'b' }, off: { disabled: true, targets: ['claude'] } };
+    expect(serverCount({ source: { servers, targets: ['claude'] }, paths: { claude: '/c.json' } }, 'claude')).toBe(2);
   });
 });

@@ -3,7 +3,7 @@ import { Ellipsis, Plug } from 'lucide-react';
 import { useT } from '../../i18n';
 import AgentIcon from '../AgentIcon';
 import { mcpOffTargets } from '../../api/mcp';
-import { describeEndpoint, type MatrixRow } from './mcpView';
+import { describeEndpoint, writes, type MatrixRow } from './mcpView';
 import { TargetPill, TargetToggles } from './TargetPicker';
 import { useDirectToolsLabel } from './MCPProjectSettings';
 
@@ -15,13 +15,15 @@ interface Props {
   onMenu: (e: React.MouseEvent<HTMLButtonElement>, name: string) => void;
   /** Agents a switch-only entry can go to. mcp.projects cannot reach Claude's off list. */
   offTargets?: readonly string[];
+  /** Holds the toggles while a save is on its way: each sends the revision it previewed. */
+  disabled?: boolean;
 }
 
 /**
  * One row per server. The agents it writes to are chips inside the row, not columns:
  * the list grows downwards as more CLIs gain MCP support, so it never scrolls sideways.
  */
-export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMenu, offTargets = mcpOffTargets }: Props) {
+export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMenu, offTargets = mcpOffTargets, disabled = false }: Props) {
   const t = useT();
   const [open, setOpen] = useState<string[]>([]);
   const directToolsLabel = useDirectToolsLabel();
@@ -44,7 +46,7 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex items-center gap-2">
                   <span title={row.name} className={`truncate font-mono font-semibold ${row.server ? '' : 'text-ink-3 line-through'}`}>{row.name}</span>
-                  {row.server && Object.values(row.cells).some((c) => c.action === 'add' || c.action === 'update' || c.action === 'remove') && <span className="ss-tag warn">{t('plugins.pending')}</span>}
+                  {row.server && Object.values(row.cells).some(writes) && <span className="ss-tag warn">{t('plugins.pending')}</span>}
                   {row.server && !row.server.disabled && row.server.targets?.length === 0 && <span className="ss-tag">{t('plugins.noAgentsYet')}</span>}
                   {!row.server && <span className="ss-st bad">{t('mcp.removedFromSource')}</span>}
                 </span>
@@ -71,7 +73,7 @@ export default function MCPServerList({ rows, targets, targetsOf, onToggle, onMe
             </div>
             {expanded && row.server && (
               <div className="ss-r fold !min-h-0 flex-wrap gap-x-6 gap-y-3.5 !py-3.5">
-                <TargetToggles offered={offered} selected={selected} http={http} onToggle={(target, on) => onToggle(row.name, target, on)} />
+                <TargetToggles offered={offered} selected={selected} http={http} disabled={disabled} onToggle={(target, on) => onToggle(row.name, target, on)} />
               </div>
             )}
           </Fragment>

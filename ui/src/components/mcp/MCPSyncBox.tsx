@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import { ChevronRight, RefreshCw, X } from 'lucide-react';
+import { AlertCircle, ChevronRight, CircleCheck, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { MCPPlan } from '../../api/mcp';
 import Button from '../Button';
 import DialogShell from '../DialogShell';
 import { RailLine, SyncBox } from '../StatusRail';
-import { MCP_CHANGED, runSync } from '../sync/syncView';
+import SyncResultList from '../SyncResultList';
+import { MCP_CHANGED, mcpGroups, runSync } from '../sync/syncView';
 import { useT } from '../../i18n';
 import { queryKeys } from '../../lib/queryKeys';
 import { shortenHome } from '../../lib/paths';
-import { projectOf, targetLabel, type MCPChange } from './mcpView';
-
-const isPending = (c: MCPChange) => c.action === 'add' || c.action === 'update' || c.action === 'remove';
+import { offListFor, projectOf, targetLabel, writes, type MCPChange } from './mcpView';
 
 function ChangeLines({ changes, roots }: { changes: MCPChange[]; roots: string[] }) {
   return (
@@ -25,15 +24,23 @@ function ChangeLines({ changes, roots }: { changes: MCPChange[]; roots: string[]
   );
 }
 
-/** Confirm, then write the whole MCP plan. The plan is global, so a project's box still syncs every project. */
-function MCPSyncDialog({ plan, shown, roots, onClose }: { plan: MCPPlan; shown: number; roots: string[]; onClose: () => void }) {
+/**
+ * Confirm, then write the whole MCP plan, laid out like the Skills sync dialog: a row per Agent file.
+ * The plan is global, so a project's box still syncs every project.
+ */
+export function MCPSyncDialog({ plan, shown, onClose }: { plan: MCPPlan; shown: number; onClose: () => void }) {
   const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
-  const pending = plan.changes.filter(isPending);
+  const pending = plan.changes.filter(writes);
+  // A file under an mcp.projects root is named by its project, as the Claude off list already is.
+  // The plan's root says which, as projectOf reads it: the path alone is ambiguous under nested roots.
+  const groups = mcpGroups({ ...plan, changes: pending }).map((g) => ({ ...g, project: g.project ?? pending.find((c) => c.path === g.path && !offListFor(c))?.root }));
+  // Agents that get servers but have nothing to write fold into the closing line.
+  const inSync = [...new Set(plan.changes.map((c) => c.target))].filter((x) => plan.changes.every((c) => c.target !== x || c.action === 'unchanged')).map(targetLabel);
   const outside = pending.length - shown;
   const title = t('mcp.syncButton');
 
@@ -53,25 +60,33 @@ function MCPSyncDialog({ plan, shown, roots, onClose }: { plan: MCPPlan; shown: 
   };
 
   return (
-    <DialogShell open onClose={onClose} padding="none" maxWidth="lg" preventClose={running} ariaLabel={title}>
+    <DialogShell open onClose={onClose} padding="none" maxWidth="2xl" preventClose={running} ariaLabel={title}>
       <div className="dh">
-        <h2 className="ss-h2">{done ? t('syncPreview.titleComplete') : title}</h2>
-        <button type="button" className="ss-ib" aria-label={t('common.close')} onClick={onClose} disabled={running}><X size={16} /></button>
+        <div className="flex flex-col gap-1">
+          <h2 className="ss-h2">{done ? t('syncPreview.titleComplete') : title}</h2>
+          {!done && <p className="text-[13px] text-ink-2">{t('mcp.syncDialog.subtitle')}</p>}
+        </div>
       </div>
       <div className="db">
-        <p className="text-[13px] text-ink-2">{t(done ? 'mcp.syncDialog.done' : 'mcp.syncDialog.subtitle')}</p>
-        <ChangeLines changes={pending} roots={roots} />
-        {!done && outside > 0 && <p className="text-[13px] text-ink-2">{t(outside === 1 ? 'mcp.syncDialog.outside.one' : 'mcp.syncDialog.outside.other', { count: outside })}</p>}
-        {error && <div className="ss-note bad"><span className="flex-1">{error}</span></div>}
+        {done ? (
+          <div className="ss-note inf"><CircleCheck size={16} /><span className="flex-1">{t('mcp.syncDialog.done')}</span></div>
+        ) : (
+          <>
+            {/* One row per Agent file can outgrow the dialog; scroll the list so the buttons stay reachable. */}
+            <SyncResultList groups={groups} inSync={inSync} className="max-h-[50vh] !overflow-y-auto" />
+            {outside > 0 && <p className="text-[13px] text-ink-2">{t(outside === 1 ? 'mcp.syncDialog.outside.one' : 'mcp.syncDialog.outside.other', { count: outside })}</p>}
+          </>
+        )}
+        {error && <div className="ss-note bad"><AlertCircle size={16} /><span className="flex-1">{error}</span></div>}
       </div>
       <div className="df">
         {done ? (
-          <Button onClick={onClose}>{t('common.close')}</Button>
+          <Button variant="primary" onClick={onClose}>{t('syncPreview.closeButton')}</Button>
         ) : (
           <>
-            <Button variant="secondary" onClick={onClose} disabled={running}>{t('common.cancel')}</Button>
+            <Button variant="secondary" onClick={onClose} disabled={running}>{t('syncPreview.cancelButton')}</Button>
             {/* A moved plan is stale: close and reopen from the refreshed box instead of retrying it. */}
-            {!error && <Button onClick={() => void sync()} loading={running}>{t(pending.length === 1 ? 'mcp.syncDialog.confirm.one' : 'mcp.syncDialog.confirm.other', { count: pending.length })}</Button>}
+            {!error && <Button onClick={() => void sync()} loading={running}>{t('syncPreview.syncNowButton')}</Button>}
           </>
         )}
         <button type="button" className="ss-more order-first mr-auto" onClick={() => { onClose(); navigate('/sync'); }} disabled={running}>{t('syncPreview.openSyncPage')}</button>
@@ -86,7 +101,7 @@ export default function MCPSyncBox({ changes, roots, plan }: { changes: MCPChang
   const navigate = useNavigate();
   // Held while the dialog is open, so the list it confirms stays put when the queries refresh.
   const [reviewing, setReviewing] = useState<{ plan: MCPPlan; shown: number } | null>(null);
-  const pending = changes.filter(isPending);
+  const pending = changes.filter(writes);
   return (
     <SyncBox tone={pending.length > 0 ? 'warn' : 'ok'} state={pending.length > 0 ? t(pending.length === 1 ? 'mcp.pending.one' : 'mcp.pending.other', { count: pending.length }) : t('targets.state.synced')}>
       {pending.length > 0 && (
@@ -101,7 +116,7 @@ export default function MCPSyncBox({ changes, roots, plan }: { changes: MCPChang
       {/* Ticks only change the source; say where the files get written, next to the state. */}
       <p className={pending.length > 0 ? 'text-xs leading-normal text-ink-2' : 'text-[13px] leading-normal text-ink-2'}>{t('mcp.syncHint')}</p>
       {pending.length === 0 && <button type="button" className="ss-more self-start" onClick={() => navigate('/sync')}>{t('mcp.reviewInSync')}</button>}
-      {reviewing && <MCPSyncDialog {...reviewing} roots={roots} onClose={() => setReviewing(null)} />}
+      {reviewing && <MCPSyncDialog {...reviewing} onClose={() => setReviewing(null)} />}
     </SyncBox>
   );
 }

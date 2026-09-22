@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Archive, ChevronDown, Copy, Download, Eye, Pencil, Plug, Plus, PowerOff, Trash2, X } from 'lucide-react';
-import { mcpApi, mcpTargets, type MCPMutation, type MCPPlan, type MCPSettings } from '../api/mcp';
+import { mcpApi, type MCPMutation, type MCPPlan, type MCPSettings } from '../api/mcp';
 import Button from '../components/Button';
 import { useAppContext } from '../context/AppContext';
 import DialogShell from '../components/DialogShell';
@@ -23,13 +23,12 @@ import { MCPConfigDialog } from '../components/mcp/MCPConfigView';
 import MCPRemoveDialog from '../components/mcp/MCPRemoveDialog';
 import MCPRestoreDialog from '../components/mcp/MCPRestoreDialog';
 import MCPServerDialog from '../components/mcp/MCPServerDialog';
-import { buildMatrix, canImportConflict, describeError, describeMessage, isShadowed, isResolvable, projectOf, targetLabel, type MCPChange } from '../components/mcp/mcpView';
+import { buildMatrix, canImportConflict, describeError, describeMessage, isShadowed, isResolvable, mcpOrder, projectOf, targetLabel, writes, type MCPChange } from '../components/mcp/mcpView';
 import { MCPTargetOrder } from '../components/mcp/targetOrder';
+import { useMCPToggle } from '../components/mcp/useMCPToggle';
 import { useT } from '../i18n';
 import { shortenHome } from '../lib/paths';
 import { queryKeys } from '../lib/queryKeys';
-
-type MCPList = Awaited<ReturnType<typeof mcpApi.list>>;
 
 const copy = (text: string) => void navigator.clipboard?.writeText(text);
 
@@ -64,8 +63,8 @@ export default function MCPPage() {
     toast(message, 'success');
   };
 
-  // Accounts of an Agent follow the Agents, by name.
-  const order = useMemo(() => [...mcpTargets, ...Object.keys(data?.source.accounts ?? {}).sort()], [data?.source.accounts]);
+  const order = useMemo(() => mcpOrder(data?.source.accounts), [data?.source.accounts]);
+  const toggleTarget = useMCPToggle(order);
 
   if (isPending) return <PageSkeleton />;
 
@@ -86,23 +85,10 @@ export default function MCPPage() {
   const matrixTargets = new Set([...files, ...rows.flatMap((row) => [...targetsOf(row.name), ...Object.keys(row.cells)])]);
   const undetected = files.filter((x) => !detected.has(x));
 
-  const toggle = async (name: string, target: string, on: boolean) => {
+  const toggle = (name: string, target: string, on: boolean) => {
     if (target === 'pi' && on && !servers[name].piExtension) { setPiSetupName(name); setEditing(name); return; }
-    const current = targetsOf(name);
-    const next = order.filter((x) => (x === target ? on : current.includes(x)));
-    const server = { ...servers[name], targets: next };
-    // Tick right away; saving only touches the source, Sync writes the files
-    const prev = cache.getQueryData<MCPList>(queryKeys.mcp);
-    cache.setQueryData<MCPList>(queryKeys.mcp, (old) => old && { ...old, source: { ...old.source, servers: { ...old.source.servers, [name]: server } } });
-    try {
-      await mcpApi.save({ name, server, replace: true });
-      // Not blocked, but said out loud: the next sync takes the server out of every Agent.
-      if (next.length === 0) toast(t('mcp.noTargetsToast', { name }), 'info');
-    } catch (e) {
-      if (prev) cache.setQueryData(queryKeys.mcp, prev);
-      toast(describeError(t, (e as Error).message), 'error');
-    }
-    refresh();
+    setBusy(true);
+    void toggleTarget(name, target, on).finally(() => setBusy(false));
   };
 
   const saveSettings = async (settings: MCPSettings) => {
@@ -188,7 +174,7 @@ export default function MCPPage() {
 
       {data && (
         <RailLayout rail={<>
-          {data.plan && (rows.length > 0 || roots.length > 0) && (changes.some((c) => ['add', 'update', 'remove'].includes(c.action)) || conflicts.length === 0) && <MCPSyncBox changes={changes} roots={roots} plan={data.plan} />}
+          {data.plan && (rows.length > 0 || roots.length > 0) && (changes.some(writes) || conflicts.length === 0) && <MCPSyncBox changes={changes} roots={roots} plan={data.plan} />}
 
           <RailSection title={t('layout.nav.agents')} count={files.length}>
             {/* The file name is enough to recognise; the full path is one hover or one copy away. */}
@@ -238,7 +224,7 @@ export default function MCPPage() {
           )}
           <MCPUnmanagedNote entries={data.unmanaged.filter((u) => !u.project)} onImport={(from) => setImporting({ from })} />
           {rows.length > 0 ? (
-            <MCPServerList rows={rows} targets={order.filter((x) => matrixTargets.has(x))} targetsOf={targetsOf} onToggle={(n, x, on) => void toggle(n, x, on)} onMenu={openMenu} />
+            <MCPServerList rows={rows} targets={order.filter((x) => matrixTargets.has(x))} targetsOf={targetsOf} onToggle={(n, x, on) => void toggle(n, x, on)} onMenu={openMenu} disabled={busy} />
           ) : (
             <EmptyState
               icon={Plug}

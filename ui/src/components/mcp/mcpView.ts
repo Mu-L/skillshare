@@ -1,4 +1,4 @@
-import { mcpOffTargets } from '../../api/mcp';
+import { mcpOffTargets, mcpTargets } from '../../api/mcp';
 import type { MCPPlan, MCPServer } from '../../api/mcp';
 
 export type MCPChange = MCPPlan['changes'][number];
@@ -24,6 +24,19 @@ export function buildMatrix(servers: Record<string, MCPServer>, plan: MCPPlan | 
   }
   return [...rows.values()];
 }
+
+/** Every MCP target in display order; accounts of an Agent follow the Agents, by name. */
+export const mcpOrder = (accounts?: Record<string, unknown>) => [...mcpTargets, ...Object.keys(accounts ?? {}).sort()];
+
+/** A change that Sync writes; `unchanged` and `conflict` write nothing. */
+export const writes = (change: { action: string }) => ['add', 'update', 'remove'].includes(change.action);
+
+/** The MCP client a skill target writes to: Factory's skills target is named droid. */
+export const mcpClient = (target: string) => (target === 'droid' ? 'factory' : target);
+
+/** How many servers a scope writes to one Agent, none when it has no MCP file there. A switch-only entry turns a server off, so it does not count. */
+export const serverCount = (data: { source: { servers?: Record<string, MCPServer>; targets: string[] | null }; paths: Record<string, string> }, target: string) =>
+  data.paths[target] ? Object.values(data.source.servers ?? {}).filter((s) => !s.disabled && (s.targets ?? data.source.targets ?? []).includes(target)).length : 0;
 
 const inside = (root: string, path: string) => path.startsWith(root + '/') || path.startsWith(root + '\\');
 
@@ -133,6 +146,10 @@ export const canImportConflict = (change: MCPChange) => isResolvable(change) && 
 /** Agents a project can turn a global server off for: those it uses, that the server reaches and that have a switch. */
 export const switchTargets = (server: MCPServer, defaults: string[], projectTargets: readonly string[]) =>
   (server.targets ?? defaults).filter((x) => mcpOffTargets.includes(x) && projectTargets.includes(x) && (x !== 'pi' || server.piExtension === 'pi-mcp-adapter'));
+
+/** The Agents a server of one scope goes to. A switch that names none follows the scope's, where the Agent has a switch, as sync works it out. */
+export const reachOf = (server: MCPServer, defaults: string[]) =>
+  server.disabled ? switchTargets(server, defaults, server.targets ?? defaults) : server.targets ?? defaults;
 
 /** Display names for the MCP clients, as in their own docs. */
 export const targetLabel = (target: string) =>

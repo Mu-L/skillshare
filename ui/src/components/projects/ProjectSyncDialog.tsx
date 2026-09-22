@@ -1,29 +1,19 @@
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, CircleCheck, CircleMinus, Minus, Plus, RefreshCw, TriangleAlert } from 'lucide-react';
+import { AlertCircle, CircleCheck, TriangleAlert } from 'lucide-react';
 import { api, type SyncResponse, type Target } from '../../api/client';
 import { mcpApi } from '../../api/mcp';
-import AgentIcon from '../AgentIcon';
+import { describeMessage, targetLabel } from '../mcp/mcpView';
 import Button from '../Button';
 import DialogShell from '../DialogShell';
 import Spinner from '../Spinner';
-import { SyncUpToDate } from '../SyncResultList';
-import { describeMessage, targetLabel } from '../mcp/mcpView';
-import { countChanges, MCP_CHANGED, mcpGroups, projectChanges, resourceGroups, runSync, type ChangeGroup, type RowIcon } from '../sync/syncView';
+import SyncResultList, { SyncUpToDate } from '../SyncResultList';
+import { countChanges, MCP_CHANGED, mcpGroups, projectChanges, resourceGroups, runSync, type ChangeGroup } from '../sync/syncView';
 import { refreshTargets } from '../targets/targetView';
 import { useT } from '../../i18n';
-import { shortenHome } from '../../lib/paths';
 import { queryKeys, staleTimes } from '../../lib/queryKeys';
 import type { ProjectRow } from './projectView';
-
-const ROW_ICON: Record<RowIcon, React.ReactNode> = {
-  add: <Plus size={16} className="shrink-0 text-ok" />,
-  update: <RefreshCw size={15} className="shrink-0 text-link" />,
-  remove: <Minus size={16} className="shrink-0 text-bad" />,
-  kept: <CircleMinus size={15} className="shrink-0 text-ink-3" />,
-  conflict: <TriangleAlert size={15} className="shrink-0 text-warn" />,
-};
 
 interface Props {
   open: boolean;
@@ -50,7 +40,8 @@ export default function ProjectSyncDialog({ open, onClose, project, targets }: P
   const ignored = { skill: diff.data?.ignored_skills, agent: diff.data?.agent_ignored_skills };
   const plan = mcp.data?.plan;
   const changes = projectChanges(plan, project.path);
-  const mcpBlocked = changes.some((c) => c.action === 'conflict');
+  const conflicts = changes.filter((c) => c.action === 'conflict');
+  const mcpBlocked = conflicts.length > 0;
   const sections: { label: string; groups: ChangeGroup[] }[] = [
     { label: 'Skills', groups: resourceGroups(diffs, mine, new Set(['skill']), false, ignored).groups },
     { label: 'Agents', groups: resourceGroups(diffs, mine, new Set(['agent']), false, ignored).groups },
@@ -104,7 +95,16 @@ export default function ProjectSyncDialog({ open, onClose, project, targets }: P
         ) : (
           <>
             {error && <div className="ss-note bad"><AlertCircle size={16} /><span className="flex-1">{error}</span></div>}
-            {mcpBlocked && <div className="ss-note warn"><TriangleAlert size={16} /><span className="flex-1">{t('projects.sync.mcpConflict')}</span></div>}
+            {mcpBlocked && (
+              <div className="ss-note warn">
+                <TriangleAlert size={16} />
+                {/* The rows below count conflicts per file; say which entry and why here. */}
+                <span className="flex flex-1 flex-col gap-1">
+                  {t('projects.sync.mcpConflict')}
+                  {conflicts.map((c) => <span key={`${c.path}:${c.name}`}><span className="font-mono">{targetLabel(c.target)} · {c.name}</span>: {describeMessage(t, c.message)}</span>)}
+                </span>
+              </div>
+            )}
             {loading ? (
               <div className="ss-list"><div className="ss-r gap-2 text-[13px] text-ink-2"><Spinner size="sm" />{t('sync.checking')}</div></div>
             ) : diff.error ? (
@@ -112,29 +112,11 @@ export default function ProjectSyncDialog({ open, onClose, project, targets }: P
             ) : sections.length === 0 ? (
               <SyncUpToDate text={t('sync.nothing')} />
             ) : (
+              // One row per target, as the Skills sync dialog shows it; the Sync page lists each item.
               sections.map((s) => (
                 <section key={s.label} className="flex flex-col gap-2">
                   <h3 className="text-[13px] font-semibold">{s.label}</h3>
-                  <div className="ss-list">
-                    {s.groups.map((g) => (
-                      <Fragment key={g.key}>
-                        <div className="ss-gh">
-                          <span className="ss-at"><AgentIcon target={g.name} size={15} /></span>
-                          <span className="font-semibold">{g.part === 'mcp' ? targetLabel(g.name) : g.name}</span>
-                          {g.path && <span className="min-w-0 truncate font-mono text-[12px] text-ink-3" title={g.path}>{shortenHome(g.path)}</span>}
-                        </div>
-                        {g.rows.map((r) => (
-                          <div key={r.key} className="ss-r">
-                            {ROW_ICON[r.icon]}
-                            <span className="max-w-[45%] shrink-0 truncate font-mono text-[13px] font-semibold" title={r.name}>{r.name}</span>
-                            <span className={`min-w-0 flex-1 truncate text-[13px] ${r.icon === 'conflict' ? 'text-warn' : 'text-ink-2'}`} title={r.detail}>
-                              {r.text ? t(r.text) : r.part === 'mcp' ? describeMessage(t, r.detail) : r.detail}
-                            </span>
-                          </div>
-                        ))}
-                      </Fragment>
-                    ))}
-                  </div>
+                  <SyncResultList groups={s.groups} inSync={[]} />
                 </section>
               ))
             )}
@@ -148,7 +130,7 @@ export default function ProjectSyncDialog({ open, onClose, project, targets }: P
           <>
             <Button variant="secondary" onClick={close} disabled={running}>{t('common.cancel')}</Button>
             <Button variant="primary" onClick={() => void sync()} loading={running} disabled={loading || count === 0}>
-              {count > 0 ? t(count === 1 ? 'sync.run.one' : 'sync.run.other', { count }) : t('sync.run.none')}
+              {t('syncPreview.syncNowButton')}
             </Button>
           </>
         )}

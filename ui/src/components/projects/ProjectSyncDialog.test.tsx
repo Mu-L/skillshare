@@ -40,15 +40,26 @@ describe('Project sync dialog', () => {
     const user = userEvent.setup();
     render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><I18nProvider><ProjectSyncDialog open onClose={vi.fn()} project={project} targets={targets} /></I18nProvider></QueryClientProvider></MemoryRouter>);
 
-    expect(await screen.findByText('team-a')).toBeInTheDocument();
+    // A row per target: the project's own, never the global one; MCP rows name their servers.
+    expect(await screen.findByText('app@claude')).toBeInTheDocument();
     expect(screen.getByText('docs')).toBeInTheDocument();
-    expect(screen.queryByText('global-only')).not.toBeInTheDocument();
+    expect(screen.queryByText('claude')).not.toBeInTheDocument();
     expect(screen.queryByText('shared')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Sync 2 changes' }));
+    await user.click(screen.getByRole('button', { name: 'Sync Now' }));
     expect(await screen.findByText('app is synced.')).toBeInTheDocument();
     expect(api.sync).toHaveBeenCalledWith({ force: false, project: '~/work/app' });
     await waitFor(() => expect(mcpApi.syncProject).toHaveBeenCalledWith('/work/app', 'r2'));
     expect(mcpApi.configure).not.toHaveBeenCalled();
+  });
+
+  // A row per file counts the conflicts; the note says which entry and why.
+  it('names each MCP conflict with its reason', async () => {
+    const conflict = { target: 'cursor', path: '/work/app/.cursor/mcp.json', name: 'shared', root: '/work/app', action: 'conflict', message: 'existing entry is not managed; import it to explicitly adopt it' };
+    vi.mocked(api.diff).mockResolvedValue({ diffs: [] } as unknown as Awaited<ReturnType<typeof api.diff>>);
+    vi.mocked(mcpApi.list).mockResolvedValue({ source: { path: '', configPath: '', targets: null, servers: {}, projects: { '/work/app': {} } }, projectConfigs: [], paths: {}, detected: [], plan: { ...plan, blocked: true, changes: [conflict] }, previewError: '', backups: [], unmanaged: [] });
+    render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><I18nProvider><ProjectSyncDialog open onClose={vi.fn()} project={project} targets={targets} /></I18nProvider></QueryClientProvider></MemoryRouter>);
+
+    expect((await screen.findByText('Cursor · shared')).parentElement).toHaveTextContent('The Agent already has this entry, not yet managed by skillshare');
   });
 });

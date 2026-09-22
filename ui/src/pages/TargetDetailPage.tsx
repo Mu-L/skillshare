@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDownToLine, Folder, Target as TargetIcon } from 'lucide-react';
 import { api, type Target } from '../api/client';
+import { mcpApi } from '../api/mcp';
 import Button from '../components/Button';
 import CollectDialog from '../components/CollectDialog';
 import EmptyState from '../components/EmptyState';
@@ -13,6 +14,8 @@ import { PageSkeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import FilterSection, { ModePicker } from '../components/targets/FilterSection';
 import RemoveTargetDialog from '../components/targets/RemoveTargetDialog';
+import TargetMCP from '../components/targets/TargetMCP';
+import { mcpClient, serverCount } from '../components/mcp/mcpView';
 import { refreshTargets } from '../components/targets/targetView';
 import { queryKeys, staleTimes } from '../lib/queryKeys';
 import { shortenHome } from '../lib/paths';
@@ -53,13 +56,20 @@ function TargetEditor({ target }: { target: Target }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [params] = useSearchParams();
-  const kind: Kind = target.agentPath && params.get('tab') === 'agents' ? 'agent' : 'skill';
+  const mcp = useQuery({ queryKey: queryKeys.mcp, queryFn: mcpApi.list });
+  // Only an Agent that has an MCP file in this scope (global, or the -p project) gets the tab.
+  const client = mcpClient(target.name);
+  const mcpPath = mcp.data?.paths[client];
+  // Until the list arrives, loading or failing, the tab stays so it can say which.
+  const tab: Kind | 'mcp' = target.agentPath && params.get('tab') === 'agents' ? 'agent' : params.get('tab') === 'mcp' && (mcpPath || !mcp.data) ? 'mcp' : 'skill';
+  const kind: Kind = tab === 'agent' ? 'agent' : 'skill';
+  const tabs = (['skill', 'agent', 'mcp'] as const).filter((k) => k === 'skill' || (k === 'agent' ? target.agentPath : mcpPath || tab === 'mcp'));
   const saved = draftOf(target);
   const [draft, setDraft] = useState<Draft>(saved);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [collecting, setCollecting] = useState(false);
-  const { data: extData } = useQuery({ queryKey: ['extras', 'extensions'], queryFn: () => api.listExtraExtensions(), staleTime: staleTimes.extras });
+  const { data: extData } = useQuery({ queryKey: ['extras', 'extensions'], queryFn: () => api.listExtraExtensions(), staleTime: staleTimes.extras, enabled: tab !== 'mcp' });
   const extensions = extData?.extensions ?? [];
 
   // Preview the draft filters once typing settles.
@@ -108,97 +118,102 @@ function TargetEditor({ target }: { target: Target }) {
     setDraft(agent ? { ...draft, agentInclude: next.include, agentExclude: next.exclude } : { ...draft, ...next });
   const local = agent ? target.agentLocalCount ?? 0 : target.localCount;
 
-  const tabCount = (k: Kind) => entriesOf(k).length || null;
+  const tabCount = (k: (typeof tabs)[number]) => (k === 'mcp' ? mcp.data && serverCount(mcp.data, client) : entriesOf(k).length) || null;
   return (
     <div className="animate-fade-in">
       <PageHeader
         crumbs={[{ label: t('targets.title'), to: '/targets' }, { label: target.name }]}
         title={target.name}
-        subtitle={<span className="font-mono">{shortenHome(agent ? target.agentPath ?? '' : target.path)}</span>}
+        subtitle={<span className="font-mono">{shortenHome(tab === 'mcp' ? mcpPath ?? '' : agent ? target.agentPath ?? '' : target.path)}</span>}
         actions={
           <>
-            {kind === 'skill' && <Link to={`/skills?tab=analyze&target=${encodeURIComponent(target.name)}`} className="ss-btn ghost">{t('analyze.open')}</Link>}
+            {tab === 'skill' && <Link to={`/skills?tab=analyze&target=${encodeURIComponent(target.name)}`} className="ss-btn ghost">{t('analyze.open')}</Link>}
             <Button variant="ghost" onClick={() => setRemoving(true)}>{t('targetDetail.remove')}</Button>
-            <Button variant="primary" onClick={save} loading={saving} disabled={!dirty}>{t('common.save')}</Button>
+            {/* A switch on the MCP tab saves as it flips. */}
+            {tab !== 'mcp' && <Button variant="primary" onClick={save} loading={saving} disabled={!dirty}>{t('common.save')}</Button>}
           </>
         }
       />
 
-      {target.agentPath && (
+      {tabs.length > 1 && (
         <nav className="ss-tabs mb-7" aria-label={t('targetDetail.tabs')}>
-          {(['skill', 'agent'] as const).map((k) => (
-            <Link key={k} to={k === 'agent' ? '?tab=agents' : '?'} replace className={kind === k ? 'on' : ''}>
-              {k === 'agent' ? 'Agents' : 'Skills'}
+          {tabs.map((k) => (
+            <Link key={k} to={k === 'agent' ? '?tab=agents' : k === 'mcp' ? '?tab=mcp' : '?'} replace className={tab === k ? 'on' : ''}>
+              {k === 'agent' ? 'Agents' : k === 'mcp' ? 'MCP' : 'Skills'}
               {tabCount(k) !== null && <span className="ss-cnt">{tabCount(k)}</span>}
             </Link>
           ))}
         </nav>
       )}
 
-      <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start gap-12">
-        <section className="flex flex-col gap-5">
-          <h2 className="ss-h2">{t('targetDetail.whatSyncs')}</h2>
-          <FilterSection kind={kind} mode={mode} name={target.name} include={include} exclude={exclude} onChange={setFiltersFor} entries={entries} loaded={Boolean(preview.data)} loading={preview.isPending} error={preview.error} disabled={saving} />
-        </section>
+      {tab === 'mcp' ? (
+        mcp.data ? <TargetMCP name={client} data={mcp.data} /> : mcp.error ? <div className="ss-note bad"><span className="flex-1">{mcp.error.message}</span></div> : <PageSkeleton />
+      ) : (
+        <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start gap-12">
+          <section className="flex flex-col gap-5">
+            <h2 className="ss-h2">{t('targetDetail.whatSyncs')}</h2>
+            <FilterSection kind={kind} mode={mode} name={target.name} include={include} exclude={exclude} onChange={setFiltersFor} entries={entries} loaded={Boolean(preview.data)} loading={preview.isPending} error={preview.error} disabled={saving} />
+          </section>
 
-        <aside className="flex flex-col gap-7">
-          {agent && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[13px] font-semibold">{t('targetDetail.agentsFolder')}</span>
-              <span className="flex items-center gap-2 font-mono text-[13px]"><Folder size={15} className="shrink-0 text-ink-3" />{shortenHome(target.agentPath ?? '')}</span>
-              <span className="text-[12.5px] text-ink-3">{t('targetDetail.agentsFolderHint')}</span>
-            </div>
-          )}
-          {agent && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[13px] font-semibold">{t('extras.modal.colExtension')}</span>
-              <Select
-                value={draft.agentExtension}
-                // An extension converts each agent, so it always writes copies
-                onChange={(v) => setDraft({ ...draft, agentExtension: v, ...(v ? { agentMode: 'copy' } : {}) })}
-                options={[
-                  { value: '', label: t('extras.noExtension') },
-                  ...[...new Set([...extensions, ...(draft.agentExtension ? [draft.agentExtension] : [])])].map((e) => ({ value: e, label: e })),
-                ]}
-                disabled={saving || (extensions.length === 0 && !draft.agentExtension)}
-              />
-              <span className="text-[12.5px] text-ink-3">
-                {t('extras.hint.extension')}{' '}
-                {extensions.length === 0 && <Link to="/config?tab=extensions" className="font-semibold text-ink-2 hover:text-ink">{t('extras.installExtensionHint')}</Link>}
-              </span>
-            </div>
-          )}
-          <div className="flex flex-col gap-3">
-            <h2 className="ss-h2">{t('targetDetail.syncMode')}</h2>
-            <ModePicker kind={kind} mode={mode} onChange={(m) => setDraft(agent ? { ...draft, agentMode: m } : { ...draft, mode: m })} disabled={saving || (agent && draft.agentExtension !== '')} />
-          </div>
-
-          {!agent && draft.mode !== 'symlink' && (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-4">
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[13px] font-semibold">{t('targetDetail.naming')}</span>
-                  <span className="text-[13px] text-ink-2">{t(draft.naming === 'standard' ? 'targetDetail.namingStandard' : 'targetDetail.namingFlat')}</span>
-                </div>
-                <SegmentedControl value={draft.naming} onChange={(naming) => setDraft({ ...draft, naming })} options={[{ value: 'flat', label: 'flat' }, { value: 'standard', label: 'standard' }]} />
+          <aside className="flex flex-col gap-7">
+            {agent && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[13px] font-semibold">{t('targetDetail.agentsFolder')}</span>
+                <span className="flex items-center gap-2 font-mono text-[13px]"><Folder size={15} className="shrink-0 text-ink-3" />{shortenHome(target.agentPath ?? '')}</span>
+                <span className="text-[12.5px] text-ink-3">{t('targetDetail.agentsFolderHint')}</span>
               </div>
-              {saved.naming === 'standard' && (target.skippedSkillCount ?? 0) > 0 && (
-                <span className="text-[13px] text-warn">{t(target.skippedSkillCount === 1 ? 'targetDetail.skipped.one' : 'targetDetail.skipped.other', { count: target.skippedSkillCount })}</span>
-              )}
+            )}
+            {agent && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[13px] font-semibold">{t('extras.modal.colExtension')}</span>
+                <Select
+                  value={draft.agentExtension}
+                  // An extension converts each agent, so it always writes copies
+                  onChange={(v) => setDraft({ ...draft, agentExtension: v, ...(v ? { agentMode: 'copy' } : {}) })}
+                  options={[
+                    { value: '', label: t('extras.noExtension') },
+                    ...[...new Set([...extensions, ...(draft.agentExtension ? [draft.agentExtension] : [])])].map((e) => ({ value: e, label: e })),
+                  ]}
+                  disabled={saving || (extensions.length === 0 && !draft.agentExtension)}
+                />
+                <span className="text-[12.5px] text-ink-3">
+                  {t('extras.hint.extension')}{' '}
+                  {extensions.length === 0 && <Link to="/config?tab=extensions" className="font-semibold text-ink-2 hover:text-ink">{t('extras.installExtensionHint')}</Link>}
+                </span>
+              </div>
+            )}
+            <div className="flex flex-col gap-3">
+              <h2 className="ss-h2">{t('targetDetail.syncMode')}</h2>
+              <ModePicker kind={kind} mode={mode} onChange={(m) => setDraft(agent ? { ...draft, agentMode: m } : { ...draft, mode: m })} disabled={saving || (agent && draft.agentExtension !== '')} />
             </div>
-          )}
 
-          {local > 0 && (
-            <div className="ss-box flex flex-col gap-3">
-              <span className="flex items-center gap-2 font-semibold"><ArrowDownToLine size={16} />{t('targetDetail.collect')}</span>
-              <p className="text-[13px] text-ink-2">{t(`targetDetail.collectHint.${agent ? 'agents' : 'skills'}.${local === 1 ? 'one' : 'other'}`, { count: local })}</p>
-              <Button variant="secondary" onClick={() => setCollecting(true)}>
-                {t(`collectDialog.run.${kind}.${local === 1 ? 'one' : 'other'}`, { count: local })}
-              </Button>
-            </div>
-          )}
-        </aside>
-      </div>
+            {!agent && draft.mode !== 'symlink' && (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-4">
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-[13px] font-semibold">{t('targetDetail.naming')}</span>
+                    <span className="text-[13px] text-ink-2">{t(draft.naming === 'standard' ? 'targetDetail.namingStandard' : 'targetDetail.namingFlat')}</span>
+                  </div>
+                  <SegmentedControl value={draft.naming} onChange={(naming) => setDraft({ ...draft, naming })} options={[{ value: 'flat', label: 'flat' }, { value: 'standard', label: 'standard' }]} />
+                </div>
+                {saved.naming === 'standard' && (target.skippedSkillCount ?? 0) > 0 && (
+                  <span className="text-[13px] text-warn">{t(target.skippedSkillCount === 1 ? 'targetDetail.skipped.one' : 'targetDetail.skipped.other', { count: target.skippedSkillCount })}</span>
+                )}
+              </div>
+            )}
+
+            {local > 0 && (
+              <div className="ss-box flex flex-col gap-3">
+                <span className="flex items-center gap-2 font-semibold"><ArrowDownToLine size={16} />{t('targetDetail.collect')}</span>
+                <p className="text-[13px] text-ink-2">{t(`targetDetail.collectHint.${agent ? 'agents' : 'skills'}.${local === 1 ? 'one' : 'other'}`, { count: local })}</p>
+                <Button variant="secondary" onClick={() => setCollecting(true)}>
+                  {t(`collectDialog.run.${kind}.${local === 1 ? 'one' : 'other'}`, { count: local })}
+                </Button>
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
 
       {removing && (
         <RemoveTargetDialog
