@@ -389,7 +389,7 @@ func handleExistingInit(opts *initOptions) (bool, error) {
 		return true, reinitWithDiscover(cfg, opts.selectArg, opts.dryRun, opts.mode)
 	}
 
-	return true, fmt.Errorf("already initialized. Run 'skillshare init --discover' to add new agents, or 'skillshare init -p' to initialize project-level skills")
+	return true, fmt.Errorf("skillshare is already initialized (global config: %s). Run 'skillshare init --discover' to add new agents, or 'skillshare init -p' to initialize project-level skills", config.ConfigPath())
 }
 
 // switchGitRootScope changes git_root on an already-initialized setup. It

@@ -32,7 +32,8 @@ targets: {}
 	result := sb.RunCLI("ui", "--no-open")
 
 	result.AssertFailure(t)
-	result.AssertAnyOutputContains(t, "run 'skillshare init' first")
+	result.AssertAnyOutputContains(t, "global source directory not found")
+	result.AssertAnyOutputContains(t, "mkdir -p "+missingSource)
 }
 
 func TestUI_ClearCache(t *testing.T) {

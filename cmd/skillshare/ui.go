@@ -693,23 +693,23 @@ func startGlobalUI(addr, url, basePath string, noOpen bool) error {
 func loadUIConfig() (*config.Config, error) {
 	cfg, err := config.Load()
 	if err != nil {
-		return nil, fmt.Errorf("skillshare is not initialized: run 'skillshare init' first")
+		return nil, fmt.Errorf("skillshare is not initialized (global): run 'skillshare init' first")
 	}
 
 	source := strings.TrimSpace(cfg.EffectiveSkillsSource())
 	if source == "" {
-		return nil, fmt.Errorf("invalid config: source is empty (run 'skillshare init' first)")
+		return nil, fmt.Errorf("invalid global config (%s): source is empty; fix 'sources.skills' or run 'skillshare init --source <path>'", config.ConfigPath())
 	}
 
 	info, err := os.Stat(source)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("source directory not found: %s (run 'skillshare init' first)", source)
+			return nil, fmt.Errorf("global source directory not found: %s (config: %s)\nThe config file exists but its source directory is missing. Create it with 'mkdir -p %s', or point 'sources.skills' in the config at an existing directory", source, config.ConfigPath(), source)
 		}
-		return nil, fmt.Errorf("failed to access source directory %s: %w", source, err)
+		return nil, fmt.Errorf("failed to access global source directory %s: %w", source, err)
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("source path is not a directory: %s (run 'skillshare init' first)", source)
+		return nil, fmt.Errorf("global source path is not a directory: %s (config: %s)", source, config.ConfigPath())
 	}
 
 	return cfg, nil
