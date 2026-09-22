@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { mcpTargets, type MCPDirectTools, type MCPSettings } from '../../api/mcp';
+import { useContext, useState } from 'react';
+import type { MCPDirectTools, MCPSettings } from '../../api/mcp';
 import { useT } from '../../i18n';
 import { DirectToolsSetting } from './MCPProjectSettings';
 import { TargetPill, TargetToggles } from './TargetPicker';
+import { MCPTargetOrder } from './targetOrder';
 
 interface Props {
   targets: string[];
@@ -15,7 +16,8 @@ interface Props {
 export default function MCPDefaults({ targets, directTools, offered, onSave }: Props) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const shown = mcpTargets.filter((x) => offered.includes(x) || targets.includes(x));
+  const order = useContext(MCPTargetOrder);
+  const shown = order.filter((x) => offered.includes(x) || targets.includes(x));
   return (
     <section className="mt-4 flex flex-col">
       <div className="ss-sec"><h2>{t('mcp.defaults')}</h2></div>
@@ -26,7 +28,7 @@ export default function MCPDefaults({ targets, directTools, offered, onSave }: P
         </div>
         {open && (
           <div className="flex flex-wrap gap-x-6 gap-y-3.5 px-[18px] pb-4">
-            <TargetToggles offered={shown} selected={targets} onToggle={(target, on) => onSave({ targets: mcpTargets.filter((x) => (x === target ? on : targets.includes(x))), directTools })} />
+            <TargetToggles offered={shown} selected={targets} onToggle={(target, on) => onSave({ targets: order.filter((x) => (x === target ? on : targets.includes(x))), directTools })} />
           </div>
         )}
         {/* Only pi-mcp-adapter reads it, so it is offered once Pi is a default target. */}

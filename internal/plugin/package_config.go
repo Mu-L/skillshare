@@ -13,11 +13,18 @@ import (
 	"github.com/tailscale/hujson"
 )
 
-func (s *Service) piSettingsPath() (string, error) {
+func (s *Service) piSettingsPath(target string) (string, error) {
 	if s.ProjectRoot != "" {
 		return filepath.Join(s.ProjectRoot, ".pi", "settings.json"), nil
 	}
-	dir := os.Getenv("PI_CODING_AGENT_DIR")
+	// An account's packages live in the account's own directory, not in the one the
+	// environment points the CLI at.
+	dir := ""
+	if account, ok := s.account(target); ok {
+		dir = account.Dir
+	} else {
+		dir = os.Getenv("PI_CODING_AGENT_DIR")
+	}
 	if dir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -33,8 +40,8 @@ func (s *Service) piSettingsPath() (string, error) {
 
 // Pi has no machine-readable list command. Read its documented settings without
 // loading extensions; leave all writes to pi install/remove.
-func (s *Service) piInventory() ([]Installed, string, error) {
-	path, err := s.piSettingsPath()
+func (s *Service) piInventory(target string) ([]Installed, string, error) {
+	path, err := s.piSettingsPath(target)
 	if err != nil {
 		return nil, "", err
 	}

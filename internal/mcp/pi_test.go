@@ -125,8 +125,8 @@ func TestPiDirectoryOverride(t *testing.T) {
 		t.Fatalf("%s %v", path, err)
 	}
 	_, err = s.render(&Source{Targets: []string{"pi"}, Servers: map[string]Server{"docs": {Command: "echo", PiExtension: "pi-mcp-extension"}}})
-	if err == nil {
-		t.Fatal("extension ignores the directory override")
+	if err == nil || !strings.Contains(err.Error(), "unset the override") {
+		t.Fatalf("extension ignores the directory override: %v", err)
 	}
 	candidates, err := Import("", []byte(`{"transport":"sse","url":"https://example.com/sse"}`), "docs")
 	if err != nil || len(candidates[0].Problems) == 0 {

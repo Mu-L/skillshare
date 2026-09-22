@@ -16,7 +16,7 @@ func TestNativePackageLifecycle(t *testing.T) {
 			t.Setenv("HOME", home)
 			installed := false
 			s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state")}
-			s.Run = func(_ context.Context, _, bin string, args ...string) ([]byte, error) {
+			s.Run = func(_ context.Context, _ string, _ []string, bin string, args ...string) ([]byte, error) {
 				command := strings.Join(args, " ")
 				if command == "--version" {
 					return []byte("test"), nil
@@ -66,7 +66,7 @@ func TestFailedUpdateRestoresSnapshot(t *testing.T) {
 	source := fixture(t)
 	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state")}
 	installed, fail := false, false
-	s.Run = func(_ context.Context, _, _ string, args ...string) ([]byte, error) {
+	s.Run = func(_ context.Context, _ string, _ []string, _ string, args ...string) ([]byte, error) {
 		command := strings.Join(args, " ")
 		if command == "--version" {
 			return []byte("1"), nil

@@ -73,7 +73,8 @@
       "examples": [
         {
           "claude": { "skills": { "mode": "merge" } },
-          "cursor": { "skills": { "path": "~/.cursor/skills" } }
+          "cursor": { "skills": { "path": "~/.cursor/skills" } },
+          "claude-work": { "agent": "claude", "config_dir": "~/.claude-work" }
         }
       ]
     },
@@ -195,7 +196,18 @@
       "type": "object",
       "description": "Configuration for a single sync target. Supports both legacy flat format (path/mode/include/exclude) and new resource sub-keys (skills/agents). Legacy flat fields are auto-migrated to skills: on load.",
       "additionalProperties": false,
+      "dependentRequired": { "agent": ["config_dir"], "config_dir": ["agent"] },
       "properties": {
+        "agent": {
+          "type": "string",
+          "description": "Makes this target another config directory of a built-in Agent, such as a second account. Goes with config_dir. The skills and agents paths follow config_dir unless skills.path or agents.path is set.",
+          "enum": ["claude", "codex", "pi"]
+        },
+        "config_dir": {
+          "type": "string",
+          "description": "The config directory this account of the Agent uses, the one CLAUDE_CONFIG_DIR, CODEX_HOME or PI_CODING_AGENT_DIR points at. Absolute or starting with ~, and not the Agent's default one.",
+          "examples": ["~/.claude-work", "~/.codex-work", "~/.pi/work"]
+        },
         "path": {
           "type": "string",
           "description": "[Legacy] Absolute path to the target skills directory. Prefer skills.path instead.",

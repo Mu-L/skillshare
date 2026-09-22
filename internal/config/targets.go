@@ -32,7 +32,10 @@ type targetSpec struct {
 	// Detect is the tool's install directory (e.g. ~/.codex). Only needed for
 	// targets whose skills path is shared with another target, where the skills
 	// path alone cannot tell the tools apart.
-	Detect    string          `yaml:"detect,omitempty"`
+	Detect string `yaml:"detect,omitempty"`
+	// ConfigDir is the directory the Agent keeps its files in, where the Agent can be told to
+	// use another one (CLAUDE_CONFIG_DIR). A target may then be such another directory.
+	ConfigDir string          `yaml:"config_dir,omitempty"`
 	Skills    targetPathPair  `yaml:"skills"`
 	Agents    targetPathPair  `yaml:"agents,omitempty"`
 	AlsoScans targetAlsoScans `yaml:"also_scans,omitempty"`

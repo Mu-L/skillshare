@@ -39,6 +39,21 @@ skillshare target add windsurf ~/.windsurf/skills
 - 路径看起来像一个 skills 目录
 - Target 名称唯一
 
+#### 某个 Agent 的另一个账号 {#another-account}
+
+如果你用独立的配置目录运行某个 Agent 的第二个账号，例如使用 `CLAUDE_CONFIG_DIR=~/.claude-work` 的 Claude Code、使用 `CODEX_HOME` 的 Codex，或使用 `PI_CODING_AGENT_DIR` 的 Pi，请把该目录添加为一个 target。Skillshare 会据此推导出 skills 和 agents 路径：
+
+```bash
+skillshare target add claude-work --agent claude --config-dir ~/.claude-work
+# Added target: claude-work -> ~/.claude-work/skills
+```
+
+你有多少个账号就可以添加多少个，每个使用各自的名称。这个名称也可以用作 [MCP target](./mcp.md#accounts)，因此一次 sync 就能覆盖每个账号的 skills、agents 和 MCP server。
+
+`--agent` 接受 `claude`（`CLAUDE_CONFIG_DIR`）、`codex`（`CODEX_HOME`）和 `pi`（`PI_CODING_AGENT_DIR`）。Codex 或 Pi 账号会把它的 skills 同步到 `<config_dir>/skills`；只有 Claude 还有 agents 目录。该目录必须是绝对路径或以 `~` 开头，不能是该 Agent 的默认目录，也不能被两个 target 共用。
+
+移除这类 target 不会因为 MCP 而失败：即使 `mcp.targets` 或某个 server 的 `targets` 仍然写着它，`skillshare target remove` 也会移除该 target，并提醒你把那里的名称也一并删掉。
+
 ### target remove
 
 移除一个 target，并将其 skills 恢复为普通目录。
@@ -215,7 +230,10 @@ Target filters 是三层过滤机制之一。参见 [Filtering Reference](/docs/
 
 ### target add
 
-无额外选项。
+| Flag | Description |
+|------|-------------|
+| `--agent <agent>` | Add [another account](#another-account) of this Agent instead of a path. Goes with `--config-dir` |
+| `--config-dir <dir>` | The config directory that account uses |
 
 ### target remove
 

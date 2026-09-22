@@ -57,7 +57,7 @@ func pluginWizard(s *plugin.Service, o pluginOptions) error {
 			}
 			r.Source = v
 		}
-		d, err := plugin.DiscoverOptions(ctx, r.Source, r.SourceRef, r.Entry)
+		d, err := s.Discover(ctx, r.Source, r.SourceRef, r.Entry)
 		if err != nil {
 			return err
 		}
@@ -90,7 +90,7 @@ func pluginWizard(s *plugin.Service, o pluginOptions) error {
 		if len(r.Targets) == 0 {
 			items = nil
 			targets := []string{}
-			for _, definition := range plugin.TargetDefinitions() {
+			for _, definition := range s.TargetDefinitions() {
 				target := definition.Target
 				if !slices.Contains(chosen.Targets, target) || !slices.Contains(definition.Operations, "add") {
 					continue

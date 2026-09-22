@@ -312,6 +312,32 @@ Global Claude, Codex, Grok, Copilot 경로는 `CLAUDE_CONFIG_DIR`, `CODEX_HOME`,
 Project 대상은 선택한 프로젝트 루트를 기준으로 합니다. 프로젝트 신뢰, 서버 승인,
 인증은 여전히 수신 Agent의 책임입니다.
 
+### Another account of an Agent {#accounts}
+
+[Agent의 다른 계정](/docs/reference/targets/configuration#agent-config-dir)으로 선언된 target은 `claude`(`CLAUDE_CONFIG_DIR`), `codex`(`CODEX_HOME`), `pi`(`PI_CODING_AGENT_DIR`)에 대해 MCP target이기도 합니다. 그 서버는 해당 Agent의 형식으로, 계정 자체의 파일에 작성됩니다. Claude는 `<config_dir>/.claude.json`, Codex는 `<config_dir>/config.toml`, Pi는 `<config_dir>/mcp.json`입니다.
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work
+
+mcp:
+  targets: [claude, claude-work]      # 두 계정 모두 모든 서버를 받음
+  servers:
+    docs:
+      url: https://example.com/mcp
+    jira:
+      command: jira-mcp
+      targets: [claude-work]          # 업무용 계정만
+```
+
+여기서 `docs`는 `~/.claude.json`과 `~/.claude-work/.claude.json`에 작성되고, `jira`는 두 번째 파일에만 작성됩니다. `--target claude-work`는 `mcp add`와 `mcp edit`에서 동작하며, 대시보드는 이 계정을 Agent 옆에 나열합니다.
+
+`pi-mcp-extension`은 항상 `~/.pi/agent/mcp.json`을 읽으므로, Pi 계정에는 `piExtension: pi-mcp-adapter`가 필요합니다.
+
+모든 계정은 동일한 프로젝트 파일을 읽으므로, `mcp.projects` 안과 project mode에서는 Agent 자체의 이름을 사용하세요. Claude Code는 프로젝트의 off 목록을 각 계정의 파일에 유지합니다. [프로젝트에서 서버를 끄면](#turn-off-a-global-server-in-one-project) 해당 서버를 가진 모든 계정에 스위치가 작성됩니다. `mcp import --from claude-work`와 대시보드의 Import from target은 계정 자체의 파일을 읽습니다. `mcp import --file <path> --from claude-work`는 직접 내보낸 파일을 해당 계정의 Agent 형식으로 읽습니다.
+
 ## Turn off a global server in one project {#turn-off-a-global-server-in-one-project}
 
 Agent는 자체 global MCP 파일과 프로젝트 파일을 함께 읽습니다. 따라서 global 파일에

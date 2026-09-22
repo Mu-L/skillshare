@@ -338,9 +338,43 @@ func Import(target string, data []byte, singleName string) ([]Candidate, error) 
 	return out, nil
 }
 
-// ImportClient inspects only the selected native configuration and scope.
+// importClient resolves the client an import reads: an Agent, or an account of one, whose
+// file is its Agent's own format. A project has no accounts: every account reads its files.
+func (s *Service) importClient(target string) (*Service, string, error) {
+	if validTarget(target) {
+		return s, target, nil
+	}
+	source, err := LoadSource(s.ConfigPath)
+	if err != nil {
+		return nil, "", err
+	}
+	if _, ok := source.Accounts[target]; !ok || s.ProjectRoot != "" {
+		return nil, "", fmt.Errorf("unsupported MCP target %q", target)
+	}
+	scoped := *s
+	scoped.accounts = source.Accounts
+	account, agent := scoped.forTarget(target)
+	return account, agent, nil
+}
+
+// ImportFormat is the native format a target's own file is written in: an Agent's own,
+// or, for an account, its Agent's. It is what --file data has to be read as.
+func (s *Service) ImportFormat(target string) (string, error) {
+	if target == "" {
+		return "", nil
+	}
+	_, format, err := s.importClient(target)
+	return format, err
+}
+
+// ImportClient inspects only the selected native configuration and scope. Candidates
+// report the name that was asked for, so an account keeps its own.
 func (s *Service) ImportClient(target string) ([]Candidate, error) {
-	path, err := s.nativePath(target)
+	client, format, err := s.importClient(target)
+	if err != nil {
+		return nil, err
+	}
+	path, err := client.nativePath(format)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +385,7 @@ func (s *Service) ImportClient(target string) ([]Candidate, error) {
 	if !exists {
 		return nil, fmt.Errorf("no MCP configuration found for %s in this scope", target)
 	}
-	items, err := Import(target, data, "")
+	items, err := Import(format, data, "")
 	if err != nil {
 		return nil, err
 	}

@@ -94,8 +94,8 @@ skillshare ui start --clear-cache
 | **Extras** | 與 skills 一同同步的 rules、commands 及其他資料夾 |
 | **MCP** | 每個 server 一列，並以切換開關顯示它同步至哪些 Agents。**新增伺服器** 接受 URL、指令、貼上的片段或檔案；**從 target 匯入** 讀取已安裝 Agent 目前的設定。每個 server 的選單都有 **檢視各 Agent 會寫入的設定**，可顯示各 Agent 的原生設定（含尚未儲存的編輯內容）。衝突時提供 **從該 Agent 匯入** 或 **以來源覆寫**，備份可在還原前先預覽。對於搭配 `pi-mcp-adapter` 的 Pi server，server 對話框還有 **Direct tools**，以及一個 **其他 adapter 設定** 欄位，以 JSON 填入 [`piOptions`](./mcp.md#pi-options)。**預設值** 用來編輯 `mcp.targets` 與 `mcp.directTools`。 |
 | **Plugins** | 每個 plugin 一列，並以其 Agents 作為切換開關。展開一列還會列出來源支援的其他 Agents；勾選其中之一即可預覽安裝內容。列選單可以同步、更新、移除，或開啟 **View files**，也就是唯讀瀏覽 Skillshare 已檢視過的本機副本。參見 [跨工具管理 plugins](/docs/how-to/daily-tasks/sharing-plugins) |
-| **Targets** | 附帶狀態的 target 列表。每個 target 的頁面可編輯 include/exclude 篩選條件，並將僅存於本機的 skills 收集回 source |
-| **Projects** | 僅限 global mode。global config 會同步進去的 project 資料夾，來自 [`projects`](/docs/reference/targets/configuration#projects) 與 [`mcp.projects`](./mcp.md#projects-in-the-dashboard)。**Add project** 會要求填入資料夾、它的 targets，以及要同步的內容。每個 project 都有 **Skills** 與 **Agents** 分頁，附帶篩選條件、預覽畫面與會被寫入的資料夾，還有一個 **MCP** 分頁可在該資料夾中關閉 global servers 或給它專屬的 servers。已經指向某個 project 資料夾的 target 可以被轉換 |
+| **Targets** | 附帶狀態的 target 列表。**新增目標** 也接受 **另一個帳號**：你已在使用的某個 Agent 的第二個 config 資料夾，並會預覽它寫入的位置。每個 target 的頁面可編輯 include/exclude 篩選條件，並將僅存於本機的 skills 收集回 source |
+| **Projects** | 僅限 global mode。global config 會同步進去的 project 資料夾，來自 [`projects`](/docs/reference/targets/configuration#projects) 與 [`mcp.projects`](./mcp.md#projects-in-the-dashboard)。**新增專案** 會要求填入資料夾、它的 targets，以及要同步的內容。每個 project 都有 **Skills** 與 **Agents** 分頁，附帶篩選條件、預覽畫面與會被寫入的資料夾，還有一個 **MCP** 分頁可在該資料夾中關閉 global servers 或給它專屬的 servers。已經指向某個 project 資料夾的 target 可以被轉換 |
 | **Audit** | 對 skills 與 agents 進行安全掃描，依嚴重程度列出發現項目。**Rules** 分頁可依分類瀏覽每一項規則：關閉某項、變更其嚴重程度、對整個分類套用嚴重程度、選擇掃描設定檔（`default`、`strict`、`permissive`），或開啟編輯器自訂 `audit-rules.yaml` |
 | **Settings** | 分頁式：**General**（source 路徑、同步模式、外觀）、**Backup**（快照與還原）、**Log**（操作歷史）、**Health**（與 [`doctor`](/docs/reference/commands/doctor) 相同的檢查）、**Extensions**（同步時的檔案轉換）、**Files**（直接編輯 `config.yaml`、`.skillignore` 與 `.agentignore`） |
 

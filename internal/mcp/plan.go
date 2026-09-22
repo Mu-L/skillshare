@@ -173,6 +173,12 @@ func (s *Service) previewSource(source *Source) (*Plan, error) {
 // owner cover every root: separate plans would each read the others' entries as leftovers.
 func (s *Service) render(source *Source) (map[fileKey]map[string]map[string]any, error) {
 	desired := map[fileKey]map[string]map[string]any{}
+	if err := source.checkTargets(); err != nil {
+		return nil, err
+	}
+	withAccounts := *s
+	withAccounts.accounts = source.Accounts
+	s = &withAccounts
 	if s.ProjectRoot != "" && len(source.Projects) > 0 {
 		return nil, fmt.Errorf("mcp.projects belongs in the global config; this project already syncs its own mcp.servers")
 	}
@@ -247,6 +253,15 @@ func followingSwitches(servers map[string]Server, defaults []string, global *Sou
 			}
 		}
 		server.Targets = SwitchTargets(server, defaults, reached)
+		// The off list is per account, so an account that has the server gets the switch too.
+		if global != nil {
+			for _, account := range sortedKeys(global.Accounts) {
+				agent := global.Accounts[account].Agent
+				if _, err := renderDisabled(agent, server); err == nil && slices.Contains(defaults, agent) && (reached == nil || slices.Contains(reached, account)) {
+					server.Targets = append(server.Targets, account)
+				}
+			}
+		}
 		out[name] = server
 	}
 	return out
@@ -268,6 +283,7 @@ func (s *Service) renderScope(desired map[fileKey]map[string]map[string]any, ser
 			}
 		}
 		for _, target := range selected {
+			s, target := s.forTarget(target)
 			if err := s.checkScope(name, target, server); err != nil {
 				return err
 			}
@@ -301,6 +317,37 @@ func (s *Service) renderScope(desired map[fileKey]map[string]map[string]any, ser
 		}
 	}
 	return nil
+}
+
+// forTarget resolves an account to its Agent, in a scope whose files are that account's.
+func (s *Service) forTarget(target string) (*Service, string) {
+	account, ok := s.accounts[target]
+	if !ok {
+		return s, target
+	}
+	scoped := *s
+	scoped.ConfigDirs = maps.Clone(s.ConfigDirs)
+	if scoped.ConfigDirs == nil {
+		scoped.ConfigDirs = map[string]string{}
+	}
+	scoped.ConfigDirs[account.Agent] = account.Dir
+	scoped.account = target
+	return &scoped, account.Agent
+}
+
+// shownAs is the target a change reports: the account when the file is one's, so two
+// accounts of one Agent stay apart in the plan and in conflict resolutions.
+func (s *Service) shownAs(target, path string, accounts map[string]Account) string {
+	shown := shownTarget(target)
+	for _, name := range sortedKeys(accounts) {
+		scoped := *s
+		scoped.accounts, scoped.ProjectRoot = accounts, ""
+		account, agent := scoped.forTarget(name)
+		if file, err := account.nativePath(agent); err == nil && agent == shown && file == path {
+			return name
+		}
+	}
+	return shown
 }
 
 // destination is the file one server lands in for one Agent, and the native target that
@@ -357,6 +404,11 @@ func (s *Service) checkScope(name, target string, server Server) error {
 	case server.Disabled && s.ProjectRoot == "":
 		return fmt.Errorf("MCP %s: disabled only applies in project mode, where it turns off a server from the Agent's global config; here, unselect the Agent instead", name)
 	case target == "pi" && s.ProjectRoot == "" && s.ConfigDirs["pi"] != "" && server.PiExtension == "pi-mcp-extension":
+		// An account is a directory the user chose, so say which one is out of reach and
+		// what to select instead; an environment override they can simply unset.
+		if s.account != "" {
+			return fmt.Errorf("pi-mcp-extension always reads ~/.pi/agent/mcp.json, so it cannot reach account %s (%s); set piExtension: pi-mcp-adapter on this server", s.account, s.ConfigDirs["pi"])
+		}
 		return fmt.Errorf("pi-mcp-extension uses ~/.pi/agent/mcp.json and does not honor PI_CODING_AGENT_DIR; unset the override before syncing")
 	case target == "grok" && (!grokServerName.MatchString(name) || strings.Contains(name, "__") || strings.HasSuffix(name, "_")):
 		return fmt.Errorf("Grok MCP %s: use a name starting with a letter or underscore, containing only letters, digits, hyphens and single underscores, and not ending in underscore", name)
@@ -384,7 +436,9 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 	matched := map[string]bool{}
 	for _, r := range resolutions {
 		key := r.Target + "\x00" + r.Name
-		if _, exists := matched[key]; exists || !validTarget(r.Target) || (r.Action != "replace" && r.Action != "adopt") {
+		_, exists := matched[key]
+		_, account := source.Accounts[r.Target]
+		if exists || (!validTarget(r.Target) && !account) || (r.Action != "replace" && r.Action != "adopt") {
 			return nil, fmt.Errorf("invalid or duplicate MCP conflict resolution")
 		}
 		matched[key] = false
@@ -447,6 +501,7 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
+		shown := s.shownAs(target, path, source.Accounts)
 		f := &filePlan{path: path, target: target, before: data, exists: exists, mode: mode, section: sectionDigest(native), changes: map[string]map[string]any{}}
 		revision += path + target + f.section
 		names := map[string]bool{}
@@ -466,7 +521,7 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 			want := desired[fk][name]
 			wantHash := entryHash(managedEntry(target, want))
 			for _, resolution := range resolutions {
-				if resolution.Target != shownTarget(target) || resolution.Name != name {
+				if resolution.Target != shown || resolution.Name != name {
 					continue
 				}
 				matched[resolution.Target+"\x00"+name] = true
@@ -484,7 +539,7 @@ func (s *Service) previewResolved(source *Source, resolutions []Resolution) (*Pl
 				managed = true
 				p.state.Entries[key] = owned
 			}
-			change := Change{Target: shownTarget(target), Path: path, Name: name, Root: changeRoot(target, path, projectRoots)}
+			change := Change{Target: shown, Path: path, Name: name, Root: changeRoot(target, path, projectRoots)}
 			if change.Switch = switchOnly(target, want); want == nil {
 				change.Switch = switchOnly(target, current)
 			}

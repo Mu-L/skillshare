@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Braces, Check, Download, FileUp, Info, Plus, X } from 'lucide-react';
-import { mcpApi, mcpTargets, type MCPCandidate, type MCPMutation, type MCPServer } from '../../api/mcp';
+import { mcpApi, type MCPCandidate, type MCPMutation, type MCPServer } from '../../api/mcp';
 import PiExtensionField from './PiExtensionField';
 import AgentIcon from '../AgentIcon';
 import Button from '../Button';
@@ -13,6 +13,7 @@ import { useToast } from '../Toast';
 import { useT } from '../../i18n';
 import { shortenHome } from '../../lib/paths';
 import { describeEndpoint, describeError, targetLabel } from './mcpView';
+import { MCPTargetOrder } from './targetOrder';
 
 /** Where the configuration comes from. Each entry point fixes one; the dialog never switches. */
 type Source = 'target' | 'paste';
@@ -56,8 +57,11 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
   const t = useT();
   const { toast } = useToast();
   const tab = source;
-  const availableTargets = offered ?? mcpTargets.filter((x) => paths[x]);
-  const [from, setFrom] = useState(conflict?.target ?? availableTargets.find((x) => detected.includes(x)) ?? availableTargets[0] ?? '');
+  const order = useContext(MCPTargetOrder);
+  const availableTargets = offered ?? order.filter((x) => paths[x]);
+  // An account of an Agent has its own file, so it is an import source under its own name.
+  const sources = order.filter((x) => availableTargets.includes(x));
+  const [from, setFrom] = useState(conflict?.target ?? sources.find((x) => detected.includes(x)) ?? sources[0] ?? '');
   const [content, setContent] = useState('');
   const [pasted, setPasted] = useState('');
   const [tomlFrom, setTomlFrom] = useState('codex');
@@ -109,7 +113,7 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
     for (const c of chosen) {
       // A takeover keeps the targets the existing server already has
       const own = servers[c.name]?.targets;
-      const write = own ?? (inherited ? undefined : mcpTargets.filter((x) => targets.includes(x)));
+      const write = own ?? (inherited ? undefined : order.filter((x) => targets.includes(x)));
       const mutation: MCPMutation = { ...(project && { project }), name: c.name, server: { ...c.server, ...(piExtension && { piExtension }), ...(write && { targets: write }) }, replace: c.name in servers };
       // Adopting records the tool's identical entry as managed, so the next sync has no conflict there
       if (c.from && (own ?? targets).includes(c.from)) mutation.resolutions = [{ target: c.from, name: c.name, action: 'adopt' }];
@@ -154,7 +158,7 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
             <Select
               value={from}
               onChange={(v) => { setFrom(v); reset(); }}
-              options={availableTargets.map((x) => ({ value: x, label: `${targetLabel(x)}  ${shortenHome(paths[x])}`, icon: <AgentIcon target={x} size={16} /> }))}
+              options={sources.map((x) => ({ value: x, label: `${targetLabel(x)}  ${shortenHome(paths[x])}`, icon: <AgentIcon target={x} size={16} /> }))}
               disabled={saving}
             />
             <span className="hp">{t('mcp.fromTargetHint')}</span>
@@ -269,7 +273,7 @@ export default function MCPImportDialog({ source, servers, defaultTargets, paths
         <div className="ss-fld">
           <span className="text-[13px] font-semibold">{t('mcp.targets')}</span>
           <div className="flex flex-wrap gap-x-5 gap-y-3">
-            {mcpTargets.filter((target) => visibleTargets.has(target)).map((target) => {
+            {order.filter((target) => visibleTargets.has(target)).map((target) => {
               const on = targets.includes(target);
               return (
                 <button

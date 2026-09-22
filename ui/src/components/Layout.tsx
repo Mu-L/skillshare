@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
@@ -26,6 +26,7 @@ import { useGlobalShortcuts } from '../hooks/useGlobalShortcuts';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import ShortcutHUD from './ShortcutHUD';
 import ScrollToTop from './ScrollToTop';
+import { TargetAgents } from './targetAgents';
 import CopyButton from './CopyButton';
 import ThemePopover from './ThemePopover';
 import LanguagePopover from './LanguagePopover';
@@ -101,6 +102,9 @@ export default function Layout() {
   const version = overview?.version;
   const home = isProjectMode ? projectRoot : overview?.configDir;
   const counts = useNavCounts(isProjectMode);
+  // Shares the badge query, so this costs no request.
+  const { data: synced } = useQuery({ queryKey: queryKeys.targets.synced, queryFn: () => api.listTargets('all'), staleTime: staleTimes.targets });
+  const targetAgents = useMemo(() => Object.fromEntries((synced?.targets ?? []).flatMap((x) => (x.agent ? [[x.name, x.agent]] : []))), [synced]);
 
   return (
     <div className="min-h-screen">
@@ -156,7 +160,7 @@ export default function Layout() {
 
       <main className="ml-[232px] min-w-0 px-12 py-10">
         <div className="max-w-[1080px] mx-auto">
-          <Outlet />
+          <TargetAgents.Provider value={targetAgents}><Outlet /></TargetAgents.Provider>
         </div>
       </main>
 

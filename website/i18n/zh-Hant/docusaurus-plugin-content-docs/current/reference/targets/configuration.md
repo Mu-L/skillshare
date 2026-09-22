@@ -208,6 +208,29 @@ targets:
     path: ~/my-app/skills
 ```
 
+#### 某個 Agent 的另一個帳號 {#agent-config-dir}
+
+Target 可以是某個內建 Agent 的第二個 config 目錄：以 `CLAUDE_CONFIG_DIR` 啟動的 Claude Code、以 `CODEX_HOME` 啟動的 Codex，或以 `PI_CODING_AGENT_DIR` 啟動的 Pi。指定 Agent 與該目錄即可；Skill 與 agents 的路徑會跟著它決定。
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work   # Skill 會放到 ~/.claude-work/skills，agents 放到 ~/.claude-work/agents
+  codex-work:
+    agent: codex
+    config_dir: ~/.codex-work    # Skill 會放到 ~/.codex-work/skills
+```
+
+Codex 也會讀取共用的 `~/.agents/skills`，但一個帳號只擁有自己的目錄，因此它的 Skill 會放到 `<config_dir>/skills`。Pi 的運作方式相同。只有 Claude 有 agents 目錄。
+
+| 欄位 | 說明 |
+|-------|-------------|
+| `agent` | 內建的 Agent：`claude`（`CLAUDE_CONFIG_DIR`）、`codex`（`CODEX_HOME`）或 `pi`（`PI_CODING_AGENT_DIR`） |
+| `config_dir` | 該帳號的 config 目錄。必須是絕對路徑或以 `~` 開頭，不能是該 Agent 的預設目錄，且只能由一個 Target 使用 |
+
+`mode`、`include`、`exclude` 與其他 Target 設定的運作方式與任何 Target 相同。你自己寫的 `skills.path` 或 `agents.path` 會優先於推導出來的路徑。Target 名稱也可以當作 [MCP target](/docs/reference/commands/mcp#accounts) 與 [plugin target](/docs/reference/commands/plugin#accounts) 使用。
+
 ### `include` / `exclude`（Target 篩選條件） {#include--exclude-target-filters}
 
 使用每個 Target 各自的篩選條件，控制在 **merge 與 copy 模式**下要同步哪些 Skill。

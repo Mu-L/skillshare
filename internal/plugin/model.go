@@ -225,13 +225,18 @@ type Result struct {
 	Results []Outcome `json:"results"`
 }
 
-type Runner func(context.Context, string, string, ...string) ([]byte, error)
+// Runner runs one native CLI: a working directory, environment entries on top of the
+// process environment, the binary and its arguments.
+type Runner func(context.Context, string, []string, string, ...string) ([]byte, error)
 
 type Service struct {
 	ConfigPath  string
 	StateDir    string
 	ProjectRoot string
-	Run         Runner
+	// Accounts are the targets that are another config directory of a built-in Agent,
+	// keyed by the name the config gives them.
+	Accounts map[string]Account
+	Run      Runner
 }
 
 func (b Binding) Selected() bool { return b.Sync == nil || *b.Sync }

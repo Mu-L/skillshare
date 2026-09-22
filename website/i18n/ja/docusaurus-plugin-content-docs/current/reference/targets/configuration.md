@@ -210,6 +210,29 @@ targets:
     path: ~/my-app/skills
 ```
 
+#### Agent の別のアカウント {#agent-config-dir}
+
+Target は、組み込み Agent の 2 つ目の Config ディレクトリにすることもできます。`CLAUDE_CONFIG_DIR` で起動した Claude Code、`CODEX_HOME` で起動した Codex、`PI_CODING_AGENT_DIR` で起動した Pi です。Agent とディレクトリを指定すれば、skills と agents のパスはそれに従います。
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work   # skills は ~/.claude-work/skills、agents は ~/.claude-work/agents に入る
+  codex-work:
+    agent: codex
+    config_dir: ~/.codex-work    # skills は ~/.codex-work/skills に入る
+```
+
+Codex は共有の `~/.agents/skills` も読み込みますが、アカウントが所有するのは自分のディレクトリだけなので、その Skill は `<config_dir>/skills` に入ります。Pi も同じ仕組みです。agents ディレクトリを持つのは Claude だけです。
+
+| フィールド | 説明 |
+|-------|-------------|
+| `agent` | 組み込みの Agent。`claude`（`CLAUDE_CONFIG_DIR`）、`codex`（`CODEX_HOME`）、`pi`（`PI_CODING_AGENT_DIR`） |
+| `config_dir` | そのアカウントの Config ディレクトリ。絶対パスか `~` で始まること、Agent のデフォルトのディレクトリではないこと、1 つの Target だけが使うこと |
+
+`mode`、`include`、`exclude` などの Target 設定は、他の Target と同じように機能します。自分で書いた `skills.path` や `agents.path` は、導き出されたパスより優先されます。Target 名は [MCP Target](/docs/reference/commands/mcp#accounts) や [plugin Target](/docs/reference/commands/plugin#accounts) としても使えます。
+
 ### `include` / `exclude`（Target フィルター） {#include--exclude-target-filters}
 
 **merge および copy モード** でどの Skill を Sync するかを制御するには、Target 単位のフィルターを

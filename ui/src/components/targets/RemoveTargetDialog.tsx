@@ -7,7 +7,7 @@ import Button from '../Button';
 import DialogShell from '../DialogShell';
 
 /** What removal does mirrors handleRemoveTarget: merge links become copies, a whole-folder link is deleted, copies stay. */
-export default function RemoveTargetDialog({ target, onClose, onRemoved }: { target: Target; onClose: () => void; onRemoved: () => void }) {
+export default function RemoveTargetDialog({ target, onClose, onRemoved }: { target: Target; onClose: () => void; onRemoved: (warnings: string[]) => void }) {
   const t = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -16,8 +16,8 @@ export default function RemoveTargetDialog({ target, onClose, onRemoved }: { tar
     setBusy(true);
     setError('');
     try {
-      await api.removeTarget(target.name);
-      onRemoved();
+      const result = await api.removeTarget(target.name);
+      onRemoved(result.warnings ?? []);
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);

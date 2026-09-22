@@ -53,10 +53,10 @@ target 會儲存這個選擇。下一次 `sync plugins` 會移除其受管理的
 
 | Option | Meaning |
 |---|---|
-| `--target TARGET` | 可重複指定：`claude`、`codex`、`cursor`、`antigravity`（別名 `agy`）、`antigravity-cli`、`copilot`、`grok`、`pi`、`opencode`；請參閱下方的 capability 表 |
+| `--target TARGET` | 可重複指定：`claude`、`codex`、`cursor`、`antigravity`（別名 `agy`）、`antigravity-cli`、`copilot`、`grok`、`pi`、`opencode`，或[某個 Agent 的另一個帳號](#accounts)的名稱；請參閱下方的 capability 表 |
 | `--plugin NAME` | 從 source marketplace 選擇一個 plugin |
 | `--name NAME` | 新增或匯入時使用的邏輯套件名稱 |
-| `--from TARGET` | 從 Claude、Codex、Antigravity CLI、Copilot、Grok、Pi 或 OpenCode 匯入 |
+| `--from TARGET` | 從 Claude、Codex、Antigravity CLI、Copilot、Grok、Pi、OpenCode 或[某個 Agent 的另一個帳號](#accounts)匯入 |
 | `--dry-run`, `-n` | 預覽而不變更 Skillshare 或 Agent 設定 |
 | `--source-ref REF` | 用於 `discover`、`add`、`update` 的 Git branch、tag 或 commit；僅限遠端 source |
 | `--entry PATH` | 明確指定已建置的 OpenCode JS/TS 進入點，相對於套件根目錄（`discover` 與 `add`） |
@@ -94,6 +94,24 @@ source 宣告某個 target 不代表 Skillshare 就能管理它。`list --json` 
 `targetDefinitions`，列出允許的操作；探索階段也會針對每種格式揭露 `targetInfo`，內容包含
 版本、元件、進入點與驗證問題。損壞的 manifest 只會影響該 target；損壞的 catalog 則以警告方式
 回報，不會隱藏有效的格式。
+
+### 某個 Agent 的另一個帳號 {#accounts}
+
+宣告為[某個 Agent 的另一個帳號](/docs/reference/targets/configuration#agent-config-dir)的 target 同時也是 plugin target，適用於 `claude`、`codex` 與 `pi`。Skillshare 會透過 `CLAUDE_CONFIG_DIR`、`CODEX_HOME` 或 `PI_CODING_AGENT_DIR`，對該帳號的 config 目錄執行該 Agent 自己的 CLI：
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work
+```
+
+```bash
+skillshare plugin add owner/repo --target claude-work
+skillshare plugin import demo@market --from claude-work
+```
+
+該帳號沿用它所屬 Agent 的操作方式，並以自己的名稱保存自己的綁定，因此同一個 plugin 可以只裝在其中一個帳號。帳號只存在於 global 範圍：專案的 plugin 屬於該專案，而不屬於某個帳號。`--target` 與 `--from` 都接受帳號名稱，終端機選單與 dashboard 的 Plugins 頁面也會把它列在 Agents 旁邊。
 
 ### Cursor and Antigravity
 

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { Check, KeyRound, Link2, Plus, SquareTerminal, X } from 'lucide-react';
-import { mcpApi, mcpOffTargets, mcpTargets, type MCPServer, type MCPValue } from '../../api/mcp';
+import { mcpApi, mcpOffTargets, type MCPServer, type MCPValue } from '../../api/mcp';
 import AgentIcon from '../AgentIcon';
 import Button from '../Button';
 import CodeEditor from '../CodeEditor';
@@ -12,6 +12,7 @@ import PiExtensionField from './PiExtensionField';
 import DirectToolsField, { directToolsComplete, directToolsDraft, directToolsValue } from './DirectToolsField';
 import MCPConfigView from './MCPConfigView';
 import { describeError, joinCommand, parsePiOptions, splitCommand, targetLabel } from './mcpView';
+import { MCPTargetOrder } from './targetOrder';
 
 // Mirrors mcp.serverName
 const NAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
@@ -81,8 +82,10 @@ interface Props {
 }
 
 /** Add or edit one source server. Saving only changes the source; Sync writes the config files. */
-export default function MCPServerDialog({ initial, defaultTargets, defaultPiExtension = '', existingNames, availableTargets = mcpTargets, project, off: offKind = false, onMode, onClose, onSaved }: Props) {
+export default function MCPServerDialog({ initial, defaultTargets, defaultPiExtension = '', existingNames, availableTargets: offered, project, off: offKind = false, onMode, onClose, onSaved }: Props) {
   const t = useT();
+  const order = useContext(MCPTargetOrder);
+  const availableTargets = offered ?? order;
   const server = initial?.server;
   // The entry point already chose which kind of entry this is, so the dialog never asks again.
   const off = initial ? Boolean(server?.disabled) : offKind;
@@ -136,7 +139,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
     if (options.value && Object.keys(options.value).length > 0) next.piOptions = options.value;
     return next;
   };
-  const ordered = mcpTargets.filter((x) => targets.includes(x));
+  const ordered = order.filter((x) => targets.includes(x));
   const complete = Boolean(trimmed) && !nameError && ordered.length > 0 && (off || (http ? url.trim() !== '' : words.length > 0));
   const mutation = { name: trimmed, server: { ...build(), targets: ordered } };
 
@@ -232,7 +235,7 @@ export default function MCPServerDialog({ initial, defaultTargets, defaultPiExte
         <div className="ss-fld">
           <span className="text-[13px] font-semibold">{off ? t('mcp.offTargets') : t('mcp.targets')}</span>
           <div className="flex flex-wrap gap-x-5 gap-y-3">
-            {mcpTargets.filter((target) => visibleTargets.has(target)).map((target) => {
+            {order.filter((target) => visibleTargets.has(target)).map((target) => {
               const on = targets.includes(target);
               return (
                 <button

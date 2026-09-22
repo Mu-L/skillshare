@@ -9,6 +9,7 @@ import (
 
 	"skillshare/internal/backup"
 	"skillshare/internal/config"
+	"skillshare/internal/mcp"
 	"skillshare/internal/oplog"
 	"skillshare/internal/sync"
 	"skillshare/internal/targetsummary"
@@ -101,6 +102,8 @@ Manage target skill directories.
 
 Subcommands:
   add <name> [path]      Add a target (path optional for known project targets)
+  add <name> --agent <agent> --config-dir <dir>
+                         Add another account of an Agent: its second config directory
   remove <name>          Remove a target
   remove --all           Remove all targets
   list                   List configured targets
@@ -128,6 +131,7 @@ Target Settings:
 Examples:
   skillshare target add cursor
   skillshare target add my-ide .my-ide/skills
+  skillshare target add claude-work --agent claude --config-dir ~/.claude-work
   skillshare target remove cursor
   skillshare target list
   skillshare target cursor
@@ -145,7 +149,7 @@ Project mode:
 
 func targetAdd(args []string) error {
 	if len(args) < 2 {
-		return fmt.Errorf("usage: skillshare target add <name> <path>")
+		return fmt.Errorf("usage: skillshare target add <name> <path>\n       skillshare target add <name> --agent <agent> --config-dir <dir>")
 	}
 
 	name := args[0]
@@ -154,6 +158,9 @@ func targetAdd(args []string) error {
 	// Validate target name
 	if err := validate.TargetName(name); err != nil {
 		return fmt.Errorf("invalid target name: %w", err)
+	}
+	if strings.HasPrefix(path, "--") {
+		return targetAddAgentConfigDir(name, args[1:])
 	}
 
 	// Expand ~
@@ -203,6 +210,37 @@ func targetAdd(args []string) error {
 		return err
 	}
 
+	ui.Success("Added target: %s -> %s", name, path)
+	ui.Info("Run 'skillshare sync' to sync skills to this target")
+	return nil
+}
+
+// targetAddAgentConfigDir adds another config directory of a built-in Agent, such as a
+// second account. Its skills and agents paths follow the directory.
+func targetAddAgentConfigDir(name string, args []string) error {
+	var agent, dir string
+	for i := 0; i < len(args); i++ {
+		if i+1 == len(args) || (args[i] != "--agent" && args[i] != "--config-dir") {
+			return fmt.Errorf("usage: skillshare target add <name> --agent <agent> --config-dir <dir>")
+		}
+		if args[i] == "--agent" {
+			agent = args[i+1]
+		} else {
+			dir = args[i+1]
+		}
+		i++
+	}
+	cfg, err := config.LoadWithoutProjects()
+	if err != nil {
+		return err
+	}
+	path, err := cfg.AddAgentConfigDirTarget(name, agent, dir)
+	if err != nil {
+		return err
+	}
+	if err := cfg.Save(); err != nil {
+		return err
+	}
 	ui.Success("Added target: %s -> %s", name, path)
 	ui.Info("Run 'skillshare sync' to sync skills to this target")
 	return nil
@@ -337,16 +375,30 @@ func targetRemove(args []string) error {
 	backupTargets(cfg, toRemove)
 
 	ui.Header("Unlinking targets")
+	var stillNamed []string
 	for _, targetName := range toRemove {
 		target := cfg.Targets[targetName]
 		if err := unlinkTarget(targetName, target, cfg.EffectiveSkillsSource()); err != nil {
 			ui.Error("%s: %v", targetName, err)
 			continue
 		}
+		// Read the MCP config before it is saved without the target: afterwards its
+		// own name no longer resolves, so the config no longer loads.
+		if target.Agent != "" {
+			if warning := mcp.ReferenceWarning(config.ConfigPath(), targetName); warning != "" {
+				stillNamed = append(stillNamed, warning)
+			}
+		}
 		delete(cfg.Targets, targetName)
 	}
 
-	return cfg.Save()
+	if err := cfg.Save(); err != nil {
+		return err
+	}
+	for _, warning := range stillNamed {
+		ui.Warning("%s", warning)
+	}
+	return nil
 }
 
 func targetRemoveDryRun(cfg *config.Config, toRemove []string) error {

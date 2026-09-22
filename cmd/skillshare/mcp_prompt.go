@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textarea"
@@ -66,6 +68,18 @@ func mcpTargetItems(service *mcp.Service, server *mcp.Server) []checklistItemDat
 			}
 		}
 		items = append(items, checklistItemData{label: name})
+	}
+	// Accounts of an Agent follow, under the names the config gives them.
+	if source, err := mcp.LoadSource(service.ConfigPath); err == nil {
+		paths := service.AccountPaths(source.Accounts)
+		for _, name := range slices.Sorted(maps.Keys(paths)) {
+			if server != nil {
+				if _, err := mcp.Render(source.Accounts[name].Agent, *server); err != nil {
+					continue
+				}
+			}
+			items = append(items, checklistItemData{label: name})
+		}
 	}
 	return items
 }

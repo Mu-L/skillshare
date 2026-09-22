@@ -60,10 +60,10 @@ commands require explicit inputs. `sync` and `check` may operate on all packages
 
 | Option | Meaning |
 |---|---|
-| `--target TARGET` | Repeatable selection: `claude`, `codex`, `cursor`, `antigravity` (`agy` alias), `antigravity-cli`, `copilot`, `grok`, `pi`, `opencode`; see the capability table below |
+| `--target TARGET` | Repeatable selection: `claude`, `codex`, `cursor`, `antigravity` (`agy` alias), `antigravity-cli`, `copilot`, `grok`, `pi`, `opencode`, or the name of [another account of an Agent](#accounts); see the capability table below |
 | `--plugin NAME` | Select one plugin from a source marketplace |
 | `--name NAME` | Logical package name when adding or importing |
-| `--from TARGET` | Import from Claude, Codex, Antigravity CLI, Copilot, Grok, Pi, or OpenCode |
+| `--from TARGET` | Import from Claude, Codex, Antigravity CLI, Copilot, Grok, Pi, OpenCode, or [another account of an Agent](#accounts) |
 | `--dry-run`, `-n` | Preview without changing Skillshare or Agent configuration |
 | `--source-ref REF` | Git branch, tag, or commit for `discover`, `add`, and `update`; remote sources only |
 | `--entry PATH` | Explicit built OpenCode JS/TS entry, relative to the package root (`discover` and `add`) |
@@ -103,6 +103,24 @@ reason. A source declaring a target does not imply that Skillshare can manage it
 operations; discovery also exposes `targetInfo` for each format's version,
 components, entry, and validation problem. A broken manifest is isolated to its
 target; a malformed catalog is reported as a warning without hiding valid formats.
+
+### Another account of an Agent {#accounts}
+
+A target declared as [another account of an Agent](/docs/reference/targets/configuration#agent-config-dir) is a plugin target too, for `claude`, `codex` and `pi`. Skillshare runs that Agent's own CLI against the account's config directory, through `CLAUDE_CONFIG_DIR`, `CODEX_HOME` or `PI_CODING_AGENT_DIR`:
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work
+```
+
+```bash
+skillshare plugin add owner/repo --target claude-work
+skillshare plugin import demo@market --from claude-work
+```
+
+The account takes the operations of the Agent it belongs to and keeps its own bindings under its own name, so a plugin can be installed in one account and not in the other. Accounts exist in global scope only: a project's plugins belong to the project, not to one account. `--target` and `--from` accept the account name, and the terminal picker and the dashboard's Plugins page list it next to the Agents.
 
 ### Cursor and Antigravity
 

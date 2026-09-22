@@ -29,8 +29,13 @@ func ProjectSupported(target string) bool {
 	return false
 }
 
+// validTargetID checks an identifier for the Agent that installs it. An empty target is
+// an account whose Agent the caller could not resolve; every Agent that can have one
+// writes its plugins as name@marketplace.
 func validTargetID(target, id string) bool {
 	switch target {
+	case "":
+		return validID(id)
 	case "claude", "codex":
 		return validID(id)
 	case "cursor", "antigravity", "antigravity-cli", "grok", "kimi", "hermes", "devin":
@@ -45,7 +50,7 @@ func validTargetID(target, id string) bool {
 
 func (s *Service) snapshotPath(b Binding, target string) string {
 	market := "skillshare-" + hash([]byte(s.ConfigPath + "\x00" + b.Source + "\x00" + b.Plugin + "\x00" + target))[:16]
-	if target == "claude" || target == "codex" {
+	if agent := s.agentOf(target); agent == "claude" || agent == "codex" {
 		_, market, _ = strings.Cut(b.ID, "@")
 	}
 	return filepath.Join(s.managedRoot(), market)
@@ -95,34 +100,35 @@ func openCodeEntry(root string, explicit ...string) (string, error) {
 }
 
 func (s *Service) additionalHost(ctx context.Context, target string) Host {
+	agent := s.agentOf(target)
 	h := Host{Target: target, Status: HostReady, Installed: []Installed{}}
-	if problem := automationProblem(target); problem != "" {
-		h.block("plugins.problem."+target, problem)
+	if problem := automationProblem(agent); problem != "" {
+		h.block("plugins.problem."+agent, problem)
 		return h
 	}
-	if commandTarget(target) {
+	if commandTarget(agent) {
 		return s.commandHost(ctx, target)
 	}
-	if s.ProjectRoot != "" && !ProjectSupported(target) {
-		h.block("plugins.error.userScoped", target+" plugins are user-scoped; use global mode. Project operations never fall back to global.")
+	if s.ProjectRoot != "" && !ProjectSupported(agent) {
+		h.block("plugins.error.userScoped", agent+" plugins are user-scoped; use global mode. Project operations never fall back to global.")
 		return h
 	}
 	var err error
-	switch target {
+	switch agent {
 	case "cursor":
 		h.NoteKey = "plugins.note.cursor"
 		h.Note = "Local plugin files only. Reload Cursor and allow local plugin imports; marketplace installations take precedence."
-		h.Installed, h.Fingerprint, err = s.localInventory(target)
+		h.Installed, h.Fingerprint, err = s.localInventory(agent)
 	case "antigravity":
 		h.NoteKey = "plugins.note.antigravity"
 		h.Note = "Custom plugin files for Antigravity desktop/workspaces; verify loading in Antigravity. The standalone agy CLI uses a separate plugin store."
-		h.Installed, h.Fingerprint, err = s.localInventory(target)
+		h.Installed, h.Fingerprint, err = s.localInventory(agent)
 	case "pi":
 		var data []byte
 		data, err = s.run(ctx, target, "--version")
 		h.Version = strings.TrimSpace(string(data))
 		if err == nil {
-			h.Installed, h.Fingerprint, err = s.piInventory()
+			h.Installed, h.Fingerprint, err = s.piInventory(target)
 		}
 		h.NoteKey = "plugins.note.pi"
 		h.Note = "Package registrations from Pi settings; resource loading is verified in Pi."
@@ -145,19 +151,20 @@ func (s *Service) additionalHost(ctx context.Context, target string) Host {
 }
 
 func (s *Service) verifyAdditional(ctx context.Context, target, action, id string) error {
-	if commandTarget(target) {
+	agent := s.agentOf(target)
+	if commandTarget(agent) {
 		return s.verifyNativeTarget(ctx, target, action, id)
 	}
-	if s.ProjectRoot != "" && !ProjectSupported(target) {
+	if s.ProjectRoot != "" && !ProjectSupported(agent) {
 		return fmt.Errorf("%s project plugins are unsupported", target)
 	}
-	if !validTargetID(target, id) {
+	if !validTargetID(agent, id) {
 		return fmt.Errorf("invalid native plugin identifier")
 	}
 	if !slices.Contains([]string{"install", "update", "remove", "uninstall"}, action) {
 		return fmt.Errorf("unsupported plugin action %s", action)
 	}
-	if target == "cursor" || target == "antigravity" || target == "opencode" {
+	if agent == "cursor" || agent == "antigravity" || agent == "opencode" {
 		return nil
 	}
 	command := action
@@ -182,18 +189,18 @@ func (s *Service) applyAdditional(ctx context.Context, c Change, b Binding) erro
 		}
 		for _, candidate := range d.Candidates {
 			if candidate.Name == b.Plugin {
-				root = filepath.Join(snapshot, "content", candidate.pathFor(c.Target))
+				root = filepath.Join(snapshot, "content", candidate.pathFor(s.agentOf(c.Target)))
 			}
 		}
 		if root == "" {
 			return fmt.Errorf("plugin missing from snapshot")
 		}
 	}
-	if commandTarget(c.Target) {
+	if commandTarget(s.agentOf(c.Target)) {
 		return s.applyNativeTarget(ctx, c, b, root)
 	}
 	remove := c.Action == "remove" || c.Action == "uninstall"
-	switch c.Target {
+	switch s.agentOf(c.Target) {
 	case "cursor", "antigravity":
 		return s.applyLocal(c, b, root)
 	case "opencode":

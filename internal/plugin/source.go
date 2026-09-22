@@ -57,14 +57,14 @@ func acquireRef(ctx context.Context, source, ref string) (string, string, func()
 		return "", "", cleanup, err
 	}
 	cleanup = func() { _ = os.RemoveAll(root) }
-	_, err = runCommand(ctx, "", "git", "-c", "core.hooksPath=/dev/null", "clone", "--depth", "1", "--", source, root)
+	_, err = runCommand(ctx, "", nil, "git", "-c", "core.hooksPath=/dev/null", "clone", "--depth", "1", "--", source, root)
 	if err != nil {
 		cleanup()
 		return "", "", func() {}, fmt.Errorf("download plugin source: %w", err)
 	}
 	if ref != "" {
-		if _, err = runCommand(ctx, root, "git", "fetch", "--depth", "1", "origin", ref); err == nil {
-			_, err = runCommand(ctx, root, "git", "-c", "core.hooksPath=/dev/null", "checkout", "--detach", "FETCH_HEAD")
+		if _, err = runCommand(ctx, root, nil, "git", "fetch", "--depth", "1", "origin", ref); err == nil {
+			_, err = runCommand(ctx, root, nil, "git", "-c", "core.hooksPath=/dev/null", "checkout", "--detach", "FETCH_HEAD")
 		}
 		if err != nil {
 			cleanup()
@@ -154,7 +154,7 @@ func DiscoverOptions(ctx context.Context, source, ref, entry string) (*Discovery
 	if err == nil {
 		d.SourceRef = ref
 		if strings.HasPrefix(normalized, "https://") {
-			if commit, e := runCommand(ctx, root, "git", "rev-parse", "HEAD"); e == nil {
+			if commit, e := runCommand(ctx, root, nil, "git", "rev-parse", "HEAD"); e == nil {
 				d.Commit = strings.TrimSpace(string(commit))
 			} else {
 				return nil, e

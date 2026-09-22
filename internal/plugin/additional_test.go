@@ -153,7 +153,9 @@ func TestOpenCodeConfigPreservesOtherEntries(t *testing.T) {
 			key, _ := openCodeKey(version)
 			path := filepath.Join(home, ".config/opencode/opencode.jsonc")
 			writePluginFile(t, home, ".config/opencode/opencode.jsonc", "{\n// keep me\n\"model\":\"unchanged\",\""+key+"\":[\"other-package\"],\n}")
-			s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state"), Run: func(_ context.Context, _, _ string, args ...string) ([]byte, error) { return []byte(version), nil }}
+			s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state"), Run: func(_ context.Context, _ string, _ []string, _ string, args ...string) ([]byte, error) {
+				return []byte(version), nil
+			}}
 			applyPluginRequest(t, s, Request{Action: "add", Source: source, Targets: []string{"opencode"}})
 			raw, _, entries, err := readPackageConfig(path, key)
 			if err != nil || len(entries) != 2 || !strings.Contains(string(raw), "// keep me") || !strings.Contains(string(raw), "unchanged") {
@@ -177,7 +179,9 @@ func TestPiFilteredImportRejected(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(home, ".pi/agent"))
 	writePluginFile(t, home, ".pi/agent/settings.json", `{"packages":[{"source":"npm:demo","skills":[]}]}`)
-	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), Run: func(_ context.Context, _, _ string, _ ...string) ([]byte, error) { return []byte("0.85.1"), nil }}
+	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), Run: func(_ context.Context, _ string, _ []string, _ string, _ ...string) ([]byte, error) {
+		return []byte("0.85.1"), nil
+	}}
 	if _, err := s.Preview(context.Background(), Request{Action: "import", From: "pi", Plugin: "npm:demo"}); err == nil {
 		t.Fatal("resource filters would be lost")
 	}
@@ -212,7 +216,9 @@ func TestOpenCodeStalePreviewAndSymlink(t *testing.T) {
 	t.Setenv("OPENCODE_CONFIG_CONTENT", "")
 	path := filepath.Join(home, ".config/opencode/opencode.json")
 	writePluginFile(t, home, ".config/opencode/opencode.json", `{"plugin":["demo"]}`)
-	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state"), Run: func(_ context.Context, _, _ string, _ ...string) ([]byte, error) { return []byte("1.18.31"), nil }}
+	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state"), Run: func(_ context.Context, _ string, _ []string, _ string, _ ...string) ([]byte, error) {
+		return []byte("1.18.31"), nil
+	}}
 	r := Request{Action: "import", From: "opencode", Plugin: "demo"}
 	p, err := s.Preview(context.Background(), r)
 	if err != nil {
@@ -241,7 +247,7 @@ func TestPiRelativePackageIdentity(t *testing.T) {
 	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(home, ".pi/agent"))
 	writePluginFile(t, home, ".pi/agent/settings.json", `{"packages":["../../snapshot/demo"]}`)
 	s := &Service{}
-	items, _, err := s.piInventory()
+	items, _, err := s.piInventory("pi")
 	if err != nil || len(items) != 1 || items[0].ID != filepath.Join(home, "snapshot/demo") {
 		t.Fatalf("relative package identity: %+v %v", items, err)
 	}
@@ -250,7 +256,7 @@ func TestPiRelativePackageIdentity(t *testing.T) {
 func TestUnavailableNativeClientDoesNotForgetBinding(t *testing.T) {
 	home := t.TempDir()
 	writePluginFile(t, home, "config.yaml", "plugins:\n  packages:\n    demo:\n      bindings:\n        pi:\n          id: npm:demo\n")
-	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), Run: func(_ context.Context, _, _ string, _ ...string) ([]byte, error) {
+	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), Run: func(_ context.Context, _ string, _ []string, _ string, _ ...string) ([]byte, error) {
 		return nil, fmt.Errorf("Pi not installed")
 	}}
 	p, err := s.Preview(context.Background(), Request{Action: "remove", Name: "demo"})
@@ -272,7 +278,7 @@ func TestOpenCodeProjectImportedUpdateNeverUsesGlobalCLI(t *testing.T) {
 	project := t.TempDir()
 	writePluginFile(t, project, "opencode.json", `{"plugins":["demo"]}`)
 	s := &Service{ConfigPath: filepath.Join(project, "config.yaml"), StateDir: filepath.Join(home, "state"), ProjectRoot: project,
-		Run: func(_ context.Context, _, _ string, args ...string) ([]byte, error) {
+		Run: func(_ context.Context, _ string, _ []string, _ string, args ...string) ([]byte, error) {
 			if strings.Join(args, " ") != "--version" {
 				t.Fatalf("unexpected native operation: %v", args)
 			}

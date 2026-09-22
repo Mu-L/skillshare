@@ -104,17 +104,16 @@ func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := plugin.Validate([]byte(body.Raw)); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
 	// Validate YAML syntax + semantic validation before saving
 	var warnings []string
 	if s.IsProjectMode() {
 		var testCfg config.ProjectConfig
 		if err := yaml.Unmarshal([]byte(body.Raw), &testCfg); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid YAML: "+err.Error())
+			return
+		}
+		if err := plugin.Validate([]byte(body.Raw), nil); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		w2, validErr := config.ValidateProjectConfig(&testCfg, s.projectRoot)
@@ -132,9 +131,14 @@ func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, "invalid YAML: "+err.Error())
 			return
 		}
+		// An account of an Agent is a target for plugins under the name the config gives it.
+		if err := plugin.Validate([]byte(body.Raw), testCfg.AgentConfigDirTargetAgents()); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		w2, validErr := config.ValidateConfig(&testCfg)
 		if validErr == nil {
-			validErr = config.ValidateMCP(testCfg.MCP, testCfg.Sources.MCP)
+			validErr = config.ValidateMCP(testCfg.MCP, testCfg.Sources.MCP, testCfg.AgentConfigDirTargets()...)
 		}
 		if validErr != nil {
 			writeError(w, http.StatusBadRequest, validErr.Error())
@@ -183,6 +187,8 @@ func (s *Server) handleAvailableTargets(w http.ResponseWriter, r *http.Request) 
 		Name      string `json:"name"`
 		Path      string `json:"path"`
 		AgentPath string `json:"agentPath,omitempty"`
+		// ConfigDir is set when a target can be another config directory of this Agent.
+		ConfigDir string `json:"configDir,omitempty"`
 		Installed bool   `json:"installed"`
 		Detected  bool   `json:"detected"`
 	}
@@ -217,6 +223,9 @@ func (s *Server) handleAvailableTargets(w http.ResponseWriter, r *http.Request) 
 		}
 		if agentTC, ok := agentDefaults[name]; ok {
 			item.AgentPath = agentTC.Path
+		}
+		if !isProjectMode {
+			item.ConfigDir = config.AgentConfigDir(name)
 		}
 		items = append(items, item)
 	}

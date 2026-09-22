@@ -180,10 +180,13 @@ func (c *Config) OwnTargets() map[string]TargetConfig {
 }
 
 // withoutProjectTargets returns c as it should be written: project targets come from
-// projects, never from targets.
+// projects, never from targets, and a path derived from config_dir stays derived.
 func (c *Config) withoutProjectTargets() *Config {
 	out := *c
 	out.Targets = c.OwnTargets()
+	for name, target := range out.Targets {
+		out.Targets[name] = target.withoutDerivedPaths()
+	}
 	return &out
 }
 

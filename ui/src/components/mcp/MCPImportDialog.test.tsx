@@ -2,10 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mcpApi } from '../../api/mcp';
+import { mcpApi, mcpTargets } from '../../api/mcp';
 import { I18nProvider } from '../../i18n';
 import { ToastProvider } from '../Toast';
 import MCPImportDialog from './MCPImportDialog';
+import { MCPTargetOrder } from './targetOrder';
 
 // CodeMirror needs a real layout engine; a textarea stands in for it
 vi.mock('../CodeEditor', () => ({
@@ -13,8 +14,8 @@ vi.mock('../CodeEditor', () => ({
 }));
 vi.mock('../../api/mcp', async (load) => ({ ...await load<typeof import('../../api/mcp')>(), mcpApi: { import: vi.fn(), save: vi.fn() } }));
 
-const renderDialog = (props: Partial<Parameters<typeof MCPImportDialog>[0]> = {}) =>
-  render(<QueryClientProvider client={new QueryClient()}><I18nProvider><ToastProvider><MCPImportDialog source="target" servers={{ github: { command: 'npx' } }} defaultTargets={['claude', 'cursor']} paths={{ claude: '/home/me/.claude.json', codex: '/home/me/.codex/config.toml' }} detected={['claude']} onClose={vi.fn()} onImported={vi.fn()} {...props} /></ToastProvider></I18nProvider></QueryClientProvider>);
+const renderDialog = (props: Partial<Parameters<typeof MCPImportDialog>[0]> = {}, order: readonly string[] = mcpTargets) =>
+  render(<QueryClientProvider client={new QueryClient()}><I18nProvider><ToastProvider><MCPTargetOrder.Provider value={order}><MCPImportDialog source="target" servers={{ github: { command: 'npx' } }} defaultTargets={['claude', 'cursor']} paths={{ claude: '/home/me/.claude.json', codex: '/home/me/.codex/config.toml' }} detected={['claude']} onClose={vi.fn()} onImported={vi.fn()} {...props} /></MCPTargetOrder.Provider></ToastProvider></I18nProvider></QueryClientProvider>);
 
 describe('MCP import dialog', () => {
   beforeEach(() => {
@@ -51,6 +52,19 @@ describe('MCP import dialog', () => {
       name: 'sentry', server: { url: 'https://mcp.sentry.dev/mcp' }, replace: false,
       resolutions: [{ target: 'claude', name: 'sentry', action: 'adopt' }],
     });
+  });
+
+  // An account of an Agent has its own file, so it is an import source under its own name.
+  it('offers an account of an Agent as an import source', async () => {
+    vi.mocked(mcpApi.import).mockResolvedValue({ candidates: [] });
+    const user = userEvent.setup();
+    renderDialog(
+      { paths: { claude: '/home/me/.claude.json', 'claude-work': '/home/me/.claude-work/.claude.json' } },
+      [...mcpTargets, 'claude-work'],
+    );
+    await user.click(screen.getByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: 'claude-work ~/.claude-work/.claude.json' }));
+    await waitFor(() => expect(mcpApi.import).toHaveBeenLastCalledWith({ from: 'claude-work' }));
   });
 
   it('lets a conflicting entry replace the source server of the same name', async () => {

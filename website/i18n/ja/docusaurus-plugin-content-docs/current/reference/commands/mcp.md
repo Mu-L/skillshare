@@ -234,6 +234,32 @@ Global の Claude、Codex、Grok、Copilot のパスは、`CLAUDE_CONFIG_DIR`、
 project の送信先は、選択された project ルートからの相対パスです。project の trust、
 サーバーの承認、認証は引き続き受け取り側 Agent の責任です。
 
+### Agent の別のアカウント {#accounts}
+
+[Agent の別のアカウント](/docs/reference/targets/configuration#agent-config-dir)として宣言された Target は、`claude`（`CLAUDE_CONFIG_DIR`）、`codex`（`CODEX_HOME`）、`pi`（`PI_CODING_AGENT_DIR`）については MCP の Target でもあります。そのサーバーは、その Agent のフォーマットで、アカウント自身のファイル（Claude は `<config_dir>/.claude.json`、Codex は `<config_dir>/config.toml`、Pi は `<config_dir>/mcp.json`）に書き込まれます。
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work
+
+mcp:
+  targets: [claude, claude-work]      # 両方のアカウントがすべてのサーバーを受け取る
+  servers:
+    docs:
+      url: https://example.com/mcp
+    jira:
+      command: jira-mcp
+      targets: [claude-work]          # 仕事用アカウントのみ
+```
+
+この例では、`docs` は `~/.claude.json` と `~/.claude-work/.claude.json` に、`jira` は 2 つ目のファイルにのみ書き込まれます。`--target claude-work` は `mcp add` と `mcp edit` で使え、ダッシュボードではそのアカウントが Agent と並んで一覧表示されます。
+
+`pi-mcp-extension` は常に `~/.pi/agent/mcp.json` を読み込むため、Pi のアカウントには `piExtension: pi-mcp-adapter` が必要です。
+
+どのアカウントも同じ project ファイルを読み込むため、`mcp.projects` 内と project mode では Agent 自身の名前を使ってください。Claude Code は project のオフリストを各アカウントのファイルに保持します。[project でサーバーをオフにする](#turn-off-a-global-server-in-one-project)と、そのサーバーを持つすべてのアカウントにスイッチが書き込まれます。`mcp import --from claude-work` とダッシュボードの Import from target は、そのアカウント自身のファイルを読み込みます。`mcp import --file <path> --from claude-work` は、自分でエクスポートしたファイルを、そのアカウントの Agent のフォーマットとして読み込みます。
+
 ## 1 つの project だけで global サーバーをオフにする {#turn-off-a-global-server-in-one-project}
 
 Agent は自身の global MCP ファイルと project のファイルを合わせて読み込みます。そのため、global

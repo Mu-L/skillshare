@@ -39,6 +39,21 @@ skillshare target add windsurf ~/.windsurf/skills
 - パスが Skill ディレクトリらしいこと
 - Target 名が一意であること
 
+#### Agent の別のアカウント {#another-account}
+
+Agent の 2 つ目のアカウントを専用の config ディレクトリで動かしている場合（例: Claude Code を `CLAUDE_CONFIG_DIR=~/.claude-work` で、Codex を `CODEX_HOME` で、Pi を `PI_CODING_AGENT_DIR` で起動している場合）、そのディレクトリを Target として追加します。Skillshare はそこから skills と agents のパスを導き出します。
+
+```bash
+skillshare target add claude-work --agent claude --config-dir ~/.claude-work
+# Added target: claude-work -> ~/.claude-work/skills
+```
+
+アカウントの数だけ、それぞれ別の名前で追加できます。この名前は [MCP Target](./mcp.md#accounts) としても使えるため、1 回の sync ですべてのアカウントの Skill、Agent、MCP サーバーに反映されます。
+
+`--agent` は `claude`（`CLAUDE_CONFIG_DIR`）、`codex`（`CODEX_HOME`）、`pi`（`PI_CODING_AGENT_DIR`）を受け付けます。Codex や Pi のアカウントは Skill を `<config_dir>/skills` に sync します。agents ディレクトリを持つのは Claude だけです。ディレクトリは絶対パスか `~` で始まる必要があり、Agent のデフォルトのディレクトリであってはならず、2 つの Target で共有することもできません。
+
+この種の Target の削除が MCP を理由に失敗することはありません。`mcp.targets` やサーバーの `targets` にまだその名前が残っていても、`skillshare target remove` は Target を削除し、そちらからも名前を取り除くよう警告します。
+
 ### target remove
 
 Target を削除し、その Skill を通常のディレクトリに復元します。
@@ -212,7 +227,10 @@ Target フィルタは 3 つのフィルタリング階層の 1 つです。`.sk
 
 ### target add
 
-追加のオプションはありません。
+| フラグ | 説明 |
+|------|-------------|
+| `--agent <agent>` | パスの代わりに、この Agent の[別のアカウント](#another-account)を追加する。`--config-dir` と併用 |
+| `--config-dir <dir>` | そのアカウントが使う config ディレクトリ |
 
 ### target remove
 

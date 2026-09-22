@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -53,6 +54,7 @@ func (s *Server) handleMCPList(w http.ResponseWriter, r *http.Request) {
 	}
 	// Unresolvable paths are omitted; selected targets report them via previewError.
 	paths := service.ClientPaths()
+	maps.Copy(paths, service.AccountPaths(source.Accounts))
 	p, previewErr := service.Preview()
 	message := ""
 	if previewErr != nil {
@@ -72,7 +74,11 @@ func (s *Server) handleMCPList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	slices.Sort(ownConfig)
-	writeJSON(w, map[string]any{"source": source, "paths": paths, "detected": service.DetectedClients(paths), "plan": p, "previewError": message, "backups": backups, "projectConfigs": ownConfig})
+	detected := service.DetectedClients(paths)
+	if !s.IsProjectMode() {
+		detected = append(detected, mcp.DetectedAccounts(source.Accounts)...)
+	}
+	writeJSON(w, map[string]any{"source": source, "paths": paths, "detected": detected, "plan": p, "previewError": message, "backups": backups, "projectConfigs": ownConfig})
 }
 
 func (s *Server) handleMCPPreview(w http.ResponseWriter, r *http.Request) {

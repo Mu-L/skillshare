@@ -64,7 +64,7 @@ func TestPreviewCancelStaleAndPartialRetry(t *testing.T) {
 	installed := map[string][]Installed{"claude": {}, "codex": {}}
 	failCodex := true
 	mutations := 0
-	runner := func(ctx context.Context, dir, bin string, args ...string) ([]byte, error) {
+	runner := func(ctx context.Context, dir string, env []string, bin string, args ...string) ([]byte, error) {
 		joined := strings.Join(args, " ")
 		if joined == "--version" {
 			return []byte("test-version"), nil
@@ -159,7 +159,7 @@ func TestSyncSelectionDoesNotToggleNativeEnabledState(t *testing.T) {
 	}
 	installed := true
 	mutations := []string{}
-	s := &Service{ConfigPath: config, StateDir: filepath.Join(dir, "state"), Run: func(ctx context.Context, dir, target string, args ...string) ([]byte, error) {
+	s := &Service{ConfigPath: config, StateDir: filepath.Join(dir, "state"), Run: func(ctx context.Context, dir string, env []string, target string, args ...string) ([]byte, error) {
 		joined := strings.Join(args, " ")
 		if joined == "--version" {
 			return []byte("0.154.0"), nil
@@ -260,7 +260,7 @@ func fakeClaude(t *testing.T) (*Service, *[]Installed, *int) {
 	home := t.TempDir()
 	installed := []Installed{}
 	mutations := 0
-	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state"), Run: func(ctx context.Context, dir, bin string, args ...string) ([]byte, error) {
+	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state"), Run: func(ctx context.Context, dir string, env []string, bin string, args ...string) ([]byte, error) {
 		joined := strings.Join(args, " ")
 		switch {
 		case joined == "--version":

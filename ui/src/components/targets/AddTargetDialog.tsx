@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ChevronDown, Folder, FolderPlus, Plus, Search, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Folder, FolderPlus, Plus, Search, Users, X } from 'lucide-react';
 import { api, type AvailableTarget } from '../../api/client';
 import { shortenHome } from '../../lib/paths';
 import { useT } from '../../i18n';
@@ -24,7 +24,7 @@ function FolderField({ id, label, value, onChange, hint, placeholder, disabled }
   );
 }
 
-/** Pick a known tool (defaults filled from targets.yaml) or describe a custom one. */
+/** Pick a known tool (defaults filled from targets.yaml), describe a custom one, or add another account of a known one. */
 export default function AddTargetDialog({ available, initial, existing, onClose, onAdded }: {
   available: AvailableTarget[];
   initial?: string;
@@ -36,7 +36,11 @@ export default function AddTargetDialog({ available, initial, existing, onClose,
   const pool = available.filter((a) => !a.installed).sort((a, b) => a.name.localeCompare(b.name));
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
-  const [custom, setCustom] = useState(false);
+  const [mode, setMode] = useState<'known' | 'custom' | 'account'>('known');
+  const custom = mode !== 'known';
+  // Another account is another config folder of an Agent; its paths follow the folder.
+  const accountAgents = available.filter((a) => a.configDir);
+  const [account, setAccount] = useState({ agent: accountAgents[0]?.name ?? '', dir: '', named: false });
   const [draft, setDraft] = useState(() => {
     const first = pool.find((a) => a.name === initial) ?? pool.find((a) => a.detected);
     return { name: first?.name ?? '', path: first?.path ?? '', agentPath: first?.agentPath ?? '' };
@@ -52,23 +56,36 @@ export default function AddTargetDialog({ available, initial, existing, onClose,
   const known = pool.find((a) => a.name === draft.name);
 
   const taken = custom && existing.includes(draft.name.trim());
-  const canAdd = Boolean(draft.name.trim() && draft.path.trim()) && !taken && (custom || Boolean(known));
+  const accountAgent = accountAgents.find((a) => a.name === account.agent);
+  const dir = account.dir.trim().replace(/[\\/]+$/, '');
+  const moved = (path?: string) => (path && accountAgent?.configDir && dir && path.startsWith(accountAgent.configDir) ? dir + path.slice(accountAgent.configDir.length) : '');
+  // Codex reads the shared ~/.agents/skills, outside its config folder; an account's skills
+  // are always in its own folder.
+  const accountSkills = dir && accountAgent ? moved(accountAgent.path) || `${dir}/skills` : '';
+  const canAdd = Boolean(draft.name.trim()) && !taken && (mode === 'account' ? Boolean(dir && accountAgent) : Boolean(draft.path.trim()) && (custom || Boolean(known)));
   const add = async () => {
     const name = draft.name.trim();
     setBusy(true);
     setError('');
     try {
-      await api.addTarget(name, draft.path.trim(), draft.agentPath.trim() || undefined);
+      if (mode === 'account') await api.addAgentConfigDir(name, account.agent, dir);
+      else await api.addTarget(name, draft.path.trim(), draft.agentPath.trim() || undefined);
       onAdded(name);
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
     }
   };
-  const openCustom = (on: boolean) => {
-    setCustom(on);
+  const open = (next: typeof mode) => {
+    setMode(next);
     setError('');
     setDraft({ name: '', path: '', agentPath: '' });
+    setAccount({ agent: accountAgents[0]?.name ?? '', dir: '', named: false });
+  };
+  // The name follows the folder (~/.claude-work gives claude-work) until it is typed.
+  const setDir = (value: string) => {
+    setAccount({ ...account, dir: value });
+    if (!account.named) setDraft({ ...draft, name: value.trim().replace(/[\\/]+$/, '').split(/[\\/]/).pop()!.replace(/^\.+/, '') });
   };
 
   const row = (a: AvailableTarget) => {
@@ -116,26 +133,51 @@ export default function AddTargetDialog({ available, initial, existing, onClose,
     );
   };
 
-  const title = custom ? t('targets.add.customTitle') : t('targets.add.title');
+  const title = t({ known: 'targets.add.title', custom: 'targets.add.customTitle', account: 'targets.add.accountTitle' }[mode]);
+  const subtitle = t({ known: 'targets.add.subtitle', custom: 'targets.add.customSubtitle', account: 'targets.add.accountSubtitle' }[mode]);
+  const nameField = (
+    <div className="ss-fld">
+      <label htmlFor="target-name">{t('targets.add.name')}</label>
+      <span className={`ss-inp ${taken ? 'err' : ''}`}>
+        <input id="target-name" autoFocus={mode === 'custom'} value={draft.name} onChange={(e) => { setDraft({ ...draft, name: e.target.value }); setAccount({ ...account, named: true }); }} placeholder={mode === 'account' ? `${account.agent}-work` : 'my-tool'} disabled={busy} />
+      </span>
+      <span className={`hp ${taken ? '!text-bad' : ''}`}>{taken ? t('targets.add.nameTaken') : t('targets.add.nameHint')}</span>
+    </div>
+  );
   return (
     <DialogShell open onClose={onClose} padding="none" preventClose={busy} ariaLabel={title} className="!max-w-[600px]">
       <div className="dh">
         <div className="flex flex-col gap-1">
           <h2 className="ss-h2">{title}</h2>
-          <p className="text-[13px] text-ink-2">{custom ? t('targets.add.customSubtitle') : t('targets.add.subtitle')}</p>
+          <p className="text-[13px] text-ink-2">{subtitle}</p>
         </div>
         <button type="button" className="ss-ib" aria-label={t('common.close')} onClick={onClose} disabled={busy}><X size={16} /></button>
       </div>
       <form id="add-target" className="db" onSubmit={(e) => { e.preventDefault(); if (canAdd) void add(); }}>
-        {custom ? (
+        {mode === 'account' ? (
           <>
-            <div className="ss-fld">
-              <label htmlFor="target-name">{t('targets.add.name')}</label>
-              <span className={`ss-inp ${taken ? 'err' : ''}`}>
-                <input id="target-name" autoFocus value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="my-tool" disabled={busy} />
-              </span>
-              <span className={`hp ${taken ? '!text-bad' : ''}`}>{taken ? t('targets.add.nameTaken') : t('targets.add.nameHint')}</span>
+            <div className="flex flex-wrap gap-x-5 gap-y-3" role="radiogroup" aria-label={t('targets.add.accountAgent')}>
+              {accountAgents.map((a) => (
+                <button key={a.name} type="button" role="radio" aria-checked={a.name === account.agent} aria-label={a.name} className={`ss-tgl ${a.name === account.agent ? 'on' : ''}`} onClick={() => setAccount({ ...account, agent: a.name })} disabled={busy}>
+                  <span className="ic"><AgentIcon target={a.name} size={20} /><i><Check size={9} strokeWidth={3.5} /></i></span>
+                  {a.name}
+                </button>
+              ))}
             </div>
+            <FolderField id="target-config-dir" label={t('targets.add.accountFolder')} value={account.dir} onChange={setDir} placeholder={accountAgent ? `${shortenHome(accountAgent.configDir!)}-work` : ''} hint={t('targets.add.accountFolderHint', { name: account.agent })} disabled={busy} />
+            {nameField}
+            {dir && (
+              <div className="ss-note inf">
+                <span className="flex flex-1 flex-col gap-1">
+                  <span>{t('targets.add.accountWrites')}</span>
+                  {[accountSkills, moved(accountAgent?.agentPath)].filter(Boolean).map((path) => <span key={path} className="break-all font-mono text-[12px]">{path}</span>)}
+                </span>
+              </div>
+            )}
+          </>
+        ) : custom ? (
+          <>
+            {nameField}
             <FolderField id="target-path" label={t('targets.add.skillsFolder')} value={draft.path} onChange={(path) => setDraft({ ...draft, path })} placeholder="~/tools/my-tool/skills" hint={t('targets.add.customSkillsHint')} disabled={busy} />
             <FolderField id="target-agent-path" label={t('targets.add.agentsFolder')} value={draft.agentPath} onChange={(agentPath) => setDraft({ ...draft, agentPath })} placeholder={t('targets.add.optional')} hint={t('targets.add.customAgentsHint')} disabled={busy} />
             <div className="ss-note inf"><span className="flex-1">{t('targets.add.createdHint')}</span></div>
@@ -169,17 +211,23 @@ export default function AddTargetDialog({ available, initial, existing, onClose,
                 <div className="ss-r text-[13px] text-ink-2">{q ? t('targets.add.noMatch', { query: query.trim() }) : t('targets.add.allAdded')}</div>
               )}
             </div>
-            <button type="button" className="flex w-fit items-center gap-2 text-[13px] font-semibold hover:text-accent" onClick={() => openCustom(true)} disabled={busy}>
+            <button type="button" className="flex w-fit items-center gap-2 text-[13px] font-semibold hover:text-accent" onClick={() => open('custom')} disabled={busy}>
               <FolderPlus size={15} />
               {t('targets.add.customLink')}
             </button>
+            {accountAgents.length > 0 && (
+              <button type="button" className="flex w-fit items-center gap-2 text-[13px] font-semibold hover:text-accent" onClick={() => open('account')} disabled={busy}>
+                <Users size={15} />
+                {t('targets.add.accountLink')}
+              </button>
+            )}
           </>
         )}
         {error && <div className="ss-note bad"><span className="flex-1">{error}</span></div>}
       </form>
       <div className="df">
         {custom ? (
-          <Button variant="ghost" onClick={() => openCustom(false)} disabled={busy}><ArrowLeft size={15} />{t('targets.add.back')}</Button>
+          <Button variant="ghost" onClick={() => open('known')} disabled={busy}><ArrowLeft size={15} />{t('targets.add.back')}</Button>
         ) : (
           <span className="text-[13px] text-ink-2">{t('targets.add.modeHint')}</span>
         )}
@@ -187,7 +235,7 @@ export default function AddTargetDialog({ available, initial, existing, onClose,
         <Button variant="ghost" onClick={onClose} disabled={busy}>{t('common.cancel')}</Button>
         <Button variant="primary" type="submit" form="add-target" loading={busy} disabled={!canAdd}>
           {!busy && <Plus size={15} />}
-          {custom || !draft.name ? t('targets.addTarget') : t('targets.add.addNamed', { name: draft.name })}
+          {mode === 'custom' || !draft.name.trim() ? t('targets.addTarget') : t('targets.add.addNamed', { name: draft.name.trim() })}
         </Button>
       </div>
     </DialogShell>

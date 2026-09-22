@@ -305,6 +305,8 @@ _skillshare() {
                         '--add-agent-exclude[Add agent exclude filter]:pattern:' \
                         '--remove-agent-include[Remove agent include filter]:pattern:' \
                         '--remove-agent-exclude[Remove agent exclude filter]:pattern:' \
+                        '--agent[With add: the Agent this is another account of]:agent:(claude codex pi)' \
+                        '--config-dir[With add: the config directory of that account]:dir:_files -/' \
                         $global_flags \
                         '--help[Show help]' \
                         '-h[Show help]'

@@ -54,10 +54,10 @@ target 会保存该选择。下一次 `sync plugins` 会移除其受管理的安
 
 | Option | Meaning |
 |---|---|
-| `--target TARGET` | Repeatable selection: `claude`, `codex`, `cursor`, `antigravity` (`agy` alias), `antigravity-cli`, `copilot`, `grok`, `pi`, `opencode`; see the capability table below |
+| `--target TARGET` | Repeatable selection: `claude`, `codex`, `cursor`, `antigravity` (`agy` alias), `antigravity-cli`, `copilot`, `grok`, `pi`, `opencode`, or the name of [another account of an Agent](#accounts); see the capability table below |
 | `--plugin NAME` | Select one plugin from a source marketplace |
 | `--name NAME` | Logical package name when adding or importing |
-| `--from TARGET` | Import from Claude, Codex, Antigravity CLI, Copilot, Grok, Pi, or OpenCode |
+| `--from TARGET` | Import from Claude, Codex, Antigravity CLI, Copilot, Grok, Pi, OpenCode, or [another account of an Agent](#accounts) |
 | `--dry-run`, `-n` | Preview without changing Skillshare or Agent configuration |
 | `--source-ref REF` | Git branch, tag, or commit for `discover`, `add`, and `update`; remote sources only |
 | `--entry PATH` | Explicit built OpenCode JS/TS entry, relative to the package root (`discover` and `add`) |
@@ -95,6 +95,24 @@ Kimi 的非交互式生命周期、Hermes 的 profile 清单/同意流程，以�
 `targetDefinitions`，列出允许的操作；discovery 还会为每种格式暴露 `targetInfo`，包含版本、
 组件、entry 和验证问题。损坏的 manifest 只会隔离到其对应的 target；格式错误的 catalog
 会以警告形式报告，而不会隐藏有效的格式。
+
+### 某个 Agent 的另一个账号 {#accounts}
+
+声明为[某个 Agent 的另一个账号](/docs/reference/targets/configuration#agent-config-dir)的 target 同样是一个 plugin target，适用于 `claude`、`codex` 和 `pi`。Skillshare 会通过 `CLAUDE_CONFIG_DIR`、`CODEX_HOME` 或 `PI_CODING_AGENT_DIR`，针对该账号的配置目录运行该 Agent 自己的 CLI：
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work
+```
+
+```bash
+skillshare plugin add owner/repo --target claude-work
+skillshare plugin import demo@market --from claude-work
+```
+
+这个账号会沿用它所属 Agent 的各项操作，并以自己的名称保存自己的绑定，因此一个 plugin 可以只安装在其中一个账号而不装在另一个账号。账号只存在于 global 作用域：项目的 plugins 属于该项目，而不属于某一个账号。`--target` 和 `--from` 都接受账号名称，终端选择器和仪表盘的 Plugins 页面也会把它列在各个 Agent 旁边。
 
 ### Cursor 与 Antigravity
 

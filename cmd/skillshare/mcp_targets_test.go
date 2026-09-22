@@ -1,7 +1,11 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"skillshare/internal/mcp"
+	"skillshare/internal/testutil"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -68,5 +72,120 @@ func TestMCPListShowsWhereASwitchGoes(t *testing.T) {
 	got := mcpListItems(source, nil)[0].(mcpListItem).description
 	if !strings.Contains(got, "· opencode ·") {
 		t.Fatalf("a switch goes only to the Agents that have one: %s", got)
+	}
+}
+
+// A target that is another account of an Agent is an MCP target too.
+func TestMCPAccountTarget(t *testing.T) {
+	s := mcpTUIService(t)
+	work := filepath.Join(s.Home, ".claude-work")
+	config := "targets:\n  claude-work:\n    agent: claude\n    config_dir: " + work + "\nmcp: {targets: [claude], servers: {}}\n"
+	if err := os.WriteFile(s.ConfigPath, []byte(config), 0600); err != nil {
+		t.Fatal(err)
+	}
+	labels := []string{}
+	for _, item := range mcpTargetItems(s, &mcp.Server{URL: "https://example.com/mcp"}) {
+		labels = append(labels, item.label)
+	}
+	if !slices.Contains(labels, "claude-work") {
+		t.Fatalf("the picker does not offer the account: %v", labels)
+	}
+	o, err := parseMCPOptions([]string{"docs", "--target", "claude-work", "--url", "https://example.com/mcp", "--sync", "--no-tui"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := runMCPAdd(s, o); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(filepath.Join(work, ".claude.json")); !strings.Contains(string(data), "example.com") {
+		t.Fatalf("the account's file: %s", data)
+	}
+}
+
+// mcp import --from <account> reads the account's own file, not the Agent's default one.
+func TestMCPImportFromAccount(t *testing.T) {
+	s := mcpTUIService(t)
+	work := filepath.Join(s.Home, ".claude-work")
+	config := "targets:\n  claude-work:\n    agent: claude\n    config_dir: " + work + "\nmcp: {targets: [claude-work], servers: {}}\n"
+	if err := os.WriteFile(s.ConfigPath, []byte(config), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(work, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(work, ".claude.json"), []byte(`{"mcpServers":{"docs":{"url":"https://example.com/mcp"}}}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	o, err := parseMCPOptions([]string{"docs", "--from", "claude-work", "--no-tui"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := runMCPImport(s, o); err != nil {
+		t.Fatal(err)
+	}
+	source, err := mcp.LoadSource(s.ConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source.Servers["docs"].URL != "https://example.com/mcp" {
+		t.Fatalf("imported: %+v", source.Servers)
+	}
+}
+
+// --file says what to read, --from which client wrote it; an account's file is its Agent's.
+func TestMCPImportFileFromAccount(t *testing.T) {
+	s := mcpTUIService(t)
+	work := filepath.Join(s.Home, ".claude-work")
+	config := "targets:\n  claude-work:\n    agent: claude\n    config_dir: " + work + "\nmcp: {targets: [claude-work], servers: {}}\n"
+	if err := os.WriteFile(s.ConfigPath, []byte(config), 0600); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(s.Home, "exported.json")
+	if err := os.WriteFile(file, []byte(`{"mcpServers":{"docs":{"url":"https://example.com/mcp"}}}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	o, err := parseMCPOptions([]string{"docs", "--file", file, "--from", "claude-work", "--no-tui"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := runMCPImport(s, o); err != nil {
+		t.Fatal(err)
+	}
+	source, err := mcp.LoadSource(s.ConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source.Servers["docs"].URL != "https://example.com/mcp" {
+		t.Fatalf("imported: %+v", source.Servers)
+	}
+}
+
+// Removing an account the MCP config still selects is allowed, but says where the name
+// is left behind: the next mcp sync would refuse a target it can no longer resolve.
+func TestTargetRemoveWarnsWhenMCPStillNamesTheAccount(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	work := filepath.Join(sb.Home, ".claude-work")
+	if err := os.MkdirAll(filepath.Join(work, "skills"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	sb.WriteConfig("source: " + sb.SourcePath + "\nmode: merge\ntargets:\n  claude-work:\n    agent: claude\n    config_dir: " + work +
+		"\nmcp:\n  targets: [claude-work]\n  servers:\n    docs:\n      url: https://example.com/mcp\n      targets: [claude-work]\n")
+
+	output := stripANSIWarnings(captureStdout(t, func() {
+		if err := targetRemove([]string{"claude-work"}); err != nil {
+			t.Fatalf("target remove: %v", err)
+		}
+	}))
+	if !strings.Contains(output, "mcp.targets, mcp.servers.docs still name claude-work") {
+		t.Fatalf("no warning about the MCP config:\n%s", output)
+	}
+	saved, err := os.ReadFile(sb.ConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(saved), "agent: claude") {
+		t.Fatalf("the removal was blocked: %s", saved)
 	}
 }

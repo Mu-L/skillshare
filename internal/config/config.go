@@ -82,10 +82,17 @@ type TargetConfig struct {
 	Include []string `yaml:"include,omitempty"`
 	Exclude []string `yaml:"exclude,omitempty"`
 
+	// Agent and ConfigDir make this target another config directory of a built-in Agent,
+	// such as a second account. Its paths are then the Agent's own, moved into ConfigDir.
+	Agent     string `yaml:"agent,omitempty"`
+	ConfigDir string `yaml:"config_dir,omitempty"`
+
 	Skills *ResourceTargetConfig `yaml:"skills,omitempty"`
 	Agents *ResourceTargetConfig `yaml:"agents,omitempty"`
 
 	defaultTargetNaming string `yaml:"-"`
+	// derivedSkills and derivedAgents are the paths expandAgentConfigDirs filled in.
+	derivedSkills, derivedAgents string `yaml:"-"`
 	// projectRoot marks a target expanded from projects; see expandProjects.
 	projectRoot string `yaml:"-"`
 }
@@ -638,6 +645,9 @@ func Load() (*Config, error) {
 		cfg.Targets[name] = target
 	}
 
+	if err := cfg.expandAgentConfigDirs(); err != nil {
+		return nil, err
+	}
 	if err := cfg.expandProjects(); err != nil {
 		return nil, err
 	}
@@ -719,6 +729,7 @@ func (c *Config) cloneForSave() *Config {
 		out.Targets = make(map[string]TargetConfig, len(c.Targets))
 		for name, tc := range c.Targets {
 			tc.Path = fold(tc.Path)
+			tc.ConfigDir = fold(tc.ConfigDir)
 			if tc.Skills != nil {
 				skills := *tc.Skills
 				skills.Path = fold(skills.Path)

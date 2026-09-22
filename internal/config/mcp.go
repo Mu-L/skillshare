@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"slices"
 
 	"gopkg.in/yaml.v3"
 
@@ -65,16 +66,36 @@ func (c *MCPConfig) decode(node *yaml.Node) error {
 }
 
 // ValidateMCP checks the MCP section. Only the config editor and MCP commands
-// call it; other commands ignore MCP settings.
-func ValidateMCP(cfg *MCPConfig, external string) error {
+// call it; other commands ignore MCP settings. accounts are the targets that are
+// another config directory of an Agent, which MCP targets may name.
+func ValidateMCP(cfg *MCPConfig, external string, accounts ...string) error {
 	if cfg == nil {
 		return nil
 	}
 	if cfg.err != nil {
 		return cfg.err
 	}
-	if _, err := mcp.ParseProjects(cfg.Projects); err != nil {
+	known := func(targets []string) error {
+		for _, target := range targets {
+			if !slices.Contains(mcp.Targets, target) && !slices.Contains(accounts, target) {
+				return fmt.Errorf("unsupported MCP target %q", target)
+			}
+		}
+		return nil
+	}
+	projects, err := mcp.ParseProjects(cfg.Projects)
+	if err != nil {
 		return err
+	}
+	for _, project := range projects {
+		if err := known(project.Targets); err != nil {
+			return err
+		}
+		for _, server := range project.Servers {
+			if err := known(server.Targets); err != nil {
+				return err
+			}
+		}
 	}
 	if cfg.DirectTools != nil {
 		var value any
@@ -87,13 +108,7 @@ func ValidateMCP(cfg *MCPConfig, external string) error {
 	}
 	seen := map[string]bool{}
 	for _, target := range cfg.Targets {
-		valid := false
-		for _, supported := range mcp.Targets {
-			if target == supported {
-				valid = true
-			}
-		}
-		if !valid || seen[target] {
+		if known([]string{target}) != nil || seen[target] {
 			return fmt.Errorf("invalid or duplicate MCP target %q", target)
 		}
 		seen[target] = true
@@ -116,6 +131,9 @@ func ValidateMCP(cfg *MCPConfig, external string) error {
 	}
 	for name, server := range servers {
 		if err := server.Validate(name); err != nil {
+			return err
+		}
+		if err := known(server.Targets); err != nil {
 			return err
 		}
 	}

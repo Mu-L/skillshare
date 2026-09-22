@@ -370,7 +370,7 @@ func (s *Service) MutateBatch(mutations []Mutation, revision string, sync bool) 
 					return nil, fmt.Errorf("source saved; %w", err)
 				}
 				for _, r := range resolutions {
-					if r.Target != shownTarget(f.target) || native.Entries[r.Name] == nil {
+					if r.Target != s.shownAs(f.target, f.path, source.Accounts) || native.Entries[r.Name] == nil {
 						continue
 					}
 					approved, ok := preview.state.Entries[ownershipKey(f.target, f.path, r.Name)]

@@ -13,7 +13,23 @@ import (
 )
 
 func (s *Server) pluginService() *plugin.Service {
-	return &plugin.Service{ConfigPath: s.configPath(), ProjectRoot: s.projectRoot, StateDir: config.StateDir()}
+	service := &plugin.Service{ConfigPath: s.configPath(), ProjectRoot: s.projectRoot, StateDir: config.StateDir()}
+	if !s.IsProjectMode() {
+		service.Accounts = pluginAccounts(s.cfg)
+	}
+	return service
+}
+
+// pluginAccounts are the configured targets that are another config directory of an
+// Agent, such as a second Claude account. They are plugin targets of their own.
+func pluginAccounts(cfg *config.Config) map[string]plugin.Account {
+	accounts := map[string]plugin.Account{}
+	for name, target := range cfg.Targets {
+		if target.Agent != "" && target.ConfigDir != "" {
+			accounts[name] = plugin.Account{Agent: target.Agent, Dir: target.ConfigDir}
+		}
+	}
+	return accounts
 }
 
 func (s *Server) requireLocalPlugin(next http.HandlerFunc) http.HandlerFunc {
@@ -73,7 +89,9 @@ func (s *Server) handlePluginDiscover(w http.ResponseWriter, r *http.Request) {
 	if !decodePluginRequest(w, r, &body) {
 		return
 	}
-	result, err := plugin.DiscoverOptions(r.Context(), body.Source, body.SourceRef, body.Entry)
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result, err := s.pluginService().Discover(r.Context(), body.Source, body.SourceRef, body.Entry)
 	if err != nil {
 		writeError(w, 400, err.Error())
 		return
@@ -125,6 +143,8 @@ func (s *Server) handlePluginApply(w http.ResponseWriter, r *http.Request) {
 
 // handlePluginFiles lists the reviewed snapshot of a plugin; an imported one has none and lists nothing.
 func (s *Server) handlePluginFiles(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	files, err := s.pluginService().Files(r.PathValue("name"))
 	if err != nil {
 		writeError(w, 400, err.Error())
@@ -134,6 +154,8 @@ func (s *Server) handlePluginFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePluginFile(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	data, err := s.pluginService().ReadFile(r.PathValue("name"), r.PathValue("filepath"))
 	if errors.Is(err, fs.ErrNotExist) {
 		writeError(w, http.StatusNotFound, "file not found: "+r.PathValue("filepath"))

@@ -208,6 +208,29 @@ targets:
     path: ~/my-app/skills
 ```
 
+#### Another account of an Agent {#agent-config-dir}
+
+target은 내장 Agent의 두 번째 config 디렉터리일 수 있습니다. `CLAUDE_CONFIG_DIR`로 시작한 Claude Code, `CODEX_HOME`을 쓰는 Codex, `PI_CODING_AGENT_DIR`을 쓰는 Pi가 그렇습니다. Agent와 디렉터리를 지정하면 skills와 agents 경로는 그에 따라 정해집니다.
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work   # skills는 ~/.claude-work/skills로, agents는 ~/.claude-work/agents로
+  codex-work:
+    agent: codex
+    config_dir: ~/.codex-work    # skills는 ~/.codex-work/skills로
+```
+
+Codex는 공유되는 `~/.agents/skills`도 읽지만, 계정은 자기 디렉터리만 소유하므로 그 skill은 `<config_dir>/skills`로 갑니다. Pi도 같은 방식입니다. agents 디렉터리를 가지는 것은 Claude뿐입니다.
+
+| Field | Description |
+|-------|-------------|
+| `agent` | 내장 Agent. `claude`(`CLAUDE_CONFIG_DIR`), `codex`(`CODEX_HOME`), `pi`(`PI_CODING_AGENT_DIR`) |
+| `config_dir` | 해당 계정의 config 디렉터리. 절대 경로이거나 `~`로 시작해야 하고, Agent의 기본 디렉터리가 아니어야 하며, 하나의 target만 사용 |
+
+`mode`, `include`, `exclude` 및 그 밖의 target 설정은 다른 target과 동일하게 동작합니다. 직접 작성한 `skills.path`나 `agents.path`는 파생된 경로보다 우선합니다. target 이름은 [MCP target](/docs/reference/commands/mcp#accounts)과 [plugin target](/docs/reference/commands/plugin#accounts)으로도 사용할 수 있습니다.
+
 ### `include` / `exclude` (target filters) {#include--exclude-target-filters}
 
 **merge 및 copy 모드**에서 어떤 skill이 동기화될지 제어하려면 Target별 필터를 사용하세요.

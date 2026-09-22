@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "properties": {"servers": {"$ref": "#/$defs/servers"}},
   "$defs": {
-    "targets": {"type": "array", "uniqueItems": true, "items": {"enum": ["claude", "codex", "cursor", "vscode", "opencode", "kilocode", "grok", "antigravity", "amp", "claude-desktop", "cline", "copilot", "factory", "gemini", "goose", "junie", "kiro", "lmstudio", "warp", "windsurf", "pi"]}},
+    "targets": {"type": "array", "uniqueItems": true, "items": {"anyOf": [{"enum": ["claude", "codex", "cursor", "vscode", "opencode", "kilocode", "grok", "antigravity", "amp", "claude-desktop", "cline", "copilot", "factory", "gemini", "goose", "junie", "kiro", "lmstudio", "warp", "windsurf", "pi"]}, {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$", "description": "A target that is another account of an Agent, declared under targets with agent and config_dir. Global config only."}]}},
     "directTools": {
       "description": "pi-mcp-adapter only: register a server's tools as individual Pi tools. true for all, a list of tool names, or \"search\" to register them inactive until a search activates them. Other Agents ignore it. Under mcp or a project it is the default for servers that do not set their own.",
       "oneOf": [{"type": "boolean"}, {"const": "search"}, {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}]

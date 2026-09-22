@@ -22,6 +22,10 @@ type Service struct {
 	Platform    string
 	// ConfigDirs contains explicitly resolved native client directory overrides.
 	ConfigDirs map[string]string
+	// accounts are the source's, set while rendering it.
+	accounts map[string]Account
+	// account is the one this Service was scoped to, empty when it is the Agent's own.
+	account string
 }
 
 func (s *Service) nativePath(target string) (string, error) {
@@ -175,6 +179,35 @@ func (s *Service) ClientPaths() map[string]string {
 	for _, target := range Targets {
 		if path, err := s.nativePath(target); err == nil {
 			out[target] = path
+		}
+	}
+	return out
+}
+
+// AccountPaths is ClientPaths for the source's accounts. A project has none: every
+// account of an Agent reads the same project files.
+func (s *Service) AccountPaths(accounts map[string]Account) map[string]string {
+	out := map[string]string{}
+	if s.ProjectRoot != "" {
+		return out
+	}
+	scoped := *s
+	scoped.accounts = accounts
+	for name := range accounts {
+		account, agent := scoped.forTarget(name)
+		if path, err := account.nativePath(agent); err == nil {
+			out[name] = path
+		}
+	}
+	return out
+}
+
+// DetectedAccounts lists the accounts whose config directory exists.
+func DetectedAccounts(accounts map[string]Account) []string {
+	out := []string{}
+	for _, name := range sortedKeys(accounts) {
+		if info, err := os.Stat(accounts[name].Dir); err == nil && info.IsDir() {
+			out = append(out, name)
 		}
 	}
 	return out

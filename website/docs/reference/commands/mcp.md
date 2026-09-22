@@ -318,6 +318,32 @@ platforms using their `.config` paths.
 Project destinations are relative to the selected project root. Project trust,
 server approval and authentication remain the receiving Agent's responsibility.
 
+### Another account of an Agent {#accounts}
+
+A target declared as [another account of an Agent](/docs/reference/targets/configuration#agent-config-dir) is an MCP target too, for `claude` (`CLAUDE_CONFIG_DIR`), `codex` (`CODEX_HOME`) and `pi` (`PI_CODING_AGENT_DIR`). Its servers are written in that Agent's format, into the account's own file: `<config_dir>/.claude.json` for Claude, `<config_dir>/config.toml` for Codex, `<config_dir>/mcp.json` for Pi.
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work
+
+mcp:
+  targets: [claude, claude-work]      # both accounts get every server
+  servers:
+    docs:
+      url: https://example.com/mcp
+    jira:
+      command: jira-mcp
+      targets: [claude-work]          # the work account only
+```
+
+Here `docs` goes to `~/.claude.json` and `~/.claude-work/.claude.json`, and `jira` to the second file only. `--target claude-work` works with `mcp add` and `mcp edit`, and the dashboard lists the account next to the Agents.
+
+`pi-mcp-extension` always reads `~/.pi/agent/mcp.json`, so a Pi account needs `piExtension: pi-mcp-adapter`.
+
+Every account reads the same project files, so inside `mcp.projects` and in project mode use the Agent's own name. Claude Code keeps a project's off list in each account's file: [turning a server off in a project](#turn-off-a-global-server-in-one-project) writes the switch to every account that has the server. `mcp import --from claude-work`, and the dashboard's Import from target, read the account's own file. `mcp import --file <path> --from claude-work` reads a file you exported yourself, in that account's Agent format.
+
 ## Turn off a global server in one project {#turn-off-a-global-server-in-one-project}
 
 An Agent reads its own global MCP file and the project's file together. A server

@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -25,6 +26,8 @@ type Source struct {
 	DirectTools any `json:"directTools,omitempty"`
 	// Projects are project roots a global config syncs into, keyed by absolute path.
 	Projects map[string]Project `json:"projects,omitempty"`
+	// Accounts are the config's targets that are another config directory of an Agent.
+	Accounts map[string]Account `json:"accounts,omitempty"`
 	// projectKeys holds each root as config.yaml spells it, so saving keeps a leading ~.
 	projectKeys map[string]string
 	// What a draft changed, so save re-encodes nothing else.
@@ -230,7 +233,113 @@ func LoadSource(configPath string) (*Source, error) {
 			return nil, err
 		}
 	}
-	return s, nil
+	if s.Accounts, err = parseAccounts(field(&s.configDoc, "targets")); err != nil {
+		return nil, err
+	}
+	return s, s.checkTargets()
+}
+
+// parseAccounts reads the targets that are another config directory of an Agent whose MCP
+// file follows that directory. The config package validates the section itself.
+func parseAccounts(node *yaml.Node) (map[string]Account, error) {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return nil, nil
+	}
+	var targets map[string]struct {
+		Agent string `yaml:"agent"`
+		Dir   string `yaml:"config_dir"`
+	}
+	if err := node.Decode(&targets); err != nil {
+		return nil, nil
+	}
+	accounts := map[string]Account{}
+	for name, target := range targets {
+		if validTarget(name) || !slices.Contains(accountAgents, target.Agent) || target.Dir == "" {
+			continue
+		}
+		dir, err := expandHome(target.Dir)
+		if err != nil {
+			return nil, err
+		}
+		if !filepath.IsAbs(dir) {
+			return nil, fmt.Errorf("targets: %s: config_dir must be an absolute path or start with ~", name)
+		}
+		accounts[name] = Account{Agent: target.Agent, Dir: filepath.Clean(dir)}
+	}
+	return accounts, nil
+}
+
+// checkTargets settles the names validateTargets let through: each is an account. A
+// project's files are read by every account of an Agent, so there an account can only
+// be named by a switch, which Claude Code keeps in the account's own file.
+func (s *Source) checkTargets() error {
+	check := func(targets []string, accounts bool) error {
+		for _, target := range targets {
+			if validTarget(target) {
+				continue
+			}
+			account, ok := s.Accounts[target]
+			if !ok {
+				return fmt.Errorf("unsupported MCP target %q: it is neither an Agent nor a target with agent and config_dir", target)
+			}
+			if !accounts {
+				return fmt.Errorf("mcp.projects: %s is an account of %s, and every account reads the same project files; use %s", target, account.Agent, account.Agent)
+			}
+		}
+		return nil
+	}
+	if err := check(s.Targets, true); err != nil {
+		return err
+	}
+	for _, server := range s.Servers {
+		if err := check(server.Targets, true); err != nil {
+			return err
+		}
+	}
+	for _, project := range s.Projects {
+		if err := check(project.Targets, false); err != nil {
+			return err
+		}
+		for _, server := range project.Servers {
+			if err := check(server.Targets, server.Disabled); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// References names every place in the MCP config that still selects target. Removing a
+// target it names leaves a name no sync can resolve, so a removal can say where to look.
+func (s *Source) References(target string) []string {
+	var places []string
+	if slices.Contains(s.Targets, target) {
+		places = append(places, "mcp.targets")
+	}
+	for _, name := range sortedKeys(s.Servers) {
+		if slices.Contains(s.Servers[name].Targets, target) {
+			places = append(places, "mcp.servers."+name)
+		}
+	}
+	return places
+}
+
+// ReferenceWarning is what to tell someone removing a target the MCP config still names,
+// or "" when nothing does. A config that cannot be read says nothing: the removal stands.
+func ReferenceWarning(configPath, target string) string {
+	source, err := LoadSource(configPath)
+	if err != nil {
+		return ""
+	}
+	places := source.References(target)
+	if len(places) == 0 {
+		return ""
+	}
+	names := "still names"
+	if len(places) > 1 {
+		names = "still name"
+	}
+	return fmt.Sprintf("%s %s %s; remove it there too or the next mcp sync fails", strings.Join(places, ", "), names, target)
 }
 
 // ParseProjects reads and validates mcp.projects. The config editor shares it, so it

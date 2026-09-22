@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"skillshare/internal/config"
+	"skillshare/internal/mcp"
 	ssync "skillshare/internal/sync"
 	"skillshare/internal/targetsummary"
 	"skillshare/internal/utils"
@@ -18,6 +19,8 @@ import (
 type targetItem struct {
 	Name               string   `json:"name"`
 	Project            string   `json:"project,omitempty"` // root of the project this target belongs to
+	Agent              string   `json:"agent,omitempty"`   // the built-in Agent this is another config directory of
+	ConfigDir          string   `json:"configDir,omitempty"`
 	Path               string   `json:"path"`
 	Mode               string   `json:"mode"`
 	TargetNaming       string   `json:"targetNaming"`
@@ -100,6 +103,8 @@ func (s *Server) handleListTargets(w http.ResponseWriter, r *http.Request) {
 		item := targetItem{
 			Name:         name,
 			Project:      target.ProjectRoot(),
+			Agent:        target.Agent,
+			ConfigDir:    target.ConfigDir,
 			Path:         sc.Path,
 			Mode:         mode,
 			TargetNaming: config.EffectiveTargetNaming(sc.TargetNaming),
@@ -202,6 +207,9 @@ func (s *Server) handleAddTarget(w http.ResponseWriter, r *http.Request) {
 		Name      string `json:"name"`
 		Path      string `json:"path"`
 		AgentPath string `json:"agentPath"`
+		// Agent and ConfigDir add another config directory of a built-in Agent instead.
+		Agent     string `json:"agent"`
+		ConfigDir string `json:"configDir"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
@@ -210,6 +218,29 @@ func (s *Server) handleAddTarget(w http.ResponseWriter, r *http.Request) {
 
 	if body.Name == "" {
 		writeError(w, http.StatusBadRequest, "name is required")
+		return
+	}
+
+	if body.Agent != "" || body.ConfigDir != "" {
+		if s.IsProjectMode() {
+			writeError(w, http.StatusBadRequest, "a project has no Agent config directory to add")
+			return
+		}
+		if _, exists := s.cfg.Targets[body.Name]; exists {
+			writeError(w, http.StatusConflict, "target already exists: "+body.Name)
+			return
+		}
+		path, err := s.cfg.AddAgentConfigDirTarget(body.Name, body.Agent, body.ConfigDir)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if err := s.saveAndReloadConfig(); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		s.writeOpsLog("target", "ok", start, map[string]any{"action": "add", "name": body.Name, "target": path, "scope": "ui"}, "")
+		writeJSON(w, map[string]any{"success": true})
 		return
 	}
 
@@ -283,6 +314,15 @@ func (s *Server) handleRemoveTarget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Read the MCP config before it is saved without the target: afterwards its own
+	// name no longer resolves, so the config no longer loads.
+	var warnings []string
+	if target.Agent != "" {
+		if warning := mcp.ReferenceWarning(s.configPath(), name); warning != "" {
+			warnings = append(warnings, warning)
+		}
+	}
+
 	delete(s.cfg.Targets, name)
 
 	// In project mode, also remove from project config
@@ -308,7 +348,7 @@ func (s *Server) handleRemoveTarget(w http.ResponseWriter, r *http.Request) {
 		"scope":  "ui",
 	}, "")
 
-	writeJSON(w, map[string]any{"success": true, "name": name})
+	writeJSON(w, map[string]any{"success": true, "name": name, "warnings": warnings})
 }
 
 func (s *Server) handleUpdateTarget(w http.ResponseWriter, r *http.Request) {

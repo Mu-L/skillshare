@@ -74,11 +74,12 @@ func (s *Service) materialize(ctx context.Context, b Binding, target string) (st
 	if copied != d.Digest {
 		return "", fmt.Errorf("source changed while copying; preview again")
 	}
+	agent := s.agentOf(target)
 	rel := "./content"
-	if p := candidate.pathFor(target); p != "." {
+	if p := candidate.pathFor(agent); p != "." {
 		rel += "/" + p
 	}
-	catalog := map[string]any{"name": market, "owner": map[string]string{"name": "skillshare"}, "plugins": []any{pluginEntry(*candidate, rel, target)}}
+	catalog := map[string]any{"name": market, "owner": map[string]string{"name": "skillshare"}, "plugins": []any{pluginEntry(*candidate, rel, agent)}}
 	data, err := json.MarshalIndent(catalog, "", "  ")
 	if err != nil {
 		return "", err
@@ -162,7 +163,8 @@ func (s *Service) applyChange(ctx context.Context, c Change, b Binding) (resultE
 	if c.Action == "import" || c.Action == "forget" || c.Action == "selection" {
 		return nil
 	}
-	if c.Target != "claude" && c.Target != "codex" {
+	agent := s.agentOf(c.Target)
+	if agent != "claude" && agent != "codex" {
 		return s.applyAdditional(ctx, c, b)
 	}
 	if (c.Action == "install" || c.Action == "update") && b.Source != "" {
@@ -179,7 +181,7 @@ func (s *Service) applyChange(ctx context.Context, c Change, b Binding) (resultE
 			}
 			if !registered {
 				args := []string{"plugin", "marketplace", "add", path}
-				if c.Target == "claude" {
+				if agent == "claude" {
 					scope := "user"
 					if s.ProjectRoot != "" {
 						scope = "project"
@@ -246,7 +248,8 @@ func (s *Service) registered(ctx context.Context, target, id, path string) (bool
 		Source          string `json:"source"`
 	}
 	var entries []entry
-	if target == "codex" {
+	agent := s.agentOf(target)
+	if agent == "codex" {
 		var envelope struct {
 			Marketplaces json.RawMessage `json:"marketplaces"`
 		}
@@ -264,7 +267,7 @@ func (s *Service) registered(ctx context.Context, target, id, path string) (bool
 	for _, e := range entries {
 		if e.Name == market {
 			root := e.Root
-			if target == "claude" {
+			if agent == "claude" {
 				root = e.InstallLocation
 			}
 			if filepath.Clean(root) != filepath.Clean(path) {

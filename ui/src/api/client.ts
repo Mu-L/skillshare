@@ -288,8 +288,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ name, path, ...(agentPath && { agentPath }) }),
     }),
+  /** Adds another config folder of a built-in Agent, such as a second account. */
+  addAgentConfigDir: (name: string, agent: string, configDir: string) =>
+    apiFetch<{ success: boolean }>('/targets', { method: 'POST', body: JSON.stringify({ name, agent, configDir }) }),
   removeTarget: (name: string) =>
-    apiFetch<{ success: boolean }>(`/targets/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+    apiFetch<{ success: boolean; warnings?: string[] }>(`/targets/${encodeURIComponent(name)}`, { method: 'DELETE' }),
   updateTarget: (name: string, opts: { include?: string[]; exclude?: string[]; mode?: string; target_naming?: string; agent_mode?: string; agent_include?: string[]; agent_exclude?: string[]; agent_extension?: string }) =>
     apiFetch<{ success: boolean }>(`/targets/${encodeURIComponent(name)}`, {
       method: 'PATCH',
@@ -859,6 +862,10 @@ export interface Target {
   name: string;
   /** Root of the project this target belongs to */
   project?: string;
+  /** The built-in Agent this target is another config folder of */
+  agent?: string;
+  /** That config folder; the skills and agents paths follow it */
+  configDir?: string;
   path: string;
   mode: string;
   targetNaming: string;
@@ -1020,6 +1027,8 @@ export interface AvailableTarget {
   name: string;
   path: string;
   agentPath?: string;
+  /** Set when a target can be another config folder of this Agent. */
+  configDir?: string;
   installed: boolean;
   detected: boolean;
 }

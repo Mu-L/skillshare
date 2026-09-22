@@ -49,10 +49,10 @@ skillshare plugin remove review --no-tui
 
 | Option | 의미 |
 |---|---|
-| `--target TARGET` | 반복 가능한 선택: `claude`, `codex`, `cursor`, `antigravity`(`agy` alias), `antigravity-cli`, `copilot`, `grok`, `pi`, `opencode`. 아래 capability 표 참고 |
+| `--target TARGET` | 반복 가능한 선택: `claude`, `codex`, `cursor`, `antigravity`(`agy` alias), `antigravity-cli`, `copilot`, `grok`, `pi`, `opencode`, 또는 [Agent의 다른 계정](#accounts) 이름. 아래 capability 표 참고 |
 | `--plugin NAME` | source marketplace에서 plugin 하나를 선택 |
 | `--name NAME` | 추가하거나 import할 때의 논리적 패키지 이름 |
-| `--from TARGET` | Claude, Codex, Antigravity CLI, Copilot, Grok, Pi, 또는 OpenCode에서 import |
+| `--from TARGET` | Claude, Codex, Antigravity CLI, Copilot, Grok, Pi, OpenCode, 또는 [Agent의 다른 계정](#accounts)에서 import |
 | `--dry-run`, `-n` | Skillshare나 Agent 설정을 변경하지 않고 미리보기 |
 | `--source-ref REF` | `discover`, `add`, `update`를 위한 Git 브랜치, 태그, 또는 커밋. 원격 source에만 해당 |
 | `--entry PATH` | 패키지 루트 기준의 명시적으로 빌드된 OpenCode JS/TS entry(`discover`와 `add`) |
@@ -83,6 +83,24 @@ JSON 출력에는 source 경로와 네이티브 식별자가 포함됩니다. so
 | Devin | `.devin-plugin/plugin.json` | discovery만 가능 | 아니요 | 자동화되지 않음 |
 
 Kimi의 비대화형 lifecycle, Hermes의 profile inventory/consent, Devin의 로컬 inventory/trust/cloud 구분은 아직 이러한 adapter들에 의해 검증되지 않았습니다. 이들의 형식은 discovery 중에 표시되지만, 설치는 사유와 함께 비활성화됩니다. source가 target을 선언한다고 해서 Skillshare가 이를 관리할 수 있다는 의미는 아닙니다. `list --json`과 `discover --json`은 허용된 작업과 함께 `targetDefinitions`를 포함합니다. discovery는 또한 각 형식의 버전, 구성 요소, entry, 검증 문제에 대한 `targetInfo`를 노출합니다. 손상된 매니페스트는 해당 target에만 격리되며, 잘못된 카탈로그는 유효한 형식을 숨기지 않고 경고로 보고됩니다.
+
+### Another account of an Agent {#accounts}
+
+[Agent의 다른 계정](/docs/reference/targets/configuration#agent-config-dir)으로 선언된 target은 `claude`, `codex`, `pi`에 대해 plugin target이기도 합니다. Skillshare는 `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `PI_CODING_AGENT_DIR`을 통해 해당 Agent 자체의 CLI를 그 계정의 config 디렉터리에 대해 실행합니다:
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work
+```
+
+```bash
+skillshare plugin add owner/repo --target claude-work
+skillshare plugin import demo@market --from claude-work
+```
+
+계정은 자신이 속한 Agent의 작업을 그대로 수행하면서 바인딩은 자기 이름으로 따로 관리하므로, 한 계정에는 plugin을 설치하고 다른 계정에는 설치하지 않을 수 있습니다. 계정은 global scope에만 존재합니다. 프로젝트의 plugin은 특정 계정이 아니라 프로젝트에 속합니다. `--target`과 `--from`은 계정 이름을 받으며, 터미널 선택기와 대시보드의 Plugins 페이지는 이를 Agent 옆에 나열합니다.
 
 ### Cursor와 Antigravity
 

@@ -82,7 +82,11 @@ func runMCPImport(service *mcp.Service, o mcpOptions) error {
 		if readErr != nil {
 			return readErr
 		}
-		format := o.from
+		// An account's file is its Agent's own format, so --from may name either.
+		format, formatErr := service.ImportFormat(o.from)
+		if formatErr != nil {
+			return formatErr
+		}
 		if format == "" && strings.HasSuffix(o.file, ".toml") {
 			format = "codex"
 		}

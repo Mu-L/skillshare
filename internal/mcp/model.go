@@ -119,10 +119,24 @@ func validTarget(target string) bool {
 	return false
 }
 
+// Account is a target that is another config directory of a built-in Agent, such as a
+// second Claude account. Its servers are written in that Agent's format, into Dir.
+type Account struct {
+	Agent string `json:"agent"`
+	Dir   string `json:"configDir"`
+}
+
+// accountAgents are the Agents whose MCP file follows their config directory.
+var accountAgents = []string{"claude", "codex", "pi"}
+
+var accountName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+
+// validateTargets knows the built-in Agents only. Another name may be an account, which
+// the config's targets section declares, so Source.checkTargets settles it.
 func validateTargets(targets []string) error {
 	seen := map[string]bool{}
 	for _, target := range targets {
-		if !validTarget(target) {
+		if !validTarget(target) && !accountName.MatchString(target) {
 			return fmt.Errorf("unsupported MCP target %q", target)
 		}
 		if seen[target] {

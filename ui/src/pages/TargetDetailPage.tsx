@@ -204,9 +204,10 @@ function TargetEditor({ target }: { target: Target }) {
         <RemoveTargetDialog
           target={target}
           onClose={() => setRemoving(false)}
-          onRemoved={() => {
+          onRemoved={(warnings) => {
             refreshTargets(queryClient);
             toast(t('targets.targetRemoved', { name: target.name }), 'success');
+            warnings.forEach((warning) => toast(warning, 'warning'));
             navigate('/targets');
           }}
         />

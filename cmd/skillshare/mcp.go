@@ -313,7 +313,7 @@ Options:
   --pi-options <json>       pi-mcp-adapter only: other adapter fields as a JSON object; {} clears them
   --target <client>  Receiving client; repeat for multiple clients, or none to keep
                     the server in Skillshare without writing it to any Agent
-  --from <client>    Native client ID (see mcp documentation for destinations)
+  --from <client>    Native client ID or account target (see mcp documentation)
   --file <path>      Native configuration file to import
   --url <url>        Streamable HTTP endpoint
   --disabled        Project mode: turn off a server from the Agent's global config

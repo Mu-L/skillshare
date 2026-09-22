@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Archive, ChevronDown, Copy, Download, Eye, Pencil, Plug, Plus, PowerOff, Trash2, X } from 'lucide-react';
@@ -23,6 +23,7 @@ import MCPRemoveDialog from '../components/mcp/MCPRemoveDialog';
 import MCPRestoreDialog from '../components/mcp/MCPRestoreDialog';
 import MCPServerDialog from '../components/mcp/MCPServerDialog';
 import { buildMatrix, canImportConflict, describeError, describeMessage, isShadowed, isResolvable, projectOf, targetLabel, type MCPChange } from '../components/mcp/mcpView';
+import { MCPTargetOrder } from '../components/mcp/targetOrder';
 import { useT } from '../i18n';
 import { shortenHome } from '../lib/paths';
 import { queryKeys } from '../lib/queryKeys';
@@ -77,14 +78,16 @@ export default function MCPPage() {
   const roots = Object.keys(data?.source.projects ?? {});
   const conflicts = changes.filter((c) => c.action === 'conflict');
   const detected = new Set(data?.detected);
-  const files = mcpTargets.filter((x) => data?.paths[x]);
+  // Accounts of an Agent follow the Agents, by name.
+  const order = useMemo(() => [...mcpTargets, ...Object.keys(data?.source.accounts ?? {}).sort()], [data?.source.accounts]);
+  const files = order.filter((x) => data?.paths[x]);
   const matrixTargets = new Set([...files, ...rows.flatMap((row) => [...targetsOf(row.name), ...Object.keys(row.cells)])]);
   const undetected = files.filter((x) => !detected.has(x));
 
   const toggle = async (name: string, target: string, on: boolean) => {
     if (target === 'pi' && on && !servers[name].piExtension) { setPiSetupName(name); setEditing(name); return; }
     const current = targetsOf(name);
-    const next = mcpTargets.filter((x) => (x === target ? on : current.includes(x)));
+    const next = order.filter((x) => (x === target ? on : current.includes(x)));
     const server = { ...servers[name], targets: next };
     // Tick right away; saving only touches the source, Sync writes the files
     const prev = cache.getQueryData<MCPList>(queryKeys.mcp);
@@ -164,6 +167,7 @@ export default function MCPPage() {
   if (params.get('tab') === 'projects') return <Navigate to="/projects" replace />;
 
   return (
+    <MCPTargetOrder.Provider value={order}>
     <div className="animate-fade-in">
       <PageHeader
         title="MCP"
@@ -231,7 +235,7 @@ export default function MCPPage() {
             </div>
           )}
           {rows.length > 0 ? (
-            <MCPServerList rows={rows} targets={mcpTargets.filter((x) => matrixTargets.has(x))} targetsOf={targetsOf} onToggle={(n, x, on) => void toggle(n, x, on)} onMenu={openMenu} />
+            <MCPServerList rows={rows} targets={order.filter((x) => matrixTargets.has(x))} targetsOf={targetsOf} onToggle={(n, x, on) => void toggle(n, x, on)} onMenu={openMenu} />
           ) : (
             <EmptyState
               icon={Plug}
@@ -287,7 +291,7 @@ export default function MCPPage() {
           onImported={() => { setImporting(null); refresh(); }}
         />
       )}
-      {viewing && servers[viewing] && <MCPConfigDialog mutation={{ name: viewing, server: { ...servers[viewing], targets: mcpTargets.filter((x) => targetsOf(viewing).includes(x)) } }} onClose={() => setViewing('')} />}
+      {viewing && servers[viewing] && <MCPConfigDialog mutation={{ name: viewing, server: { ...servers[viewing], targets: order.filter((x) => targetsOf(viewing).includes(x)) } }} onClose={() => setViewing('')} />}
       {removing && <MCPRemoveDialog name={removing} inScope={(c) => !c.root && globalPaths.includes(c.path)} onClose={() => setRemoving('')} onSaved={() => done(t('mcp.toast.removed', { name: removing }))} />}
       {backupsOpen && data && <MCPRestoreDialog backups={data.backups} onClose={() => setBackupsOpen(false)} onRestored={() => done(t('mcp.toast.restored'))} />}
       <DialogShell open={Boolean(replace)} onClose={() => setReplace(null)} padding="none" preventClose={busy} ariaLabel={t('mcp.replace')} className="!max-w-[640px]">
@@ -308,5 +312,6 @@ export default function MCPPage() {
       </DialogShell>
       <SkillContextMenu open={!!menu} anchorPoint={menu ?? undefined} items={menu?.items ?? []} onClose={() => setMenu(null)} />
     </div>
+    </MCPTargetOrder.Provider>
   );
 }

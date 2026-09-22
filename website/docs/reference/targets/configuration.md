@@ -208,6 +208,29 @@ targets:
     path: ~/my-app/skills
 ```
 
+#### Another account of an Agent {#agent-config-dir}
+
+A target can be a second config directory of a built-in Agent: Claude Code started with `CLAUDE_CONFIG_DIR`, Codex with `CODEX_HOME`, or Pi with `PI_CODING_AGENT_DIR`. Name the Agent and the directory; the skills and agents paths follow it.
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work   # skills go to ~/.claude-work/skills, agents to ~/.claude-work/agents
+  codex-work:
+    agent: codex
+    config_dir: ~/.codex-work    # skills go to ~/.codex-work/skills
+```
+
+Codex reads the shared `~/.agents/skills` as well, but an account owns only its own directory, so its skills go to `<config_dir>/skills`. Pi works the same way. Only Claude has an agents directory.
+
+| Field | Description |
+|-------|-------------|
+| `agent` | The built-in Agent: `claude` (`CLAUDE_CONFIG_DIR`), `codex` (`CODEX_HOME`) or `pi` (`PI_CODING_AGENT_DIR`) |
+| `config_dir` | That account's config directory. Absolute or starting with `~`, not the Agent's default one, and used by one target only |
+
+`mode`, `include`, `exclude` and the other target settings work as on any target. A `skills.path` or `agents.path` you write yourself wins over the derived one. The target name can also be used as an [MCP target](/docs/reference/commands/mcp#accounts) and as a [plugin target](/docs/reference/commands/plugin#accounts).
+
 ### `include` / `exclude` (target filters) {#include--exclude-target-filters}
 
 Use per-target filters to control which skills are synced in **merge and copy modes**.

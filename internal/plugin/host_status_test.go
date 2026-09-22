@@ -40,7 +40,7 @@ func TestHostStatusSeparatesAMissingCLIFromOtherFailures(t *testing.T) {
 }
 
 func TestRunCommandMarksAnAbsentBinary(t *testing.T) {
-	_, err := runCommand(context.Background(), t.TempDir(), "skillshare-no-such-binary", "--version")
+	_, err := runCommand(context.Background(), t.TempDir(), nil, "skillshare-no-such-binary", "--version")
 	if !errors.Is(err, exec.ErrNotFound) && !errors.Is(err, ErrCLIMissing) {
 		t.Fatalf("err = %v, want it to match ErrCLIMissing", err)
 	}
@@ -54,7 +54,7 @@ func TestRunCommandReadsVersionFromStderr(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "pi"), []byte("#!/bin/sh\necho 0.73.1 >&2\n"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	out, err := runCommand(context.Background(), dir, filepath.Join(dir, "pi"), "--version")
+	out, err := runCommand(context.Background(), dir, nil, filepath.Join(dir, "pi"), "--version")
 	if err != nil || strings.TrimSpace(string(out)) != "0.73.1" {
 		t.Fatalf("version = %q %v", out, err)
 	}
@@ -64,7 +64,7 @@ func TestHostReportsReadyWhenTheCLIAnswers(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state")}
-	s.Run = func(_ context.Context, _, _ string, args ...string) ([]byte, error) {
+	s.Run = func(_ context.Context, _ string, _ []string, _ string, args ...string) ([]byte, error) {
 		if args[0] == "--version" {
 			return []byte("2.1.276"), nil
 		}
@@ -86,7 +86,7 @@ func TestFixedMessagesCarryATranslationKey(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state")}
-	s.Run = func(_ context.Context, _, _ string, args ...string) ([]byte, error) {
+	s.Run = func(_ context.Context, _ string, _ []string, _ string, args ...string) ([]byte, error) {
 		if args[0] == "--version" {
 			return []byte("1.0.0"), nil
 		}
@@ -110,7 +110,7 @@ func TestPackagesSkipsTheAgentsAndInventoryKeepsTheirOrder(t *testing.T) {
 	t.Setenv("HOME", home)
 	var asked atomic.Int32
 	s := &Service{ConfigPath: filepath.Join(home, "config.yaml"), StateDir: filepath.Join(home, "state")}
-	s.Run = func(_ context.Context, _, _ string, args ...string) ([]byte, error) {
+	s.Run = func(_ context.Context, _ string, _ []string, _ string, args ...string) ([]byte, error) {
 		asked.Add(1)
 		if args[0] == "--version" {
 			return []byte("1.0.0"), nil

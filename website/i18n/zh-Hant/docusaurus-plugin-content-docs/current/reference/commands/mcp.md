@@ -283,6 +283,32 @@ Global 的 Claude、Codex、Grok 與 Copilot 路徑遵循 `CLAUDE_CONFIG_DIR`、
 Project 目的地是相對於所選 project 根目錄。Project 信任、
 server 核准與驗證仍屬於接收端 Agent 的責任。
 
+### 某個 Agent 的另一個帳號 {#accounts}
+
+宣告為[某個 Agent 的另一個帳號](/docs/reference/targets/configuration#agent-config-dir)的 target 同時也是 MCP target，適用於 `claude`（`CLAUDE_CONFIG_DIR`）、`codex`（`CODEX_HOME`）與 `pi`（`PI_CODING_AGENT_DIR`）。它的 servers 會以該 Agent 的格式寫入該帳號自己的檔案：Claude 是 `<config_dir>/.claude.json`，Codex 是 `<config_dir>/config.toml`，Pi 是 `<config_dir>/mcp.json`。
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work
+
+mcp:
+  targets: [claude, claude-work]      # 兩個帳號都會拿到每個 server
+  servers:
+    docs:
+      url: https://example.com/mcp
+    jira:
+      command: jira-mcp
+      targets: [claude-work]          # 只給工作帳號
+```
+
+在這個例子中，`docs` 會寫入 `~/.claude.json` 與 `~/.claude-work/.claude.json`，`jira` 只會寫入第二個檔案。`--target claude-work` 可搭配 `mcp add` 與 `mcp edit` 使用，dashboard 也會把這個帳號列在 Agents 旁邊。
+
+`pi-mcp-extension` 一律讀取 `~/.pi/agent/mcp.json`，因此 Pi 帳號需要 `piExtension: pi-mcp-adapter`。
+
+每個帳號讀取的是同一份 project 檔案，因此在 `mcp.projects` 內以及 project mode 中，請使用 Agent 本身的名稱。Claude Code 會把 project 的關閉清單存在每個帳號的檔案中：[在某個 project 中關閉 server](#turn-off-a-global-server-in-one-project) 會把這個開關寫入每個擁有該 server 的帳號。`mcp import --from claude-work` 以及 dashboard 的 Import from target 讀取的是該帳號自己的檔案。`mcp import --file <path> --from claude-work` 讀取的則是你自己匯出的檔案，格式是該帳號所屬 Agent 的格式。
+
 ## Turn off a global server in one project {#turn-off-a-global-server-in-one-project}
 
 Agent 會同時讀取自己的 global MCP 檔案與 project 的檔案。因此定義在

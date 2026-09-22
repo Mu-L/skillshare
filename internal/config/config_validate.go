@@ -42,6 +42,11 @@ func ValidateConfig(cfg *Config) (warnings []string, err error) {
 		errs = append(errs, fmt.Sprintf("invalid git_root %q (valid: %s)", cfg.GitRoot, strings.Join(ValidGitRoots, ", ")))
 	}
 
+	// A target that is another config directory of an Agent gets its paths from there.
+	if err := cfg.expandAgentConfigDirs(); err != nil {
+		errs = append(errs, err.Error())
+	}
+
 	// Per-target validation
 	for name, target := range cfg.Targets {
 		sc := target.SkillsConfig()
@@ -57,7 +62,7 @@ func ValidateConfig(cfg *Config) (warnings []string, err error) {
 		if path == "" {
 			// Known built-in targets get their path from targets.yaml at runtime;
 			// custom targets must specify a path explicitly.
-			if _, known := LookupGlobalTarget(name); !known {
+			if _, known := LookupGlobalTarget(name); !known && target.Agent == "" {
 				errs = append(errs, fmt.Sprintf("target %q: missing path (custom targets require skills.path)", name))
 				continue
 			}

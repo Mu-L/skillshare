@@ -86,6 +86,18 @@ func parsePluginOptions(args []string) (pluginOptions, error) {
 	return o, nil
 }
 
+// pluginAccounts are the configured targets that are another config directory of an
+// Agent, such as a second Claude account. They are plugin targets of their own.
+func pluginAccounts(cfg *config.Config) map[string]plugin.Account {
+	accounts := map[string]plugin.Account{}
+	for name, target := range cfg.Targets {
+		if target.Agent != "" && target.ConfigDir != "" {
+			accounts[name] = plugin.Account{Agent: target.Agent, Dir: target.ConfigDir}
+		}
+	}
+	return accounts
+}
+
 func pluginContext(args []string) (*plugin.Service, []string, error) {
 	mode, rest, err := parseModeArgs(args)
 	if err != nil {
@@ -105,6 +117,8 @@ func pluginContext(args []string) (*plugin.Service, []string, error) {
 	if mode == modeProject {
 		s.ConfigPath = config.ProjectConfigPath(cwd)
 		s.ProjectRoot = cwd
+	} else if cfg, err := config.Load(); err == nil {
+		s.Accounts = pluginAccounts(cfg)
 	}
 	applyModeLabel(mode)
 	return s, rest, nil
@@ -145,7 +159,7 @@ func executePlugin(s *plugin.Service, o pluginOptions) error {
 	r := o.request
 	switch r.Action {
 	case "discover":
-		d, err := plugin.DiscoverOptions(ctx, r.Source, r.SourceRef, r.Entry)
+		d, err := s.Discover(ctx, r.Source, r.SourceRef, r.Entry)
 		if err != nil {
 			return err
 		}
@@ -184,7 +198,8 @@ func executePlugin(s *plugin.Service, o pluginOptions) error {
 			if len(p.Bindings) == 0 {
 				fmt.Printf("%s · no targets · %s\n", name, p.Source)
 			}
-			for _, target := range plugin.Targets {
+			for _, definition := range inventory.TargetDefinitions {
+				target := definition.Target
 				if b, ok := p.Bindings[target]; ok {
 					state := "not installed"
 					for _, h := range inventory.Hosts {

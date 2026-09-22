@@ -48,7 +48,7 @@ export interface MCPCandidate { name: string; server: MCPServer; problems: strin
 const post = <T,>(path: string, body: unknown) => apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body) });
 export const mcpApi = {
   list: () => apiFetch<{
-    source: { path: string; configPath: string; targets: string[] | null; servers: Record<string, MCPServer>; directTools?: MCPDirectTools; projects?: Record<string, MCPProject> };
+    source: { path: string; configPath: string; targets: string[] | null; servers: Record<string, MCPServer>; directTools?: MCPDirectTools; projects?: Record<string, MCPProject>; /** Targets that are another config folder of an Agent, by name */ accounts?: Record<string, { agent: string; configDir: string }> };
     /** Project roots that also have their own .skillshare/config.yaml. */
     projectConfigs: string[];
     paths: Record<string, string>; detected: string[]; plan: MCPPlan | null; previewError: string;

@@ -39,6 +39,21 @@ The command validates:
 - Path looks like a skills directory
 - Target name is unique
 
+#### Another account of an Agent {#another-account}
+
+If you run a second account of an Agent from its own config directory, such as Claude Code with `CLAUDE_CONFIG_DIR=~/.claude-work`, Codex with `CODEX_HOME` or Pi with `PI_CODING_AGENT_DIR`, add that directory as a target. Skillshare works out the skills and agents paths from it:
+
+```bash
+skillshare target add claude-work --agent claude --config-dir ~/.claude-work
+# Added target: claude-work -> ~/.claude-work/skills
+```
+
+Add as many accounts as you have, each under its own name. The name also works as an [MCP target](./mcp.md#accounts), so one sync reaches the skills, the agents and the MCP servers of every account.
+
+`--agent` accepts `claude` (`CLAUDE_CONFIG_DIR`), `codex` (`CODEX_HOME`) and `pi` (`PI_CODING_AGENT_DIR`). A Codex or Pi account syncs its skills to `<config_dir>/skills`; only Claude also has an agents directory. The directory must be absolute or start with `~`, must not be the Agent's default one, and cannot be shared by two targets.
+
+Removing such a target never fails because of MCP: if `mcp.targets` or a server's `targets` still names it, `skillshare target remove` removes the target and warns you to take the name out there too.
+
 ### target remove
 
 Remove a target and restore its skills to regular directories.
@@ -212,7 +227,10 @@ Target filters are one of three filtering layers. See [Filtering Reference](/doc
 
 ### target add
 
-No additional options.
+| Flag | Description |
+|------|-------------|
+| `--agent <agent>` | Add [another account](#another-account) of this Agent instead of a path. Goes with `--config-dir` |
+| `--config-dir <dir>` | The config directory that account uses |
 
 ### target remove
 

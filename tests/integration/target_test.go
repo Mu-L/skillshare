@@ -457,3 +457,30 @@ targets: {}
 	result.AssertFailure(t)
 	result.AssertAnyOutputContains(t, "usage")
 }
+
+// A second account of an Agent: the target names the Agent and its other config directory,
+// and skills land where that Agent looks for them there.
+func TestTargetAdd_AgentConfigDir_SyncsIntoThatDirectory(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	sb.WriteConfig(`source: ` + sb.SourcePath + `
+targets: {}
+`)
+	sb.CreateSkill("hello", map[string]string{"SKILL.md": "---\nname: hello\n---\n# Hello"})
+	dir := filepath.Join(sb.Home, ".claude-work")
+
+	result := sb.RunCLI("target", "add", "claude-work", "--agent", "claude", "--config-dir", dir)
+	result.AssertSuccess(t)
+	result.AssertOutputContains(t, filepath.Join(dir, "skills"))
+	if content := sb.ReadFile(sb.ConfigPath); !strings.Contains(content, "agent: claude") || strings.Contains(content, "path:") {
+		t.Fatalf("config:\n%s", content)
+	}
+
+	sb.RunCLI("sync").AssertSuccess(t)
+	if _, err := os.Stat(filepath.Join(dir, "skills", "hello", "SKILL.md")); err != nil {
+		t.Fatalf("skill not synced into the config directory: %v", err)
+	}
+
+	sb.RunCLI("target", "add", "claude-other", "--agent", "cursor", "--config-dir", filepath.Join(sb.Home, ".x")).AssertFailure(t)
+}

@@ -34,13 +34,13 @@ type agentError struct {
 func (e agentError) Error() string { return e.message }
 func (e agentError) Unwrap() error { return e.cause }
 
-func runCommand(ctx context.Context, dir, bin string, args ...string) ([]byte, error) {
+func runCommand(ctx context.Context, dir string, env []string, bin string, args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Dir = dir
 	// No shell, inherited stdin, or automatic native trust/command confirmation.
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	cmd.Env = append(append(os.Environ(), "GIT_TERMINAL_PROMPT=0"), env...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -74,10 +74,16 @@ func (s *Service) run(ctx context.Context, target string, args ...string) ([]byt
 			return nil, err
 		}
 	}
-	if target == "antigravity-cli" {
-		target = "agy"
+	// An account runs its Agent's CLI against the account's own config directory.
+	var env []string
+	if account, ok := s.account(target); ok {
+		env = append(env, accountEnv[account.Agent]+"="+account.Dir)
 	}
-	return run(ctx, dir, target, args...)
+	bin := s.agentOf(target)
+	if bin == "antigravity-cli" {
+		bin = "agy"
+	}
+	return run(ctx, dir, env, bin, args...)
 }
 
 func parseInventory(target string, data []byte, project string) ([]Installed, error) {
@@ -130,11 +136,12 @@ func validID(id string) bool {
 }
 
 func (s *Service) host(ctx context.Context, target string) Host {
-	if target != "claude" && target != "codex" {
+	agent := s.agentOf(target)
+	if agent != "claude" && agent != "codex" {
 		return s.additionalHost(ctx, target)
 	}
 	h := Host{Target: target, Status: HostReady, Installed: []Installed{}}
-	if target == "codex" && s.ProjectRoot != "" {
+	if agent == "codex" && s.ProjectRoot != "" {
 		h.block("plugins.error.userScoped", "Codex native plugin installation is user-scoped; use global mode. Project operations never fall back to global.")
 		return h
 	}
@@ -149,7 +156,7 @@ func (s *Service) host(ctx context.Context, target string) Host {
 		h.fail(err)
 		return h
 	}
-	h.Installed, err = parseInventory(target, data, s.ProjectRoot)
+	h.Installed, err = parseInventory(agent, data, s.ProjectRoot)
 	if err != nil {
 		h.fail(err)
 	}
@@ -163,7 +170,7 @@ func (s *Service) Packages() (*Inventory, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Inventory{TargetDefinitions: TargetDefinitions(), Packages: cfg.packages, Hosts: []Host{}}, nil
+	return &Inventory{TargetDefinitions: s.TargetDefinitions(), Packages: cfg.packages, Hosts: []Host{}}, nil
 }
 
 func (s *Service) Inventory(ctx context.Context) (*Inventory, error) {
@@ -173,9 +180,10 @@ func (s *Service) Inventory(ctx context.Context) (*Inventory, error) {
 	}
 	// Each Agent answers through its own CLI and none depends on another, so the slowest
 	// one sets the wait instead of the sum of all of them.
-	result.Hosts = make([]Host, len(Targets))
+	targets := s.targets()
+	result.Hosts = make([]Host, len(targets))
 	var wg sync.WaitGroup
-	for i, target := range Targets {
+	for i, target := range targets {
 		wg.Go(func() { result.Hosts[i] = s.host(ctx, target) })
 	}
 	wg.Wait()
@@ -189,7 +197,8 @@ func (s *Service) nativeArgs(target, action, id string) ([]string, error) {
 	if !validID(id) {
 		return nil, fmt.Errorf("invalid plugin identity")
 	}
-	if target == "codex" {
+	agent := s.agentOf(target)
+	if agent == "codex" {
 		if s.ProjectRoot != "" {
 			return nil, fmt.Errorf("Codex project plugin operations are unsupported")
 		}
@@ -201,7 +210,7 @@ func (s *Service) nativeArgs(target, action, id string) ([]string, error) {
 		}
 		return nil, fmt.Errorf("Codex has no verified native %s command; manage this operation in Codex", action)
 	}
-	if target != "claude" {
+	if agent != "claude" {
 		return nil, fmt.Errorf("unsupported plugin target %q", target)
 	}
 	if action == "install" || action == "update" || action == "remove" {
@@ -223,7 +232,7 @@ func (s *Service) nativeArgs(target, action, id string) ([]string, error) {
 }
 
 func (s *Service) verifyCommand(ctx context.Context, target, action, id string) error {
-	if target != "claude" && target != "codex" {
+	if agent := s.agentOf(target); agent != "claude" && agent != "codex" {
 		return s.verifyAdditional(ctx, target, action, id)
 	}
 	args, err := s.nativeArgs(target, action, id)

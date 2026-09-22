@@ -46,6 +46,7 @@ targets:
       global: "~/.bob/skills"
       project: ".bob/skills"
   - name: claude
+    config_dir: "~/.claude"
     skills:
       global: "~/.claude/skills"
       project: ".claude/skills"
@@ -79,6 +80,7 @@ targets:
       project: ".comate/skills"
   - name: codex
     detect: "~/.codex"
+    config_dir: "~/.codex"
     skills:
       global: "~/.agents/skills"
       project: ".agents/skills"
@@ -283,6 +285,7 @@ targets:
       global: ["~/.openhands/skills"]
       project: [".openhands/skills"]
   - name: pi
+    config_dir: "~/.pi/agent"
     skills:
       global: "~/.pi/agent/skills"
       project: ".pi/skills"

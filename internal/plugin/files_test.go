@@ -43,7 +43,7 @@ func TestSaveKeepsTwoSpaceIndent(t *testing.T) {
 	if err := os.WriteFile(s.ConfigPath, raw, 0644); err != nil {
 		t.Fatal(err)
 	}
-	d, err := decodeDocument(raw)
+	d, err := decodeDocument(raw, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -49,10 +49,10 @@ skillshare plugin remove review --no-tui
 
 | オプション | 意味 |
 |---|---|
-| `--target TARGET` | 繰り返し指定可能な選択: `claude`、`codex`、`cursor`、`antigravity`（エイリアス `agy`）、`antigravity-cli`、`copilot`、`grok`、`pi`、`opencode`。下の capability 表を参照 |
+| `--target TARGET` | 繰り返し指定可能な選択: `claude`、`codex`、`cursor`、`antigravity`（エイリアス `agy`）、`antigravity-cli`、`copilot`、`grok`、`pi`、`opencode`、または [Agent の別のアカウント](#accounts)の名前。下の capability 表を参照 |
 | `--plugin NAME` | source のマーケットプレイスから 1 つの plugin を選択 |
 | `--name NAME` | 追加またはインポート時の論理的な package 名 |
-| `--from TARGET` | Claude、Codex、Antigravity CLI、Copilot、Grok、Pi、または OpenCode からインポート |
+| `--from TARGET` | Claude、Codex、Antigravity CLI、Copilot、Grok、Pi、OpenCode、または [Agent の別のアカウント](#accounts)からインポート |
 | `--dry-run`, `-n` | Skillshare または Agent の設定を変更せずにプレビュー |
 | `--source-ref REF` | `discover`、`add`、`update` 用の git ブランチ、タグ、またはコミット。リモート source のみ |
 | `--entry PATH` | package ルートからの相対パスで明示的にビルド済みの OpenCode JS/TS エントリを指定（`discover` と `add`） |
@@ -84,6 +84,24 @@ JSON 出力には source パスとネイティブ識別子が含まれます。s
 
 Kimi の非インタラクティブなライフサイクル、Hermes のプロファイルインベントリ/同意、Devin のローカルインベントリ/trust/クラウド区別は、これらのアダプタではまだ検証されていません。フォーマットは discovery 中に表示されますが、インストールは理由付きで無効化されています。source が target を宣言していても、Skillshare がそれを管理できることを意味しません。
 `list --json` と `discover --json` には、許可された操作を含む `targetDefinitions` が含まれます。discovery ではさらに、各フォーマットの version、コンポーネント、entry、検証上の問題を示す `targetInfo` も公開されます。壊れたマニフェストはその target に限定され、不正なカタログは有効なフォーマットを隠すことなく警告として報告されます。
+
+### Agent の別のアカウント {#accounts}
+
+[Agent の別のアカウント](/docs/reference/targets/configuration#agent-config-dir)として宣言された Target は、`claude`、`codex`、`pi` については plugin の Target でもあります。Skillshare は `CLAUDE_CONFIG_DIR`、`CODEX_HOME`、`PI_CODING_AGENT_DIR` を通じて、そのアカウントの config ディレクトリに対して Agent 自身の CLI を実行します。
+
+```yaml
+targets:
+  claude-work:
+    agent: claude
+    config_dir: ~/.claude-work
+```
+
+```bash
+skillshare plugin add owner/repo --target claude-work
+skillshare plugin import demo@market --from claude-work
+```
+
+アカウントは、所属する Agent の操作をそのまま引き継ぎ、自分の名前で独自のバインディングを保持します。そのため、一方のアカウントにだけ plugin をインストールすることもできます。アカウントは global スコープにのみ存在します。project の plugin は、1 つのアカウントではなく project に属します。`--target` と `--from` はアカウント名を受け付け、ターミナルのピッカーとダッシュボードの Plugins ページでは Agent と並んで一覧表示されます。
 
 ### Cursor と Antigravity
 

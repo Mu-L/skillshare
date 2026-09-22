@@ -23,13 +23,20 @@ func (s *Service) load() (*document, error) {
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
-	return decodeDocument(raw)
+	return decodeDocument(raw, s.accountAgents())
 }
 
-// Validate checks plugin declarations without reading or writing native state.
-func Validate(raw []byte) error { _, err := decodeDocument(raw); return err }
+// Validate checks plugin declarations without reading or writing native state. accounts
+// maps each target that is another config directory of an Agent to that Agent, so a
+// binding is validated by the Agent that would install it.
+func Validate(raw []byte, accounts map[string]string) error {
+	_, err := decodeDocument(raw, accounts)
+	return err
+}
 
-func decodeDocument(raw []byte) (*document, error) {
+// decodeDocument reads the plugin section. accounts maps each account to its Agent, or to
+// "" where only the names are known.
+func decodeDocument(raw []byte, accounts map[string]string) (*document, error) {
 	d := &document{raw: raw, packages: map[string]Package{}}
 	content := raw
 	if len(content) == 0 {
@@ -74,7 +81,14 @@ func decodeDocument(raw []byte) (*document, error) {
 			return nil, fmt.Errorf("invalid plugin package name %q", name)
 		}
 		for target, b := range p.Bindings {
-			if !slices.Contains(Targets, target) || !validTargetID(target, b.ID) {
+			agent, account := accounts[target]
+			if !account && !slices.Contains(Targets, target) {
+				return nil, fmt.Errorf("invalid plugin binding for %s", name)
+			}
+			if !account {
+				agent = target
+			}
+			if !validTargetID(agent, b.ID) {
 				return nil, fmt.Errorf("invalid plugin binding for %s", name)
 			}
 		}

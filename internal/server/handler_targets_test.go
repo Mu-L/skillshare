@@ -150,6 +150,41 @@ func TestHandleRemoveTarget_CleanupFailureKeepsTarget(t *testing.T) {
 	}
 }
 
+// Removing an account the MCP config still selects succeeds and says where its name
+// is left behind, so the next mcp sync does not fail on a target it cannot resolve.
+func TestHandleRemoveTarget_WarnsWhenMCPStillNamesTheAccount(t *testing.T) {
+	s, sourceDir := newTestServer(t)
+	work := filepath.Join(t.TempDir(), "claude-work")
+	if err := os.MkdirAll(filepath.Join(work, "skills"), 0755); err != nil {
+		t.Fatalf("create account directory: %v", err)
+	}
+	raw := "source: " + sourceDir + "\nmode: merge\ntargets:\n  claude-work:\n    agent: claude\n    config_dir: " + work +
+		"\nmcp:\n  targets: [claude-work]\n  servers:\n    docs:\n      url: https://example.com/mcp\n      targets: [claude-work]\n"
+	if err := os.WriteFile(os.Getenv("SKILLSHARE_CONFIG"), []byte(raw), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("failed to load config: %v", err)
+	}
+	s = New(cfg, "127.0.0.1:0", "", "")
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/targets/claude-work", nil)
+	rr := httptest.NewRecorder()
+	s.handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var resp struct {
+		Warnings []string `json:"warnings"`
+	}
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+	if len(resp.Warnings) != 1 || !strings.Contains(resp.Warnings[0], "mcp.targets, mcp.servers.docs still name claude-work") {
+		t.Fatalf("warnings: %v", resp.Warnings)
+	}
+}
+
 func TestHandleRemoveTarget_NotFound(t *testing.T) {
 	s, _ := newTestServer(t)
 	req := httptest.NewRequest(http.MethodDelete, "/api/targets/nonexistent", nil)
@@ -450,5 +485,49 @@ func TestHandleUpdateTarget_RejectedRequestChangesNothing(t *testing.T) {
 	memTgt := s.cfg.Targets["claude"]
 	if got := memTgt.SkillsConfig().Mode + "/" + memTgt.AgentsConfig().Mode; got != "merge/merge" {
 		t.Errorf("modes = %s, want merge/merge after a rejected request", got)
+	}
+}
+
+// A target can be another config directory of a built-in Agent, such as a second account.
+func TestHandleAddTarget_AgentConfigDir(t *testing.T) {
+	s, _ := newTestServer(t)
+	dir := filepath.Join(t.TempDir(), ".claude-work")
+	add := func(body string) *httptest.ResponseRecorder {
+		rr := httptest.NewRecorder()
+		s.handler.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/api/targets", strings.NewReader(body)))
+		return rr
+	}
+	if rr := add(`{"name":"claude-work","agent":"claude","configDir":"` + dir + `"}`); rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	added := s.cfg.Targets["claude-work"]
+	if got := added.SkillsConfig().Path; got != filepath.Join(dir, "skills") {
+		t.Errorf("skills path = %q", got)
+	}
+	saved, err := os.ReadFile(config.ConfigPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(saved), "agent: claude") || strings.Contains(string(saved), "path:") {
+		t.Errorf("the paths should stay derived:\n%s", saved)
+	}
+	if rr := add(`{"name":"cursor-work","agent":"cursor","configDir":"` + dir + `2"}`); rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for an Agent without a config directory, got %d", rr.Code)
+	}
+}
+
+func TestHandleAvailableTargets_NamesTheConfigDir(t *testing.T) {
+	s, _ := newTestServer(t)
+	rr := httptest.NewRecorder()
+	s.handler.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/config/available-targets", nil))
+	var resp struct {
+		Targets []struct{ Name, ConfigDir string } `json:"targets"`
+	}
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+	accounts := map[string]bool{"claude": true, "codex": true, "pi": true}
+	for _, target := range resp.Targets {
+		if accounts[target.Name] != (target.ConfigDir != "") {
+			t.Errorf("%s: configDir = %q", target.Name, target.ConfigDir)
+		}
 	}
 }

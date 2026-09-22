@@ -365,6 +365,8 @@ export extern "skillshare target" [
     --add-agent-exclude: string    # Add agent exclude filter
     --remove-agent-include: string # Remove agent include filter
     --remove-agent-exclude: string # Remove agent exclude filter
+    --agent: string          # With add: the Agent this is another account of
+    --config-dir: string     # With add: that account's config directory
     --project(-p)            # Use project-level config
     --global(-g)             # Use global config
     --help(-h)               # Show help

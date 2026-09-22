@@ -43,8 +43,9 @@ func (s *Service) validate(r Request) error {
 		return fmt.Errorf("plugin selector is only valid for add or import")
 	}
 	seen := map[string]bool{}
+	targets := s.targets()
 	for _, t := range r.Targets {
-		if !slices.Contains(Targets, t) {
+		if !slices.Contains(targets, t) {
 			return fmt.Errorf("unsupported plugin target %q", t)
 		}
 		if seen[t] {
@@ -55,7 +56,7 @@ func (s *Service) validate(r Request) error {
 	if r.Action == "add" && r.Source == "" {
 		return fmt.Errorf("add requires a source")
 	}
-	if r.Action == "import" && (!slices.Contains(Targets, r.From) || !validTargetID(r.From, r.Plugin)) {
+	if r.Action == "import" && (!slices.Contains(targets, r.From) || !validTargetID(s.agentOf(r.From), r.Plugin)) {
 		return fmt.Errorf("import requires --from <target> and a native plugin identifier")
 	}
 	if (r.Action == "remove" || r.Action == "update" || r.Action == "enable" || r.Action == "disable") && r.Name == "" {
@@ -89,6 +90,7 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 	}
 	appendChange := func(c Change) {
 		h := host(c.Target)
+		agent := s.agentOf(c.Target)
 		if h.Error != "" {
 			c.Action = "blocked"
 			c.Message = h.Error
@@ -99,26 +101,26 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 				c.Message = err.Error()
 			}
 		}
-		if c.Action == "update" && c.Target == "antigravity-cli" {
+		if c.Action == "update" && agent == "antigravity-cli" {
 			c.Action = "blocked"
 			c.Message = "Update in Antigravity CLI to preserve native enablement; automatic reinstall updates are not supported."
 		}
-		if c.Action == "update" && c.Binding.Source == "" && (c.Target == "pi" || (c.Target == "opencode" && (s.ProjectRoot != "" || !strings.HasPrefix(strings.TrimPrefix(h.Version, "v"), "2.")))) {
+		if c.Action == "update" && c.Binding.Source == "" && (agent == "pi" || (agent == "opencode" && (s.ProjectRoot != "" || !strings.HasPrefix(strings.TrimPrefix(h.Version, "v"), "2.")))) {
 			c.Action = "blocked"
 			c.Message = "Update imported packages in the native client; Skillshare updates reviewed source snapshots only."
 		}
-		if c.Action == "update" && c.Target == "opencode" && c.Binding.Source == "" {
+		if c.Action == "update" && agent == "opencode" && c.Binding.Source == "" {
 			help, err := s.run(ctx, "opencode", "plugin", "update", "--help")
 			if err != nil || !strings.Contains(string(help), "update") {
 				c.Action = "blocked"
 				c.Message = "Installed OpenCode does not expose a verified plugin update command."
 			}
 		}
-		if c.Binding.Source == "" && commandTarget(c.Target) && (c.Action == "install" || c.Action == "update") {
+		if c.Binding.Source == "" && commandTarget(agent) && (c.Action == "install" || c.Action == "update") {
 			c.Action = "blocked"
 			c.Message = "This imported plugin has no reviewed reinstall source; install or update in the native client."
 		}
-		if c.Action == "update" && c.Target == "copilot" {
+		if c.Action == "update" && agent == "copilot" {
 			for _, item := range h.Installed {
 				if item.ID == c.ID && (!item.EnabledKnown || !item.Enabled) {
 					c.Action = "blocked"
@@ -183,22 +185,23 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 			p.Changes = append(p.Changes, change)
 		}
 		for _, target := range slices.Compact(slices.Sorted(slices.Values(r.Targets))) {
+			agent := s.agentOf(target)
 			market := "skillshare-" + hash([]byte(s.ConfigPath + "\x00" + discovered.Source + "\x00" + c.Name + "\x00" + target))[:16]
-			b := Binding{ID: c.Name + "@" + market, Source: discovered.Source, SourceRef: discovered.SourceRef, Commit: discovered.Commit, Plugin: c.Name, Digest: discovered.Digest, Version: c.TargetInfo[target].Version, Components: c.TargetInfo[target].Components}
-			switch target {
+			b := Binding{ID: c.Name + "@" + market, Source: discovered.Source, SourceRef: discovered.SourceRef, Commit: discovered.Commit, Plugin: c.Name, Digest: discovered.Digest, Version: c.TargetInfo[agent].Version, Components: c.TargetInfo[agent].Components}
+			switch agent {
 			case "cursor", "antigravity", "antigravity-cli", "copilot", "grok", "kimi", "hermes", "devin":
 				b.ID = c.Name
 			case "pi":
-				b.ID = filepath.Join(s.snapshotPath(b, target), "content", filepath.FromSlash(c.pathFor(target)))
+				b.ID = filepath.Join(s.snapshotPath(b, target), "content", filepath.FromSlash(c.pathFor(agent)))
 			case "opencode":
 				b.Entry = c.Entry
-				b.ID = fileURL(filepath.Join(s.snapshotPath(b, target), "content", filepath.FromSlash(c.pathFor(target)), c.Entry))
+				b.ID = fileURL(filepath.Join(s.snapshotPath(b, target), "content", filepath.FromSlash(c.pathFor(agent)), c.Entry))
 			}
 			change := Change{Name: name, Target: target, ID: b.ID, Binding: b, Action: "install", Components: b.Components}
-			if c.Problem != "" || !slices.Contains(c.Targets, target) {
+			if c.Problem != "" || !slices.Contains(c.Targets, agent) {
 				change.Action = "blocked"
 				change.Message = c.Problem
-				if info, ok := c.TargetInfo[target]; ok && info.Problem != "" {
+				if info, ok := c.TargetInfo[agent]; ok && info.Problem != "" {
 					change.Message = info.Problem
 				}
 				if change.Message == "" {
@@ -246,7 +249,7 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 				return nil, fmt.Errorf("use --name to choose a logical package name for this native identifier")
 			}
 		}
-		if r.From == "cursor" || r.From == "antigravity" {
+		if agent := s.agentOf(r.From); agent == "cursor" || agent == "antigravity" {
 			return nil, fmt.Errorf("Local directory plugins can be added from source; importing existing or marketplace installations is not supported")
 		}
 		if installed.Filtered {
@@ -276,11 +279,12 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 			if r.Name != "" && r.Name != name {
 				continue
 			}
-			for _, target := range Targets {
+			for _, target := range s.targets() {
 				b, ok := d.packages[name].Bindings[target]
 				if !ok || (len(r.Targets) > 0 && !slices.Contains(r.Targets, target)) {
 					continue
 				}
+				agent := s.agentOf(target)
 				c := Change{Name: name, Target: target, ID: b.ID, Binding: b, Action: r.Action}
 				_, exists := find(target, b.ID)
 				switch r.Action {
@@ -353,28 +357,28 @@ func (s *Service) Preview(ctx context.Context, r Request) (*Plan, error) {
 					if candidate == nil {
 						return nil, fmt.Errorf("plugin %s no longer exists in source", b.Plugin)
 					}
-					if candidate.Problem != "" || !slices.Contains(candidate.Targets, target) {
+					if candidate.Problem != "" || !slices.Contains(candidate.Targets, agent) {
 						c.Action = "blocked"
 						c.Message = "Updated source no longer provides a compatible native plugin"
 						break
 					}
-					c.Components = candidate.TargetInfo[target].Components
+					c.Components = candidate.TargetInfo[agent].Components
 					if disc.Digest == b.Digest && b.Pending == "" && ref == b.SourceRef {
 						c.Action = "noop"
 					} else if r.Action == "check" {
 						c.Action = "update-available"
 						c.Message = "Source content changed; review an update before applying."
 						// Check is read-only; the binding carries the source's version so the change can show old → new.
-						c.Binding.Version = candidate.TargetInfo[target].Version
+						c.Binding.Version = candidate.TargetInfo[agent].Version
 					} else {
 						c.Binding.Digest = disc.Digest
 						c.Binding.Commit = disc.Commit
 						c.Binding.SourceRef = disc.SourceRef
-						c.Binding.Version = candidate.TargetInfo[target].Version
-						c.Binding.Components = candidate.TargetInfo[target].Components
+						c.Binding.Version = candidate.TargetInfo[agent].Version
+						c.Binding.Components = candidate.TargetInfo[agent].Components
 					}
 				}
-				if c.Action == "install" && b.Source == "" && (target == "antigravity" || target == "cursor") {
+				if c.Action == "install" && b.Source == "" && (agent == "antigravity" || agent == "cursor") {
 					c.Action = "blocked"
 					c.Message = "Imported installation has no reinstall source; install it in the native client, then sync again."
 				}

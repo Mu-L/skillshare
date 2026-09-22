@@ -38,14 +38,15 @@ func (s *Service) commandHost(ctx context.Context, target string) Host {
 		return h
 	}
 	{
+		agent := s.agentOf(target)
 		args := []string{"plugin", "list", "--json"}
-		if target == "antigravity-cli" {
+		if agent == "antigravity-cli" {
 			args = []string{"plugin", "list"}
 		}
 		var data []byte
 		data, err = s.run(ctx, target, args...)
 		if err == nil {
-			h.Installed, err = parseCommandInventory(target, data)
+			h.Installed, err = parseCommandInventory(agent, data)
 			h.Fingerprint = hash(data)
 		}
 	}
@@ -100,25 +101,26 @@ func parseCommandInventory(target string, data []byte) ([]Installed, error) {
 }
 
 func (s *Service) verifyNativeTarget(ctx context.Context, target, action, id string) error {
+	agent := s.agentOf(target)
 	if s.ProjectRoot != "" {
 		return fmt.Errorf("%s project plugin operations are unsupported", target)
 	}
-	if !validTargetID(target, id) {
+	if !validTargetID(agent, id) {
 		return fmt.Errorf("invalid plugin identifier")
 	}
-	if target == "grok" && (action == "install" || action == "update") {
+	if agent == "grok" && (action == "install" || action == "update") {
 		return fmt.Errorf("Grok requires native trust confirmation; install or update in Grok, then import. Skillshare never supplies --trust automatically")
 	}
 	command := action
 	if action == "remove" || action == "uninstall" {
 		command = "uninstall"
 	}
-	if action == "update" && target == "antigravity-cli" {
+	if action == "update" && agent == "antigravity-cli" {
 		command = "install"
 	}
 	// agy handles --help on subcommands as ordinary arguments; its parent help is safe.
 	args := []string{"plugin", command, "--help"}
-	if target == "antigravity-cli" {
+	if agent == "antigravity-cli" {
 		args = []string{"plugin", "--help"}
 	}
 	_, err := s.run(ctx, target, args...)
