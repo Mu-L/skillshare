@@ -519,6 +519,47 @@ extras:
 	}
 }
 
+// TestExtras_Collect_ForceCopyMode verifies that "extras collect --force" pulls
+// target edits back over an existing source file, and that copy-mode targets
+// keep regular files instead of becoming symlinks.
+func TestExtras_Collect_ForceCopyMode(t *testing.T) {
+	sb := testutil.NewSandbox(t)
+	defer sb.Cleanup()
+
+	rulesSource := filepath.Join(sb.Home, ".config", "skillshare", "extras", "rules")
+	os.MkdirAll(rulesSource, 0755)
+	sourceFile := filepath.Join(rulesSource, "rule.md")
+	os.WriteFile(sourceFile, []byte("# Old"), 0644)
+
+	rulesTarget := filepath.Join(sb.Home, ".claude", "rules")
+	os.MkdirAll(rulesTarget, 0755)
+	localFile := filepath.Join(rulesTarget, "rule.md")
+	os.WriteFile(localFile, []byte("# Edited in target"), 0644)
+
+	claudeTarget := sb.CreateTarget("claude")
+	sb.WriteConfig(`source: ` + sb.SourcePath + `
+targets:
+  claude:
+    path: ` + claudeTarget + `
+extras:
+  - name: rules
+    targets:
+      - path: ` + rulesTarget + `
+        mode: copy
+`)
+
+	// Trailing slash: --from must still match the configured copy-mode target.
+	result := sb.RunCLI("extras", "collect", "rules", "--from", rulesTarget+"/", "--force", "-g")
+
+	result.AssertSuccess(t)
+	if got := sb.ReadFile(sourceFile); got != "# Edited in target" {
+		t.Errorf("source content = %q, want target edit", got)
+	}
+	if sb.IsSymlink(localFile) {
+		t.Error("copy-mode target should stay a regular file after collect")
+	}
+}
+
 // TestExtras_Status verifies that "status" shows extras information when extras are configured.
 func TestExtras_Status(t *testing.T) {
 	sb := testutil.NewSandbox(t)

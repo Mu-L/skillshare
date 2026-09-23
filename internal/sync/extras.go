@@ -724,9 +724,13 @@ type ExtraCollectResult struct {
 
 // CollectExtraFiles scans targetDir for non-symlink local files,
 // copies them to sourceDir, and replaces originals with symlinks.
+// In copy mode the target files are left in place, since copy-mode
+// targets hold real files rather than symlinks.
+// When force is true, files that already exist in source are overwritten
+// (identical content is still skipped).
 // When flatten is true, collected files are placed in the source root
 // (basename only) rather than preserving the target subdirectory structure.
-func CollectExtraFiles(sourceDir, targetDir string, dryRun, flatten bool, projectRoot string) (*ExtraCollectResult, error) {
+func CollectExtraFiles(sourceDir, targetDir, mode string, dryRun, force, flatten bool, projectRoot string) (*ExtraCollectResult, error) {
 	result := &ExtraCollectResult{}
 
 	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
@@ -739,6 +743,10 @@ func CollectExtraFiles(sourceDir, targetDir string, dryRun, flatten bool, projec
 			return nil, fmt.Errorf("failed to create source directory: %w", err)
 		}
 	}
+
+	// Source paths claimed this run: with flatten, two target files can share
+	// a basename, and the second must not overwrite the first.
+	claimed := make(map[string]bool)
 
 	err := filepath.Walk(targetDir, func(path string, info os.FileInfo, walkErr error) error {
 		if walkErr != nil {
@@ -774,13 +782,27 @@ func CollectExtraFiles(sourceDir, targetDir string, dryRun, flatten bool, projec
 			destRel = filepath.Base(rel)
 		}
 		destPath := filepath.Join(sourceDir, destRel)
-
-		// Skip if already exists in source
-		if _, err := os.Stat(destPath); err == nil {
-			result.Skipped++
+		if claimed[destPath] {
+			result.Errors = append(result.Errors, fmt.Sprintf("skipped %s: %s already collected from another file", rel, destRel))
 			return nil
 		}
 
+		content, err := os.ReadFile(path)
+		if err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("read failed: %v", err))
+			return nil
+		}
+
+		// Skip if already exists in source, unless forcing a changed file
+		if _, err := os.Stat(destPath); err == nil {
+			existing, readErr := os.ReadFile(destPath)
+			if !force || (readErr == nil && bytes.Equal(existing, content)) {
+				result.Skipped++
+				return nil
+			}
+		}
+
+		claimed[destPath] = true
 		if dryRun {
 			result.Collected++
 			return nil
@@ -792,16 +814,14 @@ func CollectExtraFiles(sourceDir, targetDir string, dryRun, flatten bool, projec
 			return nil
 		}
 
-		// Read source content
-		content, err := os.ReadFile(path)
-		if err != nil {
-			result.Errors = append(result.Errors, fmt.Sprintf("read failed: %v", err))
-			return nil
-		}
-
 		// Write to source dir
 		if err := os.WriteFile(destPath, content, info.Mode().Perm()); err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("write failed: %v", err))
+			return nil
+		}
+
+		if mode == "copy" {
+			result.Collected++
 			return nil
 		}
 

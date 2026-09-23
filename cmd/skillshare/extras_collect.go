@@ -35,6 +35,7 @@ func cmdExtrasCollect(args []string) error {
 	var name string
 	var fromPath string
 	dryRun := false
+	force := false
 	for i := 0; i < len(rest); i++ {
 		switch rest[i] {
 		case "--from":
@@ -45,6 +46,8 @@ func cmdExtrasCollect(args []string) error {
 			fromPath = rest[i]
 		case "--dry-run":
 			dryRun = true
+		case "--force", "-f":
+			force = true
 		case "--help", "-h":
 			printExtrasCollectHelp()
 			return nil
@@ -62,60 +65,61 @@ func cmdExtrasCollect(args []string) error {
 	}
 
 	if mode == modeProject {
-		return extrasCollectProject(cwd, name, fromPath, dryRun, start)
+		return extrasCollectProject(cwd, name, fromPath, dryRun, force, start)
 	}
-	return extrasCollectGlobal(name, fromPath, dryRun, start)
+	return extrasCollectGlobal(name, fromPath, dryRun, force, start)
 }
 
-func extrasCollectGlobal(name, fromPath string, dryRun bool, start time.Time) error {
+func extrasCollectGlobal(name, fromPath string, dryRun, force bool, start time.Time) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
 
-	extra, targetPath, flatten, extension, err := resolveCollectExtra(cfg.Extras, name, fromPath)
+	extra, target, err := resolveCollectExtra(cfg.Extras, name, fromPath, modeGlobal, "")
 	if err != nil {
 		return err
 	}
 
-	if extension != "" {
-		ui.Warning("Skipping %s — managed by extension %q (one-way; collect not supported)", shortenPath(config.ExpandPath(targetPath)), extension)
+	targetPath := config.ExpandPath(target.Path)
+	if target.Extension != "" {
+		ui.Warning("Skipping %s — managed by extension %q (one-way; collect not supported)", shortenPath(targetPath), target.Extension)
 		return nil
 	}
 
-	targetPath = config.ExpandPath(targetPath)
 	sourceDir := config.ResolveExtrasSourceDir(*extra, cfg.EffectiveExtrasSource(), cfg.EffectiveSkillsSource())
-	return runCollect(sourceDir, targetPath, extra.Name, dryRun, flatten, "global", config.ConfigPath(), start, "")
+	return runCollect(sourceDir, targetPath, extra.Name, target.Mode, dryRun, force, target.Flatten, "global", config.ConfigPath(), start, "")
 }
 
-func extrasCollectProject(cwd, name, fromPath string, dryRun bool, start time.Time) error {
+func extrasCollectProject(cwd, name, fromPath string, dryRun, force bool, start time.Time) error {
 	projCfg, err := config.LoadProject(cwd)
 	if err != nil {
 		return err
 	}
 
-	extra, targetPath, flatten, extension, err := resolveCollectExtra(projCfg.Extras, name, fromPath)
+	extra, target, err := resolveCollectExtra(projCfg.Extras, name, fromPath, modeProject, cwd)
 	if err != nil {
 		return err
 	}
 
 	// Expand ~ and resolve relative target path
-	expandedPath := config.ExpandPath(targetPath)
+	expandedPath := config.ExpandPath(target.Path)
 	if !filepath.IsAbs(expandedPath) {
 		expandedPath = filepath.Join(cwd, expandedPath)
 	}
 
-	if extension != "" {
-		ui.Warning("Skipping %s — managed by extension %q (one-way; collect not supported)", shortenPath(expandedPath), extension)
+	if target.Extension != "" {
+		ui.Warning("Skipping %s — managed by extension %q (one-way; collect not supported)", shortenPath(expandedPath), target.Extension)
 		return nil
 	}
 
 	sourceDir := config.ExtrasSourceDirProject(projCfg.EffectiveExtrasSource(cwd), extra.Name)
-	return runCollect(sourceDir, expandedPath, extra.Name, dryRun, flatten, "project", config.ProjectConfigPath(cwd), start, cwd)
+	return runCollect(sourceDir, expandedPath, extra.Name, target.Mode, dryRun, force, target.Flatten, "project", config.ProjectConfigPath(cwd), start, cwd)
 }
 
-// resolveCollectExtra finds the extra by name and determines target path, flatten flag, and extension.
-func resolveCollectExtra(extras []config.ExtraConfig, name, fromPath string) (*config.ExtraConfig, string, bool, string, error) {
+// resolveCollectExtra finds the extra by name and the target to collect from.
+// With --from, an unconfigured path yields a target with default settings.
+func resolveCollectExtra(extras []config.ExtraConfig, name, fromPath string, mode runMode, cwd string) (*config.ExtraConfig, config.ExtraTargetConfig, error) {
 	var found *config.ExtraConfig
 	for i, e := range extras {
 		if e.Name == name {
@@ -124,40 +128,29 @@ func resolveCollectExtra(extras []config.ExtraConfig, name, fromPath string) (*c
 		}
 	}
 	if found == nil {
-		return nil, "", false, "", fmt.Errorf("extra %q not found in config", name)
+		return nil, config.ExtraTargetConfig{}, fmt.Errorf("extra %q not found in config", name)
 	}
 
-	targetPath := fromPath
-	flatten := false
-	extension := ""
-	if targetPath == "" {
-		if len(found.Targets) == 1 {
-			targetPath = found.Targets[0].Path
-			flatten = found.Targets[0].Flatten
-			extension = found.Targets[0].Extension
-		} else {
-			return nil, "", false, "", fmt.Errorf("multiple targets configured for %q; use --from <path> to specify which target to collect from", name)
+	if fromPath == "" {
+		if len(found.Targets) != 1 {
+			return nil, config.ExtraTargetConfig{}, fmt.Errorf("multiple targets configured for %q; use --from <path> to specify which target to collect from", name)
 		}
-	} else {
-		// Find flatten and extension values for the matching target
-		for _, t := range found.Targets {
-			if t.Path == targetPath {
-				flatten = t.Flatten
-				extension = t.Extension
-				break
-			}
+		return found, found.Targets[0], nil
+	}
+	for _, t := range found.Targets {
+		if extraTargetPathMatches(mode, cwd, t.Path, fromPath) {
+			return found, t, nil
 		}
 	}
-
-	return found, targetPath, flatten, extension, nil
+	return found, config.ExtraTargetConfig{Path: fromPath}, nil
 }
 
-func runCollect(sourceDir, targetPath, name string, dryRun, flatten bool, scope, cfgPath string, start time.Time, projectRoot string) error {
+func runCollect(sourceDir, targetPath, name, mode string, dryRun, force, flatten bool, scope, cfgPath string, start time.Time, projectRoot string) error {
 	if dryRun {
 		ui.Warning("Dry run mode - no changes will be made")
 	}
 
-	result, err := sync.CollectExtraFiles(sourceDir, targetPath, dryRun, flatten, projectRoot)
+	result, err := sync.CollectExtraFiles(sourceDir, targetPath, mode, dryRun, force, flatten, projectRoot)
 	if err != nil {
 		return err
 	}
@@ -193,6 +186,7 @@ func runCollect(sourceDir, targetPath, name string, dryRun, flatten bool, scope,
 		"skipped":   result.Skipped,
 		"errors":    len(result.Errors),
 		"dry_run":   dryRun,
+		"force":     force,
 	}
 	oplog.WriteWithLimit(cfgPath, oplog.OpsFile, e, logMaxEntries()) //nolint:errcheck
 
@@ -203,13 +197,15 @@ func printExtrasCollectHelp() {
 	fmt.Println(`Usage: skillshare extras collect <name> [options]
 
 Collect local files from a target back into the extras source directory.
-Files are copied to source and replaced with symlinks in the target.
+Files are copied to source and replaced with symlinks in the target
+(copy-mode targets keep their files).
 
 Arguments:
   name                Name of the extra to collect for
 
 Options:
   --from <path>       Target directory to collect from (required if multiple targets)
+  --force, -f         Overwrite files that already exist in source
   --dry-run           Show what would be collected without making changes
   --project, -p       Use project mode (.skillshare/)
   --global, -g        Use global mode (~/.config/skillshare/)
@@ -218,5 +214,6 @@ Options:
 Examples:
   skillshare extras collect rules
   skillshare extras collect rules --from ~/.claude/rules --dry-run
+  skillshare extras collect rules --force
   skillshare extras collect prompts -p`)
 }
