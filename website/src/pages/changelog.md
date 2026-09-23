@@ -9,6 +9,25 @@ All notable changes to skillshare are documented here. For the full commit histo
 
 ---
 
+## [0.21.7] - 2026-09-24
+
+### New Features
+
+#### Extras
+
+- **Pull target edits back with `extras collect --force`** — `collect` skipped every file that already existed in source, so an edit made directly in a copy-mode target could not be brought back. With `--force`, the target's version overwrites the source file. Files whose content already matches are still skipped, and with `flatten`, a second target file with the same name is reported instead of overwriting the first.
+  ```bash
+  skillshare extras collect rules --force
+  ```
+  Refs: #291.
+
+### Bug Fixes
+
+#### Extras
+
+- **Collecting from a copy-mode target keeps its files** — `extras collect`, in the terminal and in the extras list, replaced each collected file in the target with a symlink, even when the target uses `mode: copy`. Copy-mode targets now keep their files. Refs: #291.
+- **`--from` finds the target however its path is written** — `extras collect --from` only matched a target written exactly as in `config.yaml`, so `/Users/me/.claude/rules` or a trailing slash did not match `~/.claude/rules`, and the target's `mode`, `flatten` and extension settings were ignored. Paths are now compared after expanding `~`. Refs: #291.
+
 ## [0.21.6] - 2026-09-23
 
 ### New Features
