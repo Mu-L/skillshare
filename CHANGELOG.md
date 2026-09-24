@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.21.8] - 2026-09-25
+
+### New Features
+
+#### Git sync
+
+- **See what the remote has before you push** — opening the **Git Sync** page fetches from the remote, and **Pull** shows how many commits are waiting, such as **Pull 2 commits**, so a machine that is behind finds out before a push is refused.
+- **`.metadata.json` conflicts resolve themselves** — every install or update rewrites `.metadata.json`, so pulling after two machines had both installed or updated skills almost always conflicted there. `pull` now merges that file skill by skill; when both machines changed the same skill, the one installed later wins. A conflict in any other file stops the pull, undoes the merge and names the files, so the repository is never left half-merged.
+  ```bash
+  skillshare pull
+  ```
+
+### Bug Fixes
+
+#### Git sync
+
+- **Pulling after both machines committed** — once this machine and the remote each had commits the other lacked, `pull` failed with `Need to specify how to reconcile divergent branches`, in the terminal and on the **Git Sync** page, and the only way out was git in a terminal. `pull` now merges the two histories. `skillshare update` does the same for a tracked repository with local commits.
+- **A refused push offers Pull** — when the remote had newer commits, **Push** on the **Git Sync** page showed git's raw `rejected` message. It now says to pull first and puts a **Pull** button next to the error.
+
 ## [0.21.7] - 2026-09-24
 
 ### New Features
