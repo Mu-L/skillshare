@@ -88,7 +88,7 @@ Some pages show a count in the sidebar when they need attention. The counts refr
 |------|-------------|
 | **Dashboard** | Counts for skills, agents, extras, MCP servers, plugins, and targets, plus items that need attention |
 | **Sync** | Preview every change per target before writing. Choose which parts to include (Skills, Agents, Extras, MCP). Files edited inside a target are kept unless **Force** is on. Items that exist only in a target can be collected back to source from here. Each sync backs up target folders first |
-| **Git Sync** | Commit and push the source repo, push commits that aren't on the remote yet, and pull. Pull syncs what the repo scope holds (`skills`, `agents`, `extras`, or `root`), like [`pull`](/docs/reference/commands/pull). When a first pull can't merge with the remote, it offers a force pull that replaces local files with the remote branch |
+| **Git Sync** | Commit and push the source repo, push commits that aren't on the remote yet, and pull. Opening the page fetches from the remote, so **Pull** shows how many commits the remote has. Pull syncs what the repo scope holds (`skills`, `agents`, `extras`, or `root`), like [`pull`](/docs/reference/commands/pull). When the remote rejects a push because it has newer commits, the error offers **Pull**. When a first pull can't merge with the remote, it offers a force pull that replaces local files with the remote branch |
 | **Hubs** | Reached from the Skills page. **Browse** filters a hub and installs from it; **My hubs** assembles an index from installed skills, validates it and exports it. See [`hub`](/docs/reference/commands/hub) |
 | **Skills** / **Agents** | Installed items, the **Updates** tab, and the **Trash** tab. Skills also have an **Analyze** tab that estimates how many tokens each skill adds to a target's context. **Install** searches GitHub or installs from a URL or path. **+ New Skill** opens the creation wizard. A skill with `disable-model-invocation: true` carries a **manual only** tag in the list, on its tile and on its detail page, the same state [`list`](/docs/reference/commands/list) toggles with `M`. In the skill editor, **Add field** describes what each frontmatter field does. **Sync skills** / **Sync agents** previews, then syncs only that kind to every target; the same dialog opens from **Sync Now** after an update, an uninstall or a collect |
 | **Extras** | Rules, commands, and other folders synced alongside skills |
@@ -156,9 +156,9 @@ The web dashboard exposes a REST API at `/api/`. All endpoints return JSON.
 | DELETE | `/api/targets/{name}` | Remove a target |
 | POST | `/api/sync` | Run sync (supports `dryRun`, `force`, `kind`, and `project`, a declared project root that limits the sync to that project's targets). Backs up targets first unless `dryRun` is set |
 | POST | `/api/git/commit` | Create a local git commit from the source repo without pushing |
-| GET | `/api/git/status` | Source repo status, including commits not pushed yet (`ahead`) |
-| POST | `/api/push` | Commit any changes, then push. Sets the upstream on the first push |
-| POST | `/api/pull` | Pull, then sync what the repo scope holds. When a first pull can't merge, it fails with error code `merge_failed`; retry with `force: true` to replace local files with the remote branch |
+| GET | `/api/git/status` | Source repo status, including commits not pushed yet (`ahead`) and upstream commits not pulled yet as of the last fetch (`behind`). Never fetches |
+| POST | `/api/push` | Commit any changes, then push. Sets the upstream on the first push. When the remote has commits this repo lacks, it fails with `409` and error code `push_rejected`; pull, then push again |
+| POST | `/api/pull` | Pull, then sync what the repo scope holds. Diverged history is merged; `.metadata.json` conflicts resolve automatically, and any other conflict fails with the merge undone. When a first pull can't merge, it fails with error code `merge_failed`; retry with `force: true` to replace local files with the remote branch |
 | GET | `/api/diff` | Diff between source and targets |
 | GET | `/api/search?q=` | Search GitHub for skills |
 | POST | `/api/install` | Install a skill from source |

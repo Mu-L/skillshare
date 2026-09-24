@@ -88,7 +88,7 @@ skillshare ui start --clear-cache
 |------|-------------|
 | **Dashboard** | skill, agent, extras, MCP 서버, plugin, target의 개수와 주의가 필요한 항목 |
 | **Sync** | target별로 기록 전에 모든 변경 사항을 미리 봅니다. 포함할 부분(Skills, Agents, Extras, MCP)을 선택합니다. target 내부에서 편집된 파일은 **Force**가 켜져 있지 않은 한 유지됩니다. target에만 존재하는 항목은 여기서 source로 다시 수집할 수 있습니다. 각 sync는 먼저 target 폴더를 백업합니다 |
-| **Git Sync** | source repo를 commit하고 push하며, 아직 remote에 없는 커밋을 push하고, pull합니다. Pull은 [`pull`](/docs/reference/commands/pull)과 마찬가지로 repo scope가 담고 있는 것(`skills`, `agents`, `extras`, 또는 `root`)을 동기화합니다. 첫 pull이 remote와 병합할 수 없을 때는 로컬 파일을 remote 브랜치로 교체하는 force pull을 제공합니다 |
+| **Git Sync** | source repo를 commit하고 push하며, 아직 remote에 없는 커밋을 push하고, pull합니다. 페이지를 열면 remote에서 fetch하므로 **Pull** 버튼에 remote에 있는 커밋 수가 표시됩니다. Pull은 [`pull`](/docs/reference/commands/pull)과 마찬가지로 repo scope가 담고 있는 것(`skills`, `agents`, `extras`, 또는 `root`)을 동기화합니다. remote에 더 새로운 커밋이 있어 push가 거부되면 오류 알림에서 **Pull**을 제공합니다. 첫 pull이 remote와 병합할 수 없을 때는 로컬 파일을 remote 브랜치로 교체하는 force pull을 제공합니다 |
 | **Hubs** | Skills 페이지에서 접근합니다. **Browse**는 hub를 필터링하고 그곳에서 설치합니다. **My hubs**는 설치된 skill로부터 인덱스를 구성하고 검증한 후 내보냅니다. [`hub`](/docs/reference/commands/hub) 참고 |
 | **Skills** / **Agents** | 설치된 항목, **Updates** 탭, **Trash** 탭. Skills에는 각 skill이 target의 context에 추가하는 토큰 수를 추정하는 **Analyze** 탭도 있습니다. **Install**은 GitHub를 검색하거나 URL 또는 경로에서 설치합니다. **+ New Skill**은 생성 마법사를 엽니다. `disable-model-invocation: true`가 설정된 skill은 목록, 타일, 상세 페이지에 **manual only** 태그가 표시되며, 이는 [`list`](/docs/reference/commands/list)에서 `M`으로 전환하는 것과 같은 상태입니다. skill 편집기에서 **Add field**는 각 frontmatter 필드가 하는 역할을 설명합니다. **Sync skills** / **Sync agents**는 미리 본 뒤 해당 종류만 모든 target에 동기화합니다. 업데이트, 제거 또는 collect 후에는 **Sync Now**에서 같은 대화상자가 열립니다 |
 | **Extras** | skill과 함께 동기화되는 rules, commands, 기타 폴더 |
@@ -156,9 +156,9 @@ project mode(`-p`)로 실행할 때 대시보드는 다음과 같이 달라집�
 | DELETE | `/api/targets/{name}` | target 제거 |
 | POST | `/api/sync` | sync 실행(`dryRun`, `force`, `kind`, 그리고 sync를 해당 프로젝트의 target으로 제한하는 선언된 프로젝트 루트인 `project` 지원). `dryRun`이 설정되지 않은 한 먼저 target을 백업합니다 |
 | POST | `/api/git/commit` | push 없이 source repo에서 로컬 git commit 생성 |
-| GET | `/api/git/status` | 아직 push되지 않은 커밋(`ahead`)을 포함한 source repo 상태 |
-| POST | `/api/push` | 변경 사항을 commit한 후 push합니다. 첫 push 시 upstream을 설정합니다 |
-| POST | `/api/pull` | pull한 후 repo scope가 담고 있는 것을 sync합니다. 첫 pull이 병합에 실패하면 오류 코드 `merge_failed`로 실패합니다. 로컬 파일을 remote 브랜치로 교체하려면 `force: true`로 재시도하세요 |
+| GET | `/api/git/status` | 아직 push되지 않은 커밋(`ahead`)과 마지막 fetch 기준으로 아직 pull하지 않은 upstream 커밋(`behind`)을 포함한 source repo 상태. fetch는 하지 않습니다 |
+| POST | `/api/push` | 변경 사항을 commit한 후 push합니다. 첫 push 시 upstream을 설정합니다. remote에 이 repo에 없는 커밋이 있으면 `409`와 오류 코드 `push_rejected`로 실패합니다. pull한 후 다시 push하세요 |
+| POST | `/api/pull` | pull한 후 repo scope가 담고 있는 것을 sync합니다. 갈라진 히스토리는 병합되며, `.metadata.json` 충돌은 자동으로 해결되고, 그 외의 충돌은 병합을 되돌린 채 실패합니다. 첫 pull이 병합에 실패하면 오류 코드 `merge_failed`로 실패합니다. 로컬 파일을 remote 브랜치로 교체하려면 `force: true`로 재시도하세요 |
 | GET | `/api/diff` | source와 target 간의 diff |
 | GET | `/api/search?q=` | GitHub에서 skill 검색 |
 | POST | `/api/install` | source에서 skill 설치 |

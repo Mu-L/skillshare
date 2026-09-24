@@ -88,7 +88,7 @@ skillshare ui start --clear-cache
 |------|-------------|
 | **Dashboard** | Skill、Agent、Extras、MCP サーバー、Plugin、Target の件数、および対応が必要な項目 |
 | **Sync** | 書き込む前に、Target ごとにすべての変更をプレビュー。含める項目を選択（Skills、Agents、Extras、MCP）。Target 内で編集されたファイルは、**Force** がオンでない限り保持される。Target にのみ存在する項目は、ここから Source に collect し戻せる。各 sync は最初に Target フォルダをバックアップする |
-| **Git Sync** | Source リポジトリのコミットとプッシュ、remote にまだないコミットのプッシュ、プルを実行。プルはリポジトリのスコープ（`skills`、`agents`、`extras`、または `root`）が保持するものを sync する。詳細は [`pull`](/docs/reference/commands/pull) を参照。最初のプルが remote とマージできない場合、remote ブランチでローカルファイルを置き換える force pull を提案する |
+| **Git Sync** | Source リポジトリのコミットとプッシュ、remote にまだないコミットのプッシュ、プルを実行。ページを開くと remote から fetch するため、**Pull** には remote にあるコミット数が表示される。プルはリポジトリのスコープ（`skills`、`agents`、`extras`、または `root`）が保持するものを sync する。詳細は [`pull`](/docs/reference/commands/pull) を参照。remote に新しいコミットがあるためにプッシュが拒否された場合、エラーに **Pull** が表示される。最初のプルが remote とマージできない場合、remote ブランチでローカルファイルを置き換える force pull を提案する |
 | **Hubs** | Skills ページから移動。**Browse** は hub をフィルタしてそこからインストール、**My hubs** はインストール済み Skill からインデックスを組み立て、検証してエクスポートする。[`hub`](/docs/reference/commands/hub) を参照 |
 | **Skills** / **Agents** | インストール済みの項目、**Updates** タブ、**Trash** タブ。Skills にはさらに、Target のコンテキストに Skill が追加するトークン数を見積もる **Analyze** タブがある。**Install** は GitHub を検索するか、URL やパスからインストールする。**+ New Skill** は作成ウィザードを開く。`disable-model-invocation: true` を持つ Skill は、一覧・タイル・詳細ページで **manual only** タグが付く。これは [`list`](/docs/reference/commands/list) で `M` キーが切り替えるのと同じ状態。Skill エディタでは、**Add field** が各フロントマターフィールドの説明を表示する。**Sync skills** / **Sync agents** はプレビューしてから、その種類だけをすべての Target に sync する。update、アンインストール、collect の後に表示される **Sync Now** からも同じダイアログが開く |
 | **Extras** | Skill と一緒に sync される rules、commands、その他のフォルダ |
@@ -156,9 +156,9 @@ Web ダッシュボードは `/api/` に REST API を公開しています。す
 | DELETE | `/api/targets/{name}` | Target を削除 |
 | POST | `/api/sync` | sync を実行（`dryRun`、`force`、`kind`、`project` に対応。`project` は宣言済みの project ルートで、sync をその project の Target に限定する）。`dryRun` が指定されていない限り、まず Target をバックアップする |
 | POST | `/api/git/commit` | Source リポジトリからプッシュせずにローカル git commit を作成 |
-| GET | `/api/git/status` | まだプッシュされていないコミット（`ahead`）を含む、Source リポジトリの状態 |
-| POST | `/api/push` | 変更をコミットしてからプッシュ。初回プッシュ時は upstream を設定する |
-| POST | `/api/pull` | プルしてから、リポジトリのスコープが保持するものを sync する。最初のプルがマージできない場合、エラーコード `merge_failed` で失敗する。`force: true` で再試行すると、remote ブランチでローカルファイルを置き換える |
+| GET | `/api/git/status` | まだプッシュされていないコミット（`ahead`）と、最後の fetch 時点でまだプルしていない upstream のコミット（`behind`）を含む、Source リポジトリの状態。fetch は行わない |
+| POST | `/api/push` | 変更をコミットしてからプッシュ。初回プッシュ時は upstream を設定する。remote にこのリポジトリにないコミットがある場合、`409` とエラーコード `push_rejected` で失敗する。プルしてから再度プッシュする |
+| POST | `/api/pull` | プルしてから、リポジトリのスコープが保持するものを sync する。分岐した履歴はマージされる。`.metadata.json` の競合は自動で解決され、それ以外の競合ではマージを取り消して失敗する。最初のプルがマージできない場合、エラーコード `merge_failed` で失敗する。`force: true` で再試行すると、remote ブランチでローカルファイルを置き換える |
 | GET | `/api/diff` | Source と Target 間の差分 |
 | GET | `/api/search?q=` | GitHub で Skill を検索 |
 | POST | `/api/install` | ソースから Skill をインストール |

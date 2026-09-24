@@ -88,7 +88,7 @@ skillshare ui start --clear-cache
 |------|------|
 | **Dashboard** | skills、agents、extras、MCP servers、plugins 和 targets 的计数，以及需要关注的项目 |
 | **Sync** | 在写入之前，按 Target 预览每一处变更。选择要包含的部分（Skills、Agents、Extras、MCP）。在 Target 内部编辑过的文件会被保留，除非开启了 **Force**。只存在于某个 Target 中的项目可以从这里收集回 Source。每次 sync 会先备份 Target 目录 |
-| **Git Sync** | 提交并推送 source 仓库，推送尚未上 remote 的提交，并拉取。Pull 会同步该仓库 scope 所涵盖的内容（`skills`、`agents`、`extras` 或 `root`），与 [`pull`](/docs/reference/commands/pull) 相同。当首次 pull 无法与 remote 合并时，它会提供一个强制 pull 选项，用 remote 分支替换本地文件 |
+| **Git Sync** | 提交并推送 source 仓库，推送尚未上 remote 的提交，并拉取。打开页面时会先从 remote fetch，所以 **Pull** 会显示 remote 有多少个新提交。Pull 会同步该仓库 scope 所涵盖的内容（`skills`、`agents`、`extras` 或 `root`），与 [`pull`](/docs/reference/commands/pull) 相同。当 remote 因为有更新的提交而拒绝 push 时，错误提示会提供 **Pull**。当首次 pull 无法与 remote 合并时，它会提供一个强制 pull 选项，用 remote 分支替换本地文件 |
 | **Hubs** | 从 Skills 页面进入。**Browse** 过滤某个 hub 并从中安装；**My hubs** 从已安装的 skills 组装出一个索引，验证并导出它。参见 [`hub`](/docs/reference/commands/hub) |
 | **Skills** / **Agents** | 已安装的项目、**Updates** 标签页，以及 **Trash** 标签页。Skills 还有一个 **Analyze** 标签页，估算每个 skill 为某个 target 的上下文增加了多少 token。**Install** 可从 GitHub 搜索，或从 URL 或路径安装。**+ New Skill** 打开创建向导。带有 `disable-model-invocation: true` 的 skill 会在列表、卡片和详情页上带有 **manual only** 标签，这与 [`list`](/docs/reference/commands/list) 用 `M` 切换的状态相同。在 skill 编辑器中，**Add field** 会描述每个 frontmatter 字段的作用。**Sync skills** / **Sync agents** 会先预览，然后只将该类型 sync 到每个 target；在更新、卸载或 collect 之后，点击 **Sync Now** 也会打开同一个对话框 |
 | **Extras** | 与 skills 一起同步的 rules、commands 和其他目录 |
@@ -156,9 +156,9 @@ web dashboard 在 `/api/` 下暴露一个 REST API。所有端点都返回 JSON�
 | DELETE | `/api/targets/{name}` | 移除一个 target |
 | POST | `/api/sync` | 运行 sync（支持 `dryRun`、`force`、`kind`，以及 `project`：一个已声明的项目根目录，用于将 sync 限定在该项目的 targets）。除非设置了 `dryRun`，否则会先备份 targets |
 | POST | `/api/git/commit` | 从 source 仓库创建一个本地 git commit，但不推送 |
-| GET | `/api/git/status` | source 仓库状态，包括尚未推送的提交（`ahead`） |
-| POST | `/api/push` | 提交任何变更，然后推送。首次推送时会设置 upstream |
-| POST | `/api/pull` | 拉取，然后同步该仓库 scope 所涵盖的内容。当首次 pull 无法合并时，会以错误码 `merge_failed` 失败；用 `force: true` 重试可用 remote 分支替换本地文件 |
+| GET | `/api/git/status` | source 仓库状态，包括尚未推送的提交（`ahead`），以及截至上次 fetch 尚未拉取的 upstream 提交（`behind`）。不会执行 fetch |
+| POST | `/api/push` | 提交任何变更，然后推送。首次推送时会设置 upstream。当 remote 有本仓库没有的提交时，会以 `409` 和错误码 `push_rejected` 失败；先 pull，再重新 push |
+| POST | `/api/pull` | 拉取，然后同步该仓库 scope 所涵盖的内容。分歧的历史会被合并；`.metadata.json` 的冲突会自动解决，其他冲突会失败并撤销合并。当首次 pull 无法合并时，会以错误码 `merge_failed` 失败；用 `force: true` 重试可用 remote 分支替换本地文件 |
 | GET | `/api/diff` | source 与 targets 之间的差异 |
 | GET | `/api/search?q=` | 在 GitHub 上搜索 skills |
 | POST | `/api/install` | 从来源安装一个 skill |

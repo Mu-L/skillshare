@@ -88,7 +88,7 @@ skillshare ui start --clear-cache
 |------|------|
 | **Dashboard** | Skills、agents、extras、MCP servers、plugins 與 targets 的數量，以及需要注意的項目 |
 | **Sync** | 在寫入前預覽每個 target 的每項變更。選擇要包含的部分（Skills、Agents、Extras、MCP）。在 target 內編輯過的檔案，除非開啟 **Force**，否則會保留。只存在於 target 中的項目可以從這裡收集回 source。每次同步都會先備份 target 資料夾 |
-| **Git Sync** | Commit 並 push source repo、push 尚未在 remote 上的 commits，以及 pull。Pull 會同步 repo scope 所涵蓋的內容（`skills`、`agents`、`extras` 或 `root`），如同 [`pull`](/docs/reference/commands/pull)。當第一次 pull 無法與 remote 合併時，會提供強制 pull 以本機檔案取代 remote 分支 |
+| **Git Sync** | Commit 並 push source repo、push 尚未在 remote 上的 commits，以及 pull。開啟頁面時會先從 remote fetch，所以 **Pull** 按鈕會顯示 remote 有幾個新的 commits。Pull 會同步 repo scope 所涵蓋的內容（`skills`、`agents`、`extras` 或 `root`），如同 [`pull`](/docs/reference/commands/pull)。當 remote 因為有較新的 commits 而拒絕 push 時，錯誤訊息會提供 **Pull**。當第一次 pull 無法與 remote 合併時，會提供強制 pull 以本機檔案取代 remote 分支 |
 | **Hubs** | 從 Skills 頁面進入。**Browse** 篩選 hub 並從中安裝；**My hubs** 從已安裝的 skills 組裝索引、驗證並匯出。參見 [`hub`](/docs/reference/commands/hub) |
 | **Skills** / **Agents** | 已安裝的項目、**Updates** 分頁與 **Trash** 分頁。Skills 還有一個 **Analyze** 分頁，用來估算每個 skill 為 target 的 context 增加多少 tokens。**Install** 可搜尋 GitHub，或從 URL 或路徑安裝。**+ New Skill** 開啟建立精靈。帶有 `disable-model-invocation: true` 的 skill 會在列表、其磚塊（tile）與詳細頁面上帶有 **manual only** 標籤，這與 [`list`](/docs/reference/commands/list) 中用 `M` 切換的狀態相同。在 skill 編輯器中，**Add field** 說明每個 frontmatter 欄位的作用。**Sync skills** / **Sync agents** 會先預覽，再只把該類型同步到所有 targets；更新、解除安裝或 collect 之後，從 **Sync Now** 也會開啟同一個對話框 |
 | **Extras** | 與 skills 一同同步的 rules、commands 及其他資料夾 |
@@ -156,9 +156,9 @@ Web dashboard 在 `/api/` 上提供 REST API。所有端點皆回傳 JSON。
 | DELETE | `/api/targets/{name}` | 移除一個 target |
 | POST | `/api/sync` | 執行同步（支援 `dryRun`、`force`、`kind`，以及 `project`：一個已宣告的 project 根目錄，會把同步範圍限定在該 project 的 targets）。除非設定 `dryRun`，否則會先備份 targets |
 | POST | `/api/git/commit` | 從 source repo 建立本機 git commit，但不 push |
-| GET | `/api/git/status` | Source repo 狀態，包含尚未 push 的 commits（`ahead`） |
-| POST | `/api/push` | Commit 所有變更後再 push。首次 push 時會設定 upstream |
-| POST | `/api/pull` | Pull 之後同步 repo scope 所涵蓋的內容。當第一次 pull 無法合併時，會以錯誤代碼 `merge_failed` 失敗；帶 `force: true` 重試可以本機檔案取代 remote 分支 |
+| GET | `/api/git/status` | Source repo 狀態，包含尚未 push 的 commits（`ahead`），以及截至上次 fetch 尚未 pull 的 upstream commits（`behind`）。不會執行 fetch |
+| POST | `/api/push` | Commit 所有變更後再 push。首次 push 時會設定 upstream。當 remote 有這個 repo 沒有的 commits 時，會以 `409` 與錯誤代碼 `push_rejected` 失敗；先 pull 再 push 即可 |
+| POST | `/api/pull` | Pull 之後同步 repo scope 所涵蓋的內容。已分歧的歷史會被合併；`.metadata.json` 的衝突會自動解決，其他衝突則會失敗並復原 merge。當第一次 pull 無法合併時，會以錯誤代碼 `merge_failed` 失敗；帶 `force: true` 重試可以本機檔案取代 remote 分支 |
 | GET | `/api/diff` | Source 與 targets 之間的差異 |
 | GET | `/api/search?q=` | 在 GitHub 上搜尋 skills |
 | POST | `/api/install` | 從來源安裝一個 skill |
