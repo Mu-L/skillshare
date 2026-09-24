@@ -218,10 +218,9 @@ Before executing a newly generated runbook, verify:
 - [ ] **Skill name ≠ repo name** — after `ss install <repo>`, the actual skill name may differ from the repo name (e.g. repo `cangjie-docs-mcp` → skill `cangjie-docs-navigator`). Always verify the installed skill name via `ss list` before writing uninstall/check steps
 - [ ] **`/tmp/` cleanup** — ssenv only isolates `$HOME`; `/tmp/` is shared across runs. Any step using `/tmp/<path>` must start with `rm -rf /tmp/<path>` to avoid stale state from previous runs
 - [ ] **`echo > symlink` writes through** — `echo "content" > path` where `path` is a symlink writes to the symlink's target, it does NOT replace the symlink with a real file. To create a local (non-managed) file at a symlinked path: either use a different filename, or `rm` the symlink first then `echo`
-- [ ] **`cat >>` is not idempotent** — appending to config files (`cat >> config.yaml`) will duplicate sections on re-run. Prefer `ss extras init` (which validates duplicates) or full file replacement over `cat >>` when possible
 - [ ] **Extras source path layout** — extras use `~/.config/skillshare/extras/<name>/` (not the legacy flat path `~/.config/skillshare/<name>/`). Symlink assertions must include `extras/` in the path regex (e.g. `regex: skillshare/extras/rules/tdd\.md`)
 - [ ] **Prefer `jq:` over `python3 -c`** — for JSON output validation, use mdproof's native `jq:` assertion type (e.g. `- jq: .extras | length == 1`) instead of piping to `python3 -c`. It's one line vs 10, and mdproof handles failure reporting automatically
-- [ ] **Config append idempotency** — when appending YAML sections with `cat >>`, always prepend `sed -i '/^section_key:/,$d'` to remove existing section. Or prefer CLI commands (`ss extras init`, `ss extras remove --force`) over manual config editing
+- [ ] **Config idempotency** — re-runs must not duplicate YAML sections: use CLI commands (`ss extras init`, `ss extras remove --force`), or prepend `sed -i '/^section_key:/,$d'` before any `cat >>`
 - [ ] **Check lessons-learned** — read `.mdproof/lessons-learned.md` before writing new runbooks for known gotchas and proven assertion patterns
 
 ## Runbook Assertion Types
@@ -384,28 +383,6 @@ docker exec $CONTAINER ssenv enter "$ENV_NAME" -- bash -c '
 '
 ```
 
-## Relationship with `/mdproof` Skill
+## Runbook authoring
 
-This skill (`/cli-e2e-test`) and the `/mdproof` skill are **complementary**, not competing:
-
-| Concern | `/cli-e2e-test` | `/mdproof` |
-|---------|-----------------|------------|
-| **Scope** | Skillshare project-specific E2E | General-purpose runbook authoring |
-| **Infrastructure** | Devcontainer, ssenv, binary build | None — format and assertions only |
-| **Config** | `ai_docs/tests/mdproof.json` (build, setup, teardown) | Assertion types, snapshot, coverage |
-| **Lessons** | Checklist items, CLI flag gotchas | `.mdproof/lessons-learned.md` |
-| **When** | Running or debugging a test | Writing or improving a runbook |
-
-### How they work together
-
-1. **Writing a new runbook** → invoke `/mdproof` first for format guidance (assertion types, `jq:` patterns, snapshot usage), then `/cli-e2e-test` to execute it in isolation
-2. **Improving existing runbooks** → invoke `/mdproof` for assertion quality review (python3 → jq:, idempotency), then `/cli-e2e-test` to verify changes pass
-3. **Debugging failures** → `/cli-e2e-test` Phase 3 step 4 handles manual docker exec; `/mdproof` lessons-learned captures recurring patterns
-4. **After a test run** → `/mdproof` Self-Learning section guides recording discoveries to `.mdproof/lessons-learned.md`
-
-### Rule of thumb
-
-- Need to **run** tests or **debug** in devcontainer? → `/cli-e2e-test`
-- Need to **write** assertions or **improve** runbook quality? → `/mdproof`
-- User says "run extras E2E" → `/cli-e2e-test`
-- User says "improve runbook assertions" → `/mdproof` then `/cli-e2e-test` to verify
+Runbooks use mdproof assertions (`jq:`, snapshots); read `.mdproof/lessons-learned.md` for proven patterns before writing one. This skill owns running them in the devcontainer.

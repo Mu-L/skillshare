@@ -85,6 +85,8 @@ This ensures `skillshare upgrade --skill` detects the new version correctly.
 
 ### Phase 5: Commit & Tag
 
+Commit and tag only when the release request includes it or the user confirms; the tag is what publishes.
+
 ```bash
 git add CHANGELOG.md website/src/pages/changelog.md skills/skillshare/SKILL.md
 # Only if the user explicitly asked to commit release notes:

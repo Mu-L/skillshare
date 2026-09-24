@@ -32,7 +32,7 @@ If $ARGUMENTS is a file path:
 If $ARGUMENTS is a description:
 1. Search existing code for related functionality
 2. Identify the right package to extend
-3. Confirm scope with user before proceeding
+3. Ask the user only if ambiguity would materially change scope or public interfaces
 
 ### Step 2: Identify Affected Files
 
@@ -46,7 +46,7 @@ internal/<package>/<feature>.go      # Core logic
 tests/integration/<command>_test.go  # Integration test
 ```
 
-Display the file list and continue. If scope is unclear, ask the user.
+Display the file list and continue.
 
 ### Step 3: Write Failing Tests First (RED)
 
@@ -66,16 +66,14 @@ func TestFeature_BasicCase(t *testing.T) {
     result := sb.RunCLI("command", "args...")
 
     // Assert
-    result.AssertSuccess()
-    result.AssertOutputContains("expected output")
+    result.AssertSuccess(t)
+    result.AssertOutputContains(t, "expected output")
 }
 ```
 
-Verify tests fail:
+Verify tests fail (inside the devcontainer, see the `skillshare-devcontainer` skill):
 ```bash
-make test-int
-# or run specific test:
-go test ./tests/integration -run TestFeature_BasicCase
+docker exec "$CONTAINER" bash -c 'cd /workspace && go test ./tests/integration -run TestFeature_BasicCase -count=1'
 ```
 
 ### Step 4: Implement (GREEN)
@@ -95,7 +93,7 @@ Write minimal code to make tests pass:
 
 Verify tests pass:
 ```bash
-make test-int
+docker exec "$CONTAINER" bash -c 'cd /workspace && make test-int'
 ```
 
 ### Step 5: Refactor and Verify
@@ -103,7 +101,7 @@ make test-int
 1. Clean up code while keeping tests green
 2. Run full quality check:
    ```bash
-   make check  # fmt-check + lint + test
+   docker exec "$CONTAINER" bash -c 'cd /workspace && make check'  # fmt-check + lint + test
    ```
 3. Fix any formatting or lint issues
 

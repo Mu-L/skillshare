@@ -145,13 +145,13 @@ Always `cd /workspace` before Go commands — ssenv changes HOME which can break
 
 ### Go tests with auth disabled
 
-Some tests (e.g., `TestResolveToken`, `TestAuthEnv`) need auth credentials removed:
+Token-resolution tests (`TestResolveToken`, `TestAuthEnv` in `internal/install`) need auth credentials removed:
 
 ```bash
-docker exec $CONTAINER bash -c '
+docker exec $CONTAINER bash -lc '
   eval "$(credential-helper --eval off)"
   cd /workspace
-  go test ./internal/github -run TestResolveToken -count=1
+  go test ./internal/install -run "TestResolveToken|TestAuthEnv" -count=1
   eval "$(credential-helper --eval on)"
 '
 ```

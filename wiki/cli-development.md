@@ -67,8 +67,8 @@ func TestFeature_BasicCase(t *testing.T) {
     })
 
     result := sb.RunCLI("command", "args...")
-    result.AssertSuccess()
-    result.AssertOutputContains("expected output")
+    result.AssertSuccess(t)
+    result.AssertOutputContains(t, "expected output")
 }
 ```
 

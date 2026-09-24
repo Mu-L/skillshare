@@ -154,7 +154,7 @@ Tailwind utilities are for layout inside these (`flex`, `gap-*`, `min-w-0`, `w-[
 
 - `.ss-wrap` spaces its children with a 28px gap. Do not add `space-y-*` or margins between them.
 - A page that is one child of a wider layout, without `.ss-wrap`, still gets header spacing from `.ss-pgh`.
-- `PageHeader` no longer renders `icon`; do not pass it. Use `backTo` for a sub-page of a nav item, `crumbs` for deeper trails, `mono` when the title is a resource name.
+- `PageHeader` has no icon (the `icon` prop is deprecated); do not pass it. Use `backTo` for a sub-page of a nav item, `crumbs` for deeper trails, `mono` when the title is a resource name.
 - A sub-page reached from a nav item keeps that item lit through `also` in the `Layout.tsx` nav definition (Skills stays active on `/hubs`).
 
 ### Components
