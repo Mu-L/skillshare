@@ -36,6 +36,8 @@ export default function GitSyncPage() {
   const [runError, setRunError] = useState('');
   // A first pull whose history cannot merge; the error note then offers a force pull.
   const [mergeFailed, setMergeFailed] = useState(false);
+  // A push the remote rejected because it has newer commits; the error note then offers a pull.
+  const [pushRejected, setPushRejected] = useState(false);
   const [confirmForce, setConfirmForce] = useState(false);
   const [note, setNote] = useState('');
   const [pulled, setPulled] = useState<PullResponse | null>(null);
@@ -50,12 +52,14 @@ export default function GitSyncPage() {
     setBusy(kind);
     setRunError('');
     setMergeFailed(false);
+    setPushRejected(false);
     setNote('');
     try {
       await work();
     } catch (err) {
       setRunError((err as Error).message);
       setMergeFailed(err instanceof ApiError && err.code === 'merge_failed');
+      setPushRejected(err instanceof ApiError && err.code === 'push_rejected');
     } finally {
       setBusy(null);
       refresh();
@@ -165,6 +169,7 @@ export default function GitSyncPage() {
             <AlertCircle size={16} />
             <span className="flex-1 whitespace-pre-wrap break-words">{runError}</span>
             {mergeFailed && <Button variant="secondary" size="sm" onClick={() => setConfirmForce(true)} disabled={writing}>{t('gitSync.pull.force.button')}</Button>}
+            {pushRejected && <Button variant="secondary" size="sm" onClick={() => pull()} disabled={writing}>{t('gitSync.actions.pull')}</Button>}
             <button type="button" className="ss-ib !h-6 !w-6" aria-label={t('common.close')} onClick={() => setRunError('')}><X size={14} /></button>
           </div>
         )}

@@ -512,6 +512,54 @@ func TestPullWithProgress(t *testing.T) {
 	}
 }
 
+// divergeFromRemote commits remoteFile on another clone and pushes it, then
+// commits localFile in repo without pushing, as two machines syncing would.
+func divergeFromRemote(t *testing.T, remote, repo string, remoteFile, localFile [2]string) {
+	t.Helper()
+	other := cloneRepo(t, remote)
+	for _, c := range []struct {
+		dir  string
+		file [2]string
+	}{{other, remoteFile}, {repo, localFile}} {
+		runGit(t, c.dir, "config", "user.email", "test@test.com")
+		runGit(t, c.dir, "config", "user.name", "test")
+		if err := os.WriteFile(filepath.Join(c.dir, c.file[0]), []byte(c.file[1]), 0644); err != nil {
+			t.Fatal(err)
+		}
+		runGit(t, c.dir, "add", "-A")
+		runGit(t, c.dir, "commit", "-m", "edit "+c.file[0])
+	}
+	runGit(t, other, "push", "origin", "HEAD:main")
+}
+
+func TestPullWithProgress_MergesDivergedHistory(t *testing.T) {
+	remote := createBareRemoteWithBranch(t, "main", map[string]string{"README.md": "# v1\n"})
+	repo := cloneRepo(t, remote)
+	divergeFromRemote(t, remote, repo, [2]string{"remote.md", "r\n"}, [2]string{"local.md", "l\n"})
+
+	if _, err := PullWithProgress(repo, nil, nil); err != nil {
+		t.Fatalf("expected diverged pull to merge, got: %v", err)
+	}
+	for _, f := range []string{"remote.md", "local.md"} {
+		if _, err := os.Stat(filepath.Join(repo, f)); err != nil {
+			t.Errorf("expected %s after merge: %v", f, err)
+		}
+	}
+}
+
+func TestPullWithProgress_ConflictLeavesRepoClean(t *testing.T) {
+	remote := createBareRemoteWithBranch(t, "main", map[string]string{"README.md": "# v1\n"})
+	repo := cloneRepo(t, remote)
+	divergeFromRemote(t, remote, repo, [2]string{"README.md", "# remote\n"}, [2]string{"README.md", "# local\n"})
+
+	if _, err := PullWithProgress(repo, nil, nil); err == nil {
+		t.Fatal("expected a conflicting pull to fail")
+	}
+	if status := runGit(t, repo, "status", "--porcelain"); status != "" {
+		t.Fatalf("expected the merge to be aborted, got status:\n%s", status)
+	}
+}
+
 func TestForcePullWithProgress(t *testing.T) {
 	remote := createBareRemoteWithBranch(t, "main", map[string]string{
 		"README.md": "# v1\n",

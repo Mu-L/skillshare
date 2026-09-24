@@ -436,6 +436,25 @@ func postPull(s *Server, body string) *httptest.ResponseRecorder {
 	return rr
 }
 
+func TestHandlePush_RemoteAheadReportsPushRejected(t *testing.T) {
+	s, src := newTestServer(t)
+	initServerGitRepo(t, src)
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	testutil.RunGit(t, "", "init", "--bare", remote)
+	testutil.RunGit(t, src, "remote", "add", "origin", remote)
+	testutil.RunGit(t, src, "push", "-u", "origin", "HEAD")
+	pushRemoteFile(t, remote, "remote-skill/SKILL.md", "# remote\n")
+	addSkill(t, src, "local-skill")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/push", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+	s.handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusConflict || !strings.Contains(rr.Body.String(), `"push_rejected"`) {
+		t.Fatalf("expected 409 push_rejected, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
 func TestHandlePull_FirstPullConflictCanBeForced(t *testing.T) {
 	s, src := newTestServer(t)
 	initServerGitRepo(t, src)

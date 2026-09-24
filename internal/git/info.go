@@ -248,11 +248,17 @@ func PullWithProgress(repoPath string, extraEnv []string, onProgress func(string
 	}
 	info.BeforeHash = beforeHash
 
-	args := []string{"pull", "--quiet"}
+	// Merge explicitly: without pull.rebase/pull.ff configured, git refuses to
+	// reconcile a branch that both this machine and the remote moved.
+	args := []string{"pull", "--no-rebase", "--ff", "--no-edit", "--quiet"}
 	if onProgress != nil {
-		args = []string{"pull", "--progress"}
+		args[len(args)-1] = "--progress"
 	}
 	if err := runGitWithProgress(repoPath, args, extraEnv, onProgress); err != nil {
+		// A conflicted merge would leave markers that a later commit-all picks up.
+		abort := exec.Command("git", "merge", "--abort")
+		abort.Dir = repoPath
+		abort.Run() // best-effort; fails harmlessly when no merge started
 		return nil, err
 	}
 
@@ -508,10 +514,19 @@ func PushRemoteWithEnv(dir string, extraEnv []string) error {
 
 	err := cmd.Run()
 	if err != nil {
-		return install.WrapGitError(outBuf.String(), err, install.UsedTokenAuth(extraEnv))
+		wrapped := install.WrapGitError(outBuf.String(), err, install.UsedTokenAuth(extraEnv))
+		out := outBuf.String()
+		if strings.Contains(out, "[rejected]") && (strings.Contains(out, "fetch first") || strings.Contains(out, "non-fast-forward")) {
+			return fmt.Errorf("%w: %v", ErrPushRejected, wrapped)
+		}
+		return wrapped
 	}
 	return nil
 }
+
+// ErrPushRejected reports that the remote has commits this repository lacks,
+// so the push needs a pull first.
+var ErrPushRejected = errors.New("remote has commits this machine does not have; pull first, then push")
 
 // PushArgs returns the git push arguments for dir. The first push sets
 // upstream, targeting origin's default branch when it is named differently

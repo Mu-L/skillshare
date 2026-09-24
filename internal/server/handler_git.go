@@ -514,6 +514,12 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := git.PushRemoteWithAuth(src); err != nil {
+		if errors.Is(err, git.ErrPushRejected) {
+			// The UI offers a pull for this code.
+			s.writeOpsLog("push", "error", start, args, err.Error())
+			writeCodedError(w, http.StatusConflict, "push_rejected", err.Error(), nil)
+			return
+		}
 		fail(err)
 		return
 	}
