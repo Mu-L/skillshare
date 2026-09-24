@@ -16,6 +16,8 @@ metadata:
 
 Run isolated E2E tests in devcontainer. $ARGUMENTS specifies runbook name or "new".
 
+Before acting, run `python3 scripts/ai-context.py testing`. The topic is the source of truth for isolation, runbook quality and reporting rules; this skill retains the execution flow and mdproof recipes.
+
 ## Flow
 
 ### Phase 0: Environment Check
@@ -150,7 +152,7 @@ Prompt user (via AskUserQuestion):
    - **Use `jq:` assertions in Expected blocks** for JSON commands — e.g. `- jq: .extras | length == 1`. This is a native mdproof assertion type, NOT a bash `jq` pipe
    - **Use `--json` + `jq -e` in bash** for inline verification within multi-command steps
    - **Config idempotency** — never bare `cat >> config.yaml`; always prepend `sed -i '/^section:/,$d'` to remove existing section first, or use CLI commands (`ss extras init`, `ss extras remove --force`) that handle duplicates
-   - **Check `ai_docs/tests/runbook.json`** for project-level config (build, setup, teardown, step_setup, timeout) that affects all runbooks
+   - **Check `ai_docs/tests/mdproof.json`** for project-level config (build, setup, teardown, step_setup, timeout) that affects all runbooks
    - **Check `.mdproof/lessons-learned.md`** for known assertion patterns and gotchas
 5. **Run the runbook quality checklist** (see below) before executing
 6. Then execute the new runbook (same flow as above)
@@ -258,17 +260,7 @@ mdproof supports 6 assertion types under `Expected:` blocks. Use the most specif
 
 ## Rules
 
-- **Always execute inside devcontainer** — use `docker exec`, never run CLI on host
-- **Always use `ssenv` for HOME isolation** — don't pollute container default HOME
-- **Always create fresh ssenv environments** — never reuse an environment from a previous run; stale config/state causes confusing cascade failures (e.g. duplicate YAML keys, "already exists" errors)
-- **ssenv only isolates `$HOME`** — `/tmp/`, `/var/`, and other system paths are shared across all environments. Runbook steps using `/tmp/` must include `rm -rf` cleanup at the start
-- **Verify every step** — never skip Expected checks
-- **Don't abort on failure** — record FAIL, continue to next step, summarize at end
-- **Ask before cleanup** — Phase 4 must prompt user before deleting ssenv environment
-- **`ss` = `skillshare`** — same binary in runbooks
-- **`~` = ssenv-isolated HOME** — `ssenv enter` auto-sets `HOME`
-- **Use `--init`** — simplify setup by using `ssenv create <name> --init`
-- **`--init` already runs init** — the env is pre-initialized; runbook steps calling `ss init` again will fail unless the step explicitly resets state first
+Apply the `testing` topic. Keep detailed assertion recipes in this workflow consistent with that topic and `.mdproof/lessons-learned.md`.
 
 ## ssenv Quick Reference
 
@@ -400,7 +392,7 @@ This skill (`/cli-e2e-test`) and the `/mdproof` skill are **complementary**, not
 |---------|-----------------|------------|
 | **Scope** | Skillshare project-specific E2E | General-purpose runbook authoring |
 | **Infrastructure** | Devcontainer, ssenv, binary build | None — format and assertions only |
-| **Config** | `ai_docs/tests/runbook.json` (build, setup, teardown) | Assertion types, snapshot, coverage |
+| **Config** | `ai_docs/tests/mdproof.json` (build, setup, teardown) | Assertion types, snapshot, coverage |
 | **Lessons** | Checklist items, CLI flag gotchas | `.mdproof/lessons-learned.md` |
 | **When** | Running or debugging a test | Writing or improving a runbook |
 

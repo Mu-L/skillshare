@@ -18,6 +18,8 @@ Sync website documentation with recent code changes. $ARGUMENTS specifies scope:
 
 **Scope**: This skill only updates `website/docs/`. It does NOT write Go code (use `implement-feature`) or CHANGELOG (use `changelog`).
 
+Before acting, run `python3 scripts/ai-context.py documentation`. That topic is the source of truth for documentation ownership, code cross-validation and verification; this skill retains the update workflow.
+
 ## Workflow
 
 ### Step 1: Detect Changes
@@ -75,7 +77,7 @@ For each affected command:
 
 2. Read the corresponding doc page:
    ```
-   website/docs/commands/<cmd>.md
+   website/docs/reference/commands/<cmd>.md
    ```
 
 3. Compare and fix:
@@ -121,7 +123,7 @@ List all changes made with rationale:
 == Documentation Updates ==
 
 Modified:
-  website/docs/commands/install.md
+  website/docs/reference/commands/install.md
     - Added --into flag documentation
     - Updated install examples
 
@@ -133,9 +135,4 @@ Build: PASS (no broken links)
 
 ## Rules
 
-- **Source of truth is code** — docs must match what the code actually does
-- **Every flag claim must be verified** — grep source before writing docs
-- **No speculative docs** — never document planned but unimplemented features
-- **No code changes** — this skill only touches `website/docs/`, `skills/skillshare/SKILL.md`, and `README.md`
-- **Preserve style** — match existing doc page structure and tone
-- **Built-in skill desc limit** — must stay under 1024 characters
+Apply the `documentation` topic. Keep this adapter scoped to documentation; use the implementation or release workflows for other changes.

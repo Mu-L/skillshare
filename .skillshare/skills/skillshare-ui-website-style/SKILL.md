@@ -16,6 +16,8 @@ metadata:
 
 Enforce the skillshare design system across the two frontends. $ARGUMENTS is the file or area being worked on.
 
+Before acting, run `python3 scripts/ai-context.py frontend`. That topic and the CSS/source files it identifies are the source of truth; this skill retains the component catalog and visual QA checklist.
+
 | Aspect | UI Dashboard (`ui/`) | Website (`website/`) |
 |--------|---------------------|----------------------|
 | Stack | React 19 + Vite + Tailwind CSS v4 | Docusaurus 3 + custom CSS |

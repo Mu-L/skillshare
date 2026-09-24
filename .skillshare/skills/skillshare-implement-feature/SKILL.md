@@ -18,6 +18,8 @@ Implement a feature following TDD workflow. $ARGUMENTS is a spec file path (e.g.
 
 **Scope**: This skill writes Go code and tests. It does NOT update website docs (use `update-docs` after) or CHANGELOG (use `changelog` after).
 
+Before acting, run `python3 scripts/ai-context.py cli-development testing`. Those topics are the source of truth for repository patterns, execution boundaries and verification; this skill retains the TDD orchestration.
+
 ## Workflow
 
 ### Step 1: Understand Requirements
@@ -248,10 +250,4 @@ If the feature does not meet the criteria above, skip this step.
 
 ## Rules
 
-- **Test-first** — always write failing test before implementation
-- **Minimal code** — only write what's needed to pass tests
-- **Follow patterns** — match existing code style in each package
-- **3-strike rule** — if a test fails 3 times after fixes, stop and report what's blocking
-- **No docs** — this skill writes code only; use `update-docs` for documentation
-- **No changelog** — use `changelog` skill for release notes
-- **Spec ambiguity** — ask the user rather than guessing
+Apply `cli-development` and `testing`. Load `documentation` as well when the authorized task includes user-facing documentation.

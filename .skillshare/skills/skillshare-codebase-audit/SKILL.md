@@ -16,13 +16,15 @@ Read-only consistency audit across the skillshare codebase. $ARGUMENTS specifies
 
 **Scope**: This skill only READS and REPORTS. It does not modify any files. Use `implement-feature` to fix issues or `update-docs` to fix documentation gaps.
 
+Before acting, run `python3 scripts/ai-context.py audit`. That topic is the source of truth for audit dimensions, evidence requirements and status meanings; this skill retains the search and report workflow.
+
 ## Audit Dimensions
 
 Run all 4 dimensions in parallel where possible. For each, produce a summary table.
 
 ### 1. CLI Flag Audit
 
-Compare every flag defined in `cmd/skillshare/*.go` against `website/docs/commands/*.md`.
+Compare every flag defined in `cmd/skillshare/*.go` against `website/docs/reference/commands/*.md`.
 
 ```bash
 # Find all flags in Go source
@@ -223,7 +225,4 @@ Report:
 
 ## Rules
 
-- **Read-only** — never modify files, only report
-- **Evidence-based** — every finding must include file path and line number
-- **No false positives** — verify with grep before flagging
-- **Scope $ARGUMENTS** — if user specifies "flags", only run dimension 1; "handlers" for dimension 5, "oplog" for dimension 6, "api" for dimension 7
+Apply the `audit` topic and keep this workflow read-only.
