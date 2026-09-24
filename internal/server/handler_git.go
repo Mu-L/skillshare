@@ -30,6 +30,8 @@ type gitStatusResponse struct {
 	TrackingBranch string   `json:"trackingBranch,omitempty"`
 	// Ahead counts commits no remote-tracking branch has yet, i.e. what a push uploads.
 	Ahead int `json:"ahead"`
+	// Behind counts upstream commits HEAD lacks as of the last fetch, i.e. what a pull brings in.
+	Behind int `json:"behind"`
 	// Root-scope hazards (populated only when scope == "root"): NestedRepos are
 	// subdirectories with their own .git that commit as empty submodules;
 	// ConfigTracked means config.yaml leaked into version control.
@@ -108,6 +110,7 @@ func (s *Server) handleGitStatus(w http.ResponseWriter, r *http.Request) {
 
 	if resp.HasRemote {
 		resp.Ahead = git.AheadCount(src)
+		resp.Behind = git.BehindCount(src)
 	}
 
 	// Root-scope hazards: nested submodule traps and a leaked config.yaml.

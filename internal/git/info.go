@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -255,11 +256,17 @@ func PullWithProgress(repoPath string, extraEnv []string, onProgress func(string
 		args[len(args)-1] = "--progress"
 	}
 	if err := runGitWithProgress(repoPath, args, extraEnv, onProgress); err != nil {
-		// A conflicted merge would leave markers that a later commit-all picks up.
-		abort := exec.Command("git", "merge", "--abort")
-		abort.Dir = repoPath
-		abort.Run() // best-effort; fails harmlessly when no merge started
-		return nil, err
+		conflicts := conflictedFiles(repoPath)
+		if len(conflicts) == 0 || resolveMetadataConflicts(repoPath, conflicts) != nil {
+			// A conflicted merge would leave markers that a later commit-all picks up.
+			abort := exec.Command("git", "merge", "--abort")
+			abort.Dir = repoPath
+			abort.Run() // best-effort; fails harmlessly when no merge started
+			if len(conflicts) > 0 {
+				return nil, fmt.Errorf("pull stopped: this machine and the remote both changed %s; the merge was undone, resolve it with git in %s", strings.Join(conflicts, ", "), repoPath)
+			}
+			return nil, err
+		}
 	}
 
 	afterHash, err := GetCurrentFullHash(repoPath)
@@ -280,6 +287,49 @@ func PullWithProgress(repoPath string, extraEnv []string, onProgress func(string
 	info.Stats = stats
 
 	return info, nil
+}
+
+// conflictedFiles lists the paths an in-progress merge left unmerged.
+func conflictedFiles(dir string) []string {
+	cmd := exec.Command("git", "diff", "--name-only", "--diff-filter=U")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return nil
+	}
+	return strings.Fields(string(out))
+}
+
+// resolveMetadataConflicts concludes a merge whose only conflicts are
+// .metadata.json files, merging them per entry (see install.MergeMetadata).
+// Both machines rewriting the shared file is the common case, not a real clash.
+func resolveMetadataConflicts(dir string, conflicts []string) error {
+	stage := func(n int, path string) []byte {
+		cmd := exec.Command("git", "show", fmt.Sprintf(":%d:%s", n, path))
+		cmd.Dir = dir
+		out, _ := cmd.Output() // a missing stage (file absent on that side) reads as empty
+		return out
+	}
+	for _, path := range conflicts {
+		if filepath.Base(path) != install.MetadataFileName {
+			return fmt.Errorf("%s is not metadata", path)
+		}
+		merged, err := install.MergeMetadata(stage(1, path), stage(2, path), stage(3, path))
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dir, path), merged, 0644); err != nil {
+			return err
+		}
+		add := exec.Command("git", "add", "--", path)
+		add.Dir = dir
+		if err := add.Run(); err != nil {
+			return err
+		}
+	}
+	commit := exec.Command("git", "commit", "--no-edit")
+	commit.Dir = dir
+	return commit.Run()
 }
 
 // PullWithEnv runs git pull and returns update info (quiet mode) with
@@ -561,6 +611,19 @@ func PushArgs(dir string, extraEnv []string) []string {
 // before the first commit.
 func AheadCount(dir string) int {
 	cmd := exec.Command("git", "rev-list", "--count", "HEAD", "--not", "--remotes")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return 0
+	}
+	n, _ := strconv.Atoi(strings.TrimSpace(string(out)))
+	return n
+}
+
+// BehindCount returns how many upstream commits HEAD lacks, as of the last
+// fetch. It returns 0 when unknown, e.g. without an upstream.
+func BehindCount(dir string) int {
+	cmd := exec.Command("git", "rev-list", "--count", "HEAD..@{u}")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {

@@ -1326,6 +1326,8 @@
   "sync.backupLink": "Backups ansehen",
   "gitSync.actions.pushCommits.one": "{count} Commit pushen",
   "gitSync.actions.pushCommits.other": "{count} Commits pushen",
+  "gitSync.actions.pullCommits.one": "{count} Commit pullen",
+  "gitSync.actions.pullCommits.other": "{count} Commits pullen",
   "gitSync.toast.uploaded.one": "{count} Commit gepusht",
   "gitSync.toast.uploaded.other": "{count} Commits gepusht",
   "gitSync.repo.ahead.one": "{count} Commit zum Pushen",

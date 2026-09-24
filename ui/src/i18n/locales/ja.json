@@ -1326,6 +1326,8 @@
   "sync.backupLink": "バックアップを見る",
   "gitSync.actions.pushCommits.one": "{count} 件の Commit を Push",
   "gitSync.actions.pushCommits.other": "{count} 件の Commit を Push",
+  "gitSync.actions.pullCommits.one": "{count} 件の Commit をプル",
+  "gitSync.actions.pullCommits.other": "{count} 件の Commit をプル",
   "gitSync.toast.uploaded.one": "{count} 件の Commit を Push しました",
   "gitSync.toast.uploaded.other": "{count} 件の Commit を Push しました",
   "gitSync.repo.ahead.one": "未 Push の Commit {count} 件",

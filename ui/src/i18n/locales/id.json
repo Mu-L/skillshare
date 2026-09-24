@@ -1326,6 +1326,8 @@
   "sync.backupLink": "Lihat cadangan",
   "gitSync.actions.pushCommits.one": "Push {count} commit",
   "gitSync.actions.pushCommits.other": "Push {count} commit",
+  "gitSync.actions.pullCommits.one": "Tarik {count} commit",
+  "gitSync.actions.pullCommits.other": "Tarik {count} commit",
   "gitSync.toast.uploaded.one": "{count} commit di-push",
   "gitSync.toast.uploaded.other": "{count} commit di-push",
   "gitSync.repo.ahead.one": "{count} commit belum di-push",

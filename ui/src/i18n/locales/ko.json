@@ -1326,6 +1326,8 @@
   "sync.backupLink": "백업 보기",
   "gitSync.actions.pushCommits.one": "Commit {count}개 Push",
   "gitSync.actions.pushCommits.other": "Commit {count}개 Push",
+  "gitSync.actions.pullCommits.one": "Commit {count}개 가져오기",
+  "gitSync.actions.pullCommits.other": "Commit {count}개 가져오기",
   "gitSync.toast.uploaded.one": "Commit {count}개를 Push했습니다",
   "gitSync.toast.uploaded.other": "Commit {count}개를 Push했습니다",
   "gitSync.repo.ahead.one": "Push할 Commit {count}개",

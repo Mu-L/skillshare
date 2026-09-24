@@ -28,7 +28,18 @@ export default function GitSyncPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: status, isPending, error } = useQuery({ queryKey: queryKeys.gitStatus, queryFn: () => api.gitStatus(), staleTime: staleTimes.gitStatus, enabled: !isProjectMode });
-  const branches = useQuery({ queryKey: queryKeys.gitBranches, queryFn: () => api.gitBranches(), staleTime: staleTimes.gitStatus, enabled: !isProjectMode && !!status?.isRepo });
+  // Fetch once when the page opens so status knows what the remote has (status itself never fetches: the sidebar polls it).
+  const branches = useQuery({
+    queryKey: queryKeys.gitBranches,
+    queryFn: async () => {
+      // An offline or unauthenticated fetch must not empty the branch list.
+      const res = await api.gitBranches({ fetch: !!status?.hasRemote }).catch(() => api.gitBranches());
+      void queryClient.invalidateQueries({ queryKey: queryKeys.gitStatus });
+      return res;
+    },
+    staleTime: staleTimes.gitStatus,
+    enabled: !isProjectMode && !!status?.isRepo,
+  });
 
   const [message, setMessage] = useState('');
   const [dryRun, setDryRun] = useState(false);
@@ -142,7 +153,7 @@ export default function GitSyncPage() {
           )}
           <Button variant="secondary" onClick={() => pull()} loading={busy === 'pull'} disabled={writing || !status.hasRemote || status.isDirty} title={!status.hasRemote ? t('gitSync.noRemoteHint') : undefined}>
             {busy !== 'pull' && <ArrowDownToLine size={16} />}
-            {t('gitSync.actions.pull')}
+            {status.behind > 0 ? t(status.behind === 1 ? 'gitSync.actions.pullCommits.one' : 'gitSync.actions.pullCommits.other', { count: status.behind }) : t('gitSync.actions.pull')}
           </Button>
         </span>
       ))}

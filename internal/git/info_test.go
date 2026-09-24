@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"skillshare/internal/install"
 )
 
 // initTestRepo creates a temporary git repo with one commit
@@ -557,6 +559,41 @@ func TestPullWithProgress_ConflictLeavesRepoClean(t *testing.T) {
 	}
 	if status := runGit(t, repo, "status", "--porcelain"); status != "" {
 		t.Fatalf("expected the merge to be aborted, got status:\n%s", status)
+	}
+}
+
+func TestPullWithProgress_ResolvesMetadataConflict(t *testing.T) {
+	meta := func(entries string) string {
+		return `{"version": 1, "entries": {` + entries + `}}` + "\n"
+	}
+	shared := func(at string) string {
+		return `"shared": {"source": "github.com/o/r/shared", "installed_at": "` + at + `"}`
+	}
+	remote := createBareRemoteWithBranch(t, "main", map[string]string{
+		".metadata.json": meta(shared("2026-01-01T00:00:00Z")),
+	})
+	repo := cloneRepo(t, remote)
+	divergeFromRemote(t, remote, repo,
+		[2]string{".metadata.json", meta(shared("2026-03-01T00:00:00Z") + `, "remote-only": {"source": "r"}`)},
+		[2]string{".metadata.json", meta(shared("2026-02-01T00:00:00Z") + `, "local-only": {"source": "l"}`)})
+
+	if _, err := PullWithProgress(repo, nil, nil); err != nil {
+		t.Fatalf("expected a metadata-only conflict to resolve, got: %v", err)
+	}
+	store, err := install.LoadMetadata(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"remote-only", "local-only"} {
+		if !store.Has(name) {
+			t.Errorf("expected entry %q after merge", name)
+		}
+	}
+	if got := store.Get("shared").InstalledAt.Format("2006-01-02"); got != "2026-03-01" {
+		t.Errorf("expected the later installed_at to win, got %s", got)
+	}
+	if status := runGit(t, repo, "status", "--porcelain"); status != "" {
+		t.Fatalf("expected the merge to be committed, got status:\n%s", status)
 	}
 }
 

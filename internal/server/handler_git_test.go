@@ -436,6 +436,31 @@ func postPull(s *Server, body string) *httptest.ResponseRecorder {
 	return rr
 }
 
+func TestHandleGitStatus_ReportsBehindAfterFetch(t *testing.T) {
+	s, src := newTestServer(t)
+	initServerGitRepo(t, src)
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	testutil.RunGit(t, "", "init", "--bare", remote)
+	testutil.RunGit(t, src, "remote", "add", "origin", remote)
+	testutil.RunGit(t, src, "push", "-u", "origin", "HEAD")
+	pushRemoteFile(t, remote, "remote-skill/SKILL.md", "# remote\n")
+	testutil.RunGit(t, src, "fetch")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/git/status", nil)
+	rr := httptest.NewRecorder()
+	s.handler.ServeHTTP(rr, req)
+
+	var resp struct {
+		Behind int `json:"behind"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v (%s)", err, rr.Body.String())
+	}
+	if resp.Behind != 1 {
+		t.Fatalf("expected behind=1, got %d: %s", resp.Behind, rr.Body.String())
+	}
+}
+
 func TestHandlePush_RemoteAheadReportsPushRejected(t *testing.T) {
 	s, src := newTestServer(t)
 	initServerGitRepo(t, src)

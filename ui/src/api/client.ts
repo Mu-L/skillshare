@@ -1205,6 +1205,8 @@ export interface GitStatus {
   trackingBranch?: string;
   /** Commits no remote-tracking branch has yet (what a push uploads); 0 without a remote. */
   ahead: number;
+  /** Upstream commits HEAD lacks as of the last fetch (what a pull brings in); 0 without an upstream. */
+  behind: number;
   // Root-scope hazards (populated only when scope === 'root').
   nestedRepos: string[];
   configTracked: boolean;

@@ -1326,6 +1326,8 @@
   "sync.backupLink": "查看備份",
   "gitSync.actions.pushCommits.one": "Push {count} 個 Commit",
   "gitSync.actions.pushCommits.other": "Push {count} 個 Commit",
+  "gitSync.actions.pullCommits.one": "Pull {count} 個 Commit",
+  "gitSync.actions.pullCommits.other": "Pull {count} 個 Commit",
   "gitSync.toast.uploaded.one": "已 Push {count} 個 Commit",
   "gitSync.toast.uploaded.other": "已 Push {count} 個 Commit",
   "gitSync.repo.ahead.one": "{count} 個 Commit 待 Push",

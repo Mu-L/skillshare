@@ -1326,6 +1326,8 @@
   "sync.backupLink": "مشاهدهٔ پشتیبان‌ها",
   "gitSync.actions.pushCommits.one": "Push کردن {count} commit",
   "gitSync.actions.pushCommits.other": "Push کردن {count} commit",
+  "gitSync.actions.pullCommits.one": "دریافت {count} commit",
+  "gitSync.actions.pullCommits.other": "دریافت {count} commit",
   "gitSync.toast.uploaded.one": "{count} commit Push شد",
   "gitSync.toast.uploaded.other": "{count} commit Push شد",
   "gitSync.repo.ahead.one": "{count} commit برای Push",
