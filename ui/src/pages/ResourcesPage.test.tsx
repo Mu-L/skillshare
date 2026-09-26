@@ -118,6 +118,13 @@ describe('Skills tree view', () => {
     expect(toasts).toEqual([expect.stringMatching(lastEnable ? /^Enabled/ : /^Disabled/)]);
   });
 
+  it('marks a disabled skill with its icon instead of hover text', async () => {
+    mount();
+    expect(within(await row('two')).getByRole('img', { name: 'Disabled' })).toBeInTheDocument();
+    expect(within(await row('one')).queryByRole('img', { name: 'Disabled' })).toBeNull();
+    expect(within(await row('two')).queryByText('Disabled', { ignore: 'title' })).toBeNull();
+  });
+
   it('keeps a plain folder name as is in the detail pane path', async () => {
     vi.mocked(api.listSkills).mockResolvedValue({ resources: [at('notes__2024/deep/x'), at('notes__2024/deep/y')] } as Awaited<ReturnType<typeof api.listSkills>>);
     mount();

@@ -1,6 +1,6 @@
 import { Fragment, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
-import { Bot, ChevronDown, ChevronRight, Folder, FolderOpen, GitBranch, Power, Puzzle } from 'lucide-react';
+import { Bot, ChevronDown, ChevronRight, Folder, FolderOpen, GitBranch, Power, PowerOff, Puzzle } from 'lucide-react';
 import type { Skill } from '../../api/client';
 import { useT } from '../../i18n';
 import { formatTrackedRepoName } from '../../lib/resourceNames';
@@ -111,6 +111,11 @@ export default function SkillTree({ rows, selected, kind, label, onSelect, onTog
             )}
             {folder ? (
               folder.repo ? <GitBranch size={15} className="ic" /> : folder.collapsed ? <Folder size={15} className="ic" /> : <FolderOpen size={15} className="ic" />
+            ) : dim ? (
+              // A disabled item says so with its icon; the hover text is for folder counts only.
+              <PowerOff size={14} className="ic" role="img" aria-label={t('resources.status.disabled')}>
+                <title>{t('resources.status.disabled')}</title>
+              </PowerOff>
             ) : (
               <ItemIcon size={14} className="ic" />
             )}
@@ -127,12 +132,10 @@ export default function SkillTree({ rows, selected, kind, label, onSelect, onTog
             {folder?.repo && <span className="ss-tag shrink-0">tracked</span>}
             <span className="hv">
               {folder && <span>{skills.length}</span>}
-              {off > 0 && (
+              {folder && off > 0 && (
                 <span className="inline-flex items-center gap-1">
                   <Power size={12} />
-                  {folder
-                    ? off === skills.length ? t('resources.tree.allDisabled') : t('resources.tree.someDisabled', { count: off })
-                    : t('resources.status.disabled')}
+                  {off === skills.length ? t('resources.tree.allDisabled') : t('resources.tree.someDisabled', { count: off })}
                 </span>
               )}
             </span>
