@@ -440,6 +440,8 @@ func (s *Server) handleUninstallRepo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	s.skillsStore.RemoveTargetOverrides(repoName)
+
 	if err := s.skillsStore.Save(s.cfg.EffectiveSkillsSource()); err != nil {
 		log.Printf("warning: failed to save metadata after repo uninstall: %v", err)
 	}

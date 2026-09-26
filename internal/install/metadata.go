@@ -29,6 +29,11 @@ type MetadataStore struct {
 	// accepted via --force. Kept outside Entries so it survives entry rewrites
 	// and works for tracked repos that have no entry of their own.
 	AuditAccepted map[string][]string `json:"audit_accepted,omitempty"`
+	// TargetOverrides maps the source-relative path of a skill inside a tracked
+	// repo to the targets set from the dashboard. Stored here so the repo's
+	// SKILL.md stays untouched and the clone stays clean for update. An empty
+	// list means "all targets"; a missing key falls back to the frontmatter.
+	TargetOverrides map[string][]string `json:"target_overrides,omitempty"`
 }
 
 // MetadataEntry merges the old SkillMeta + RegistryEntry fields.
@@ -154,6 +159,9 @@ func (e *MetadataEntry) EffectiveKind() string {
 // Handles direct key matches, full-path matches (group/name), and group membership.
 // Works with both legacy basename keys and full-path keys.
 func (s *MetadataStore) RemoveByNames(names map[string]bool) {
+	for name := range names {
+		s.RemoveTargetOverrides(name)
+	}
 	for _, key := range s.List() {
 		entry := s.Get(key)
 		fullName := KeyToRelPath(key, entry)
