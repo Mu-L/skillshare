@@ -706,6 +706,11 @@ func (s *Server) handlePull(w http.ResponseWriter, r *http.Request) {
 			writeCodedError(w, http.StatusConflict, "merge_failed", "git pull failed: "+err.Error(), nil)
 			return
 		}
+		if strings.Contains(err.Error(), "Permission denied") {
+			// Usually files a sudo run left owned by root; the UI shows how to take them back.
+			writeCodedError(w, http.StatusInternalServerError, "permission_denied", "git pull failed: "+err.Error(), map[string]string{"path": src})
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "git pull failed: "+err.Error())
 		return
 	}

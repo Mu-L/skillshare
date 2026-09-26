@@ -433,6 +433,7 @@
   "gitSync.projectMode.title": "Git 同期はプロジェクトモードでは使用できません",
   "gitSync.pull.alreadyUpToDate": "すでに最新です",
   "gitSync.pull.blocked": "未コミットの変更があるとプルできません。先にコミットするか、ターミナルで stash してください。",
+  "gitSync.pull.permission.hint": "このフォルダ内の一部のファイルがあなたの所有ではありません。多くの場合、sudo で skillshare を実行したことが原因です。ターミナルで次のコマンドを実行してから、もう一度 Pull してください：",
   "gitSync.pull.hint": "Pull は最新の Commit を取得し、変更をターゲットに同期します。",
   "gitSync.repo.noRemote": "未設定",
   "gitSync.repo.title": "リポジトリ",

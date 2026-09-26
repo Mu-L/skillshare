@@ -433,6 +433,7 @@
   "gitSync.projectMode.title": "Sinkronisasi Git tidak tersedia dalam mode proyek",
   "gitSync.pull.alreadyUpToDate": "Sudah yang terbaru",
   "gitSync.pull.blocked": "Tarik diblokir selama ada perubahan yang belum di-commit. Commit dulu, atau stash di terminal.",
+  "gitSync.pull.permission.hint": "Beberapa file di folder ini bukan milik Anda, biasanya karena skillshare dijalankan dengan sudo. Jalankan perintah ini di terminal, lalu pull lagi:",
   "gitSync.pull.hint": "Pull mengambil commit terbaru, lalu menyinkronkan perubahannya ke target.",
   "gitSync.repo.noRemote": "Belum diatur",
   "gitSync.repo.title": "Repositori",

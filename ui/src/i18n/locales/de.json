@@ -433,6 +433,7 @@
   "gitSync.projectMode.title": "Git-Sync ist im Projektmodus nicht verfügbar",
   "gitSync.pull.alreadyUpToDate": "Bereits aktuell",
   "gitSync.pull.blocked": "Pullen ist gesperrt, solange es offene Änderungen gibt. Committe sie zuerst oder stashe sie im Terminal.",
+  "gitSync.pull.permission.hint": "Einige Dateien in diesem Ordner gehören nicht dir, meist weil skillshare mit sudo ausgeführt wurde. Führe dies in einem Terminal aus und pulle dann erneut:",
   "gitSync.pull.hint": "Pull holt die neuesten Commits und synchronisiert die Änderungen dann in deine Ziele.",
   "gitSync.repo.noRemote": "Nicht gesetzt",
   "gitSync.repo.title": "Repository",

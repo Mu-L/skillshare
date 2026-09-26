@@ -433,6 +433,7 @@
   "gitSync.projectMode.title": "Git Sync n'est pas disponible en mode projet",
   "gitSync.pull.alreadyUpToDate": "Déjà à jour",
   "gitSync.pull.blocked": "Impossible de tirer tant qu'il reste des changements non commités. Commitez-les d'abord ou utilisez stash dans un terminal.",
+  "gitSync.pull.permission.hint": "Certains fichiers de ce dossier ne vous appartiennent pas, généralement parce que skillshare a été lancé avec sudo. Exécutez ceci dans un terminal, puis relancez le pull :",
   "gitSync.pull.hint": "Pull récupère les derniers commits, puis synchronise les changements vers vos cibles.",
   "gitSync.repo.noRemote": "Non défini",
   "gitSync.repo.title": "Dépôt",

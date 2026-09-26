@@ -433,6 +433,7 @@
   "gitSync.projectMode.title": "همگام‌سازی Git در حالت پروژه در دسترس نیست",
   "gitSync.pull.alreadyUpToDate": "از قبل به‌روز است",
   "gitSync.pull.blocked": "تا وقتی تغییرات کامیت‌نشده وجود دارد، دریافت ممکن نیست. ابتدا کامیت کنید یا در ترمینال stash کنید.",
+  "gitSync.pull.permission.hint": "برخی از فایل‌های این پوشه متعلق به شما نیستند؛ معمولاً چون skillshare با sudo اجرا شده است. این دستور را در ترمینال اجرا کنید و سپس دوباره pull کنید:",
   "gitSync.pull.hint": "Pull آخرین commitها را می‌گیرد و سپس تغییرات را با مقصدها همگام می‌کند.",
   "gitSync.repo.noRemote": "تنظیم نشده",
   "gitSync.repo.title": "مخزن",

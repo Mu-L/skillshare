@@ -433,6 +433,7 @@
   "gitSync.projectMode.title": "Git 동기화는 프로젝트 모드에서 사용할 수 없습니다",
   "gitSync.pull.alreadyUpToDate": "이미 최신 상태",
   "gitSync.pull.blocked": "커밋하지 않은 변경 사항이 있으면 가져올 수 없습니다. 먼저 커밋하거나 터미널에서 stash하세요.",
+  "gitSync.pull.permission.hint": "이 폴더의 일부 파일이 현재 사용자 소유가 아닙니다. 보통 sudo로 skillshare를 실행해서 생깁니다. 터미널에서 아래 명령을 실행한 뒤 다시 Pull 하세요:",
   "gitSync.pull.hint": "Pull은 최신 Commit을 가져온 뒤 변경 사항을 대상에 동기화합니다.",
   "gitSync.repo.noRemote": "설정 안 됨",
   "gitSync.repo.title": "저장소",

@@ -290,6 +290,7 @@
   "gitSync.projectMode.title": "Git Sync is not available in project mode",
   "gitSync.pull.alreadyUpToDate": "Already up to date",
   "gitSync.pull.blocked": "Pull is blocked while there are uncommitted changes. Commit them first, or stash them in a terminal.",
+  "gitSync.pull.permission.hint": "Some files in this folder aren't owned by you, usually because skillshare was run with sudo. Run this in a terminal, then pull again:",
   "gitSync.pull.hint": "Pull gets the latest commits, then syncs what changed to your targets.",
   "gitSync.repo.noRemote": "Not set",
   "gitSync.repo.title": "Repository",

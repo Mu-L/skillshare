@@ -562,6 +562,64 @@ func TestPullWithProgress_ConflictLeavesRepoClean(t *testing.T) {
 	}
 }
 
+// blockedPull pushes a remote commit that edits a.txt, adds added.txt, and
+// edits sub/b.txt, then makes sub/ read-only so the pull fails partway: git
+// writes a.txt and added.txt before it cannot unlink sub/b.txt.
+func blockedPull(t *testing.T) string {
+	t.Helper()
+	if os.Getuid() == 0 {
+		t.Skip("test requires non-root user")
+	}
+	remote := createBareRemoteWithBranch(t, "main", map[string]string{
+		"a.txt": "a1\n", "sub/b.txt": "b1\n",
+	})
+	repo := cloneRepo(t, remote)
+	other := cloneRepo(t, remote)
+	runGit(t, other, "config", "user.email", "test@test.com")
+	runGit(t, other, "config", "user.name", "test")
+	for name, body := range map[string]string{"a.txt": "a2\n", "added.txt": "new\n", "sub/b.txt": "b2\n"} {
+		if err := os.WriteFile(filepath.Join(other, name), []byte(body), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runGit(t, other, "add", "-A")
+	runGit(t, other, "commit", "-m", "remote edits")
+	runGit(t, other, "push", "origin", "HEAD:main")
+
+	sub := filepath.Join(repo, "sub")
+	if err := os.Chmod(sub, 0555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(sub, 0755) })
+	return repo
+}
+
+func TestPullWithProgress_FailedCheckoutLeavesNoResidue(t *testing.T) {
+	repo := blockedPull(t)
+
+	if _, err := PullWithProgress(repo, nil, nil); err == nil {
+		t.Fatal("expected the pull to fail on the read-only directory")
+	}
+	if status := runGit(t, repo, "status", "--porcelain", "-uall"); status != "" {
+		t.Fatalf("expected the partial checkout to be undone, got status:\n%s", status)
+	}
+}
+
+func TestPullWithProgress_FailedCheckoutKeepsLocalEdits(t *testing.T) {
+	repo := blockedPull(t)
+	notes := filepath.Join(repo, "notes.txt")
+	if err := os.WriteFile(notes, []byte("mine\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := PullWithProgress(repo, nil, nil); err == nil {
+		t.Fatal("expected the pull to fail on the read-only directory")
+	}
+	if got, err := os.ReadFile(notes); err != nil || string(got) != "mine\n" {
+		t.Fatalf("expected the local edit to survive, got %q (%v)", got, err)
+	}
+}
+
 func TestPullWithProgress_ResolvesMetadataConflict(t *testing.T) {
 	meta := func(entries string) string {
 		return `{"version": 1, "entries": {` + entries + `}}` + "\n"

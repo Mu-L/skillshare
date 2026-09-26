@@ -433,6 +433,7 @@
   "gitSync.projectMode.title": "Sincronização Git não está disponível no modo projeto",
   "gitSync.pull.alreadyUpToDate": "Já está atualizado",
   "gitSync.pull.blocked": "Não é possível baixar com alterações sem commit. Faça commit antes ou use stash no terminal.",
+  "gitSync.pull.permission.hint": "Alguns arquivos desta pasta não pertencem a você, geralmente porque o skillshare foi executado com sudo. Execute isto em um terminal e faça o pull de novo:",
   "gitSync.pull.hint": "Pull busca os commits mais recentes e depois sincroniza as mudanças com seus destinos.",
   "gitSync.repo.noRemote": "Não definido",
   "gitSync.repo.title": "Repositório",

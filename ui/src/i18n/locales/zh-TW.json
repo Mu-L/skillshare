@@ -414,6 +414,7 @@
   "gitSync.projectMode.title": "Git 同步在專案模式下不可用",
   "gitSync.pull.alreadyUpToDate": "已是最新版本",
   "gitSync.pull.blocked": "有尚未 Commit 的變更時無法 Pull。請先 Commit，或在終端機中 stash。",
+  "gitSync.pull.permission.hint": "這個資料夾裡有些檔案不屬於你，通常是之前用 sudo 執行 skillshare 留下的。請在終端機執行下面的指令，然後再 Pull 一次：",
   "gitSync.pull.hint": "Pull 會取得最新的 Commit，然後將變更同步到目標。",
   "gitSync.repo.noRemote": "未設定",
   "gitSync.repo.title": "儲存庫",

@@ -4,6 +4,7 @@ import { AlertCircle, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, CircleChe
 import { api, ApiError, type GitStatus, type PullResponse } from '../api/client';
 import Button from '../components/Button';
 import ConfirmDialog from '../components/ConfirmDialog';
+import CopyButton from '../components/CopyButton';
 import DialogShell from '../components/DialogShell';
 import EmptyState from '../components/EmptyState';
 import { Input } from '../components/Input';
@@ -20,6 +21,8 @@ import { queryKeys, staleTimes } from '../lib/queryKeys';
 const SCOPES = ['skills', 'agents', 'extras', 'root'];
 const TONE = { New: 'ok', Changed: 'warn', Renamed: 'warn', Deleted: 'bad' } as const;
 const PULLED_SHOWN = 5;
+// Gives the current user back files a sudo run left owned by root.
+const chownCommand = (path: string) => `sudo chown -R "$(id -un)" '${path.replaceAll("'", `'\\''`)}'`;
 type Setup = { kind: 'init' | 'scope' | 'remote'; scope: string };
 
 export default function GitSyncPage() {
@@ -49,6 +52,8 @@ export default function GitSyncPage() {
   const [mergeFailed, setMergeFailed] = useState(false);
   // A push the remote rejected because it has newer commits; the error note then offers a pull.
   const [pushRejected, setPushRejected] = useState(false);
+  // The source folder a pull could not write into; set with a permission error.
+  const [lockedPath, setLockedPath] = useState('');
   const [confirmForce, setConfirmForce] = useState(false);
   const [note, setNote] = useState('');
   const [pulled, setPulled] = useState<PullResponse | null>(null);
@@ -64,6 +69,7 @@ export default function GitSyncPage() {
     setRunError('');
     setMergeFailed(false);
     setPushRejected(false);
+    setLockedPath('');
     setNote('');
     try {
       await work();
@@ -71,6 +77,7 @@ export default function GitSyncPage() {
       setRunError((err as Error).message);
       setMergeFailed(err instanceof ApiError && err.code === 'merge_failed');
       setPushRejected(err instanceof ApiError && err.code === 'push_rejected');
+      setLockedPath(err instanceof ApiError && err.code === 'permission_denied' ? String(err.params?.path ?? '') : '');
     } finally {
       setBusy(null);
       refresh();
@@ -178,7 +185,18 @@ export default function GitSyncPage() {
         {runError && (
           <div className="ss-note bad">
             <AlertCircle size={16} />
-            <span className="flex-1 whitespace-pre-wrap break-words">{runError}</span>
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <span className="whitespace-pre-wrap break-words">{runError}</span>
+              {lockedPath && (
+                <>
+                  <span>{t('gitSync.pull.permission.hint')}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="min-w-0 break-all font-mono text-[12.5px]">{chownCommand(lockedPath)}</span>
+                    <CopyButton value={chownCommand(lockedPath)} size={14} title={t('common.copy')} copiedLabel="" />
+                  </span>
+                </>
+              )}
+            </div>
             {mergeFailed && <Button variant="secondary" size="sm" onClick={() => setConfirmForce(true)} disabled={writing}>{t('gitSync.pull.force.button')}</Button>}
             {pushRejected && <Button variant="secondary" size="sm" onClick={() => pull()} disabled={writing}>{t('gitSync.actions.pull')}</Button>}
             <button type="button" className="ss-ib !h-6 !w-6" aria-label={t('common.close')} onClick={() => setRunError('')}><X size={14} /></button>
