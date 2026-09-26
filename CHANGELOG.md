@@ -6,12 +6,13 @@
 
 #### Dashboard
 
-- **Turn a whole folder or tracked repo on or off** — the **tree** view on the Skills and Agents pages now shows the folders on the left and what you selected on the right. Selecting a folder or tracked repo gives one switch that enables or disables everything inside it, and each skill is listed with its own switch. Cmd/Ctrl-click adds to the selection and Shift-click selects a range, so the same switch works on any set of skills. The divider between the two sides can be dragged. Refs: #295.
+- **Turn a whole folder or tracked repo on or off** — the **tree** view on the Skills and Agents pages now shows the folders on the left and what you selected on the right. Selecting a folder or tracked repo gives one switch that enables or disables everything inside it, and each skill is listed with its own switch. Cmd/Ctrl-click adds to the selection and Shift-click selects a range, so the same switch works on any set of skills. A disabled skill is marked with a power-off icon in place of its usual one. The divider between the two sides can be dragged. Refs: #295.
 - **Targets for skills in tracked repos** — setting targets on a tracked repo, one of its subfolders or a single skill in it used to be refused. It now works, and the setting is kept outside the cloned repo, so the repo stays clean and `skillshare update` keeps it. Refs: #295.
-- **Filter and group by folder** — the list and cards views have a **Folder** filter next to **Targets**, and **Group** has a **Folder** option, so skills installed into a folder can be seen one folder at a time or side by side. A tracked repo counts as one folder, and skills at the top of the source are grouped under **Root**.
+- **Filter and group by folder** — the list and cards views have a **Folder** filter, and grouping has a **Folder** option, so skills installed into a folder can be seen one folder at a time or side by side. A tracked repo counts as one folder, and skills at the top of the source are grouped under **Root**.
   ```bash
   skillshare install ~/my-skill --into frontend
   ```
+- **A shorter toolbar on the Skills and Agents pages** — the Source, Status, Target and Folder filters are now chips that show only their name until set; a set filter shows its value and a button to clear it. Grouping and sorting share one menu, and expand all / collapse all in the tree view is one button.
 
 ### Bug Fixes
 
