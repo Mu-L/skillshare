@@ -56,11 +56,16 @@ func ValidateExtraFlatten(flatten bool, mode string) error {
 	return nil
 }
 
-// ValidateExtraNameUnique checks that the name doesn't duplicate an existing extra.
+// ValidateExtraNameUnique checks that the name doesn't duplicate an existing
+// extra. Names differing only in case count as duplicates: the name is a
+// directory name, and macOS and Windows file systems ignore case.
 func ValidateExtraNameUnique(name string, existing []ExtraConfig) error {
 	for _, e := range existing {
 		if e.Name == name {
 			return fmt.Errorf("extra name %q already exists", name)
+		}
+		if strings.EqualFold(e.Name, name) {
+			return fmt.Errorf("extra name %q is too close to %q: names cannot differ only in case", name, e.Name)
 		}
 	}
 	return nil

@@ -12,7 +12,7 @@ import { useToast } from '../Toast';
 import { useT } from '../../i18n';
 import { shortenHome } from '../../lib/paths';
 import { queryKeys } from '../../lib/queryKeys';
-import { isImportLine, sharedNameProblem } from './instructionsView';
+import { isImportLine, sharedNameProblem, takenName } from './instructionsView';
 
 /** Creates a shared instruction file, from content or by moving a target's current file into it. */
 export default function NewSharedDialog({ targets, onClose, onCreated }: {
@@ -29,7 +29,8 @@ export default function NewSharedDialog({ targets, onClose, onCreated }: {
   const title = t('instructions.shared.newTitle');
   // Extra names are one namespace: a folder extra takes the name too.
   const extras = useQuery({ queryKey: queryKeys.extras, queryFn: () => api.listExtras() });
-  const problem = sharedNameProblem(name, (extras.data?.extras ?? []).map((e) => e.name));
+  const names = (extras.data?.extras ?? []).map((e) => e.name);
+  const problem = sharedNameProblem(name, names);
   // A target already on a shared file has nothing of its own to move in.
   const sources = targets.filter((tg) => tg.exists && !tg.same_as && tg.assigned.length === 0);
 
@@ -61,7 +62,7 @@ export default function NewSharedDialog({ targets, onClose, onCreated }: {
             <span className={`ss-inp ${problem ? 'err' : ''}`}>
               <input id="shared-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="personal" disabled={saving} />
             </span>
-            <span className={`hp ${problem ? 'text-bad' : ''}`}>{problem === 'invalid' ? t('instructions.shared.nameInvalid') : problem === 'taken' ? t('instructions.convert.nameTaken', { name: name.trim() }) : t('instructions.shared.nameHint')}</span>
+            <span className={`hp ${problem ? 'text-bad' : ''}`}>{problem === 'invalid' ? t('instructions.shared.nameInvalid') : problem === 'taken' ? t('instructions.convert.nameTaken', { name: takenName(name, names) ?? name.trim() }) : t('instructions.shared.nameHint')}</span>
           </div>
           <div className="ss-fld">
             <span className="text-[13px] font-semibold">{t('instructions.shared.startFrom')}</span>

@@ -7,7 +7,14 @@ export function sharedNameProblem(name: string, taken: string[]): 'invalid' | 't
   const n = name.trim();
   if (!n) return null;
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(n)) return 'invalid';
-  return taken.includes(n) ? 'taken' : null;
+  // Names are folder names; macOS and Windows ignore case.
+  return takenName(n, taken) ? 'taken' : null;
+}
+
+/** The existing name that a new name collides with, ignoring case. */
+export function takenName(name: string, taken: string[]): string | undefined {
+  const n = name.trim().toLowerCase();
+  return taken.find((x) => x.toLowerCase() === n);
 }
 
 /** Why a target's instruction file path would be refused, checked as the user types. Same rule as the server. */

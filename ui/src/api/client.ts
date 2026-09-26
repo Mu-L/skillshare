@@ -372,10 +372,10 @@ export const api = {
   saveProject: (project: ProjectInput) => apiFetch<{ success: boolean; root: string }>('/projects', { method: 'PUT', body: JSON.stringify(project) }),
   removeProject: (root: string) => apiFetch<{ success: boolean }>(`/projects?root=${encodeURIComponent(root)}`, { method: 'DELETE' }),
   convertProject: (root: string) => apiFetch<{ success: boolean; root: string }>('/projects/convert', { method: 'POST', body: JSON.stringify({ root }) }),
-  addTarget: (name: string, path: string, agentPath?: string) =>
+  addTarget: (name: string, path: string, agentPath?: string, instructions?: TargetInstructionsSetup) =>
     apiFetch<{ success: boolean }>('/targets', {
       method: 'POST',
-      body: JSON.stringify({ name, path, ...(agentPath && { agentPath }) }),
+      body: JSON.stringify({ name, path, ...(agentPath && { agentPath }), ...(instructions && { instructions }) }),
     }),
   /** Adds another config folder of a built-in Agent, such as a second account. */
   addAgentConfigDir: (name: string, agent: string, configDir: string) =>

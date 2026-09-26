@@ -11,7 +11,7 @@ import { useToast } from '../Toast';
 import { useT } from '../../i18n';
 import { shortenHome } from '../../lib/paths';
 import { queryKeys } from '../../lib/queryKeys';
-import { importLines, lineDiff, refreshInstructions, sharedNameProblem } from './instructionsView';
+import { importLines, lineDiff, refreshInstructions, sharedNameProblem, takenName } from './instructionsView';
 
 const METHODS: ConvertMethod[] = ['import', 'rename', 'copy'];
 // The share picker's choice for a new shared file; real names are extras names.
@@ -39,7 +39,8 @@ export default function ConvertDialog({ data, onClose }: { data: TargetInstructi
   const choice = picked ?? available[0]?.name ?? NEW;
   const shareReady = sharing && Boolean(sharedList.data);
   const shareInto = shareReady && choice !== NEW ? choice : undefined;
-  const nameProblem = choice === NEW ? sharedNameProblem(shareName, (extras.data?.extras ?? []).map((e) => e.name)) : null;
+  const names = (extras.data?.extras ?? []).map((e) => e.name);
+  const nameProblem = choice === NEW ? sharedNameProblem(shareName, names) : null;
   const shareAs = shareReady && choice === NEW && !nameProblem ? shareName.trim() : undefined;
   const body = { method, keep_tool_lines: keep, ...(shareAs && { share_as: shareAs }), ...(shareInto && { share_into: shareInto }) };
   const shareMissing = sharing && !shareAs && !shareInto;
@@ -120,7 +121,7 @@ export default function ConvertDialog({ data, onClose }: { data: TargetInstructi
                         <span className={`ss-inp ${nameProblem ? 'err' : ''}`}>
                           <input value={shareName} onChange={(e) => setShareName(e.target.value)} aria-label={t('instructions.shared.name')} disabled={busy} autoFocus />
                         </span>
-                        <span className={`hp ${nameProblem ? 'text-bad' : ''}`}>{nameProblem === 'invalid' ? t('instructions.shared.nameInvalid') : nameProblem === 'taken' ? t('instructions.convert.nameTaken', { name: shareName.trim() }) : t('instructions.convert.shareHint')}</span>
+                        <span className={`hp ${nameProblem ? 'text-bad' : ''}`}>{nameProblem === 'invalid' ? t('instructions.shared.nameInvalid') : nameProblem === 'taken' ? t('instructions.convert.nameTaken', { name: takenName(shareName, names) ?? shareName.trim() }) : t('instructions.convert.shareHint')}</span>
                       </>
                     ) : (
                       <span className="hp">{t('instructions.convert.shareIntoHint', { name: choice, file })}</span>

@@ -59,6 +59,10 @@ describe('sharedNameProblem', () => {
     expect(sharedNameProblem('team', ['rules', 'team'])).toBe('taken');
   });
 
+  it('treats a name that differs only in case as taken', () => {
+    expect(sharedNameProblem('Team', ['team'])).toBe('taken');
+  });
+
   it('accepts a new valid name', () => {
     expect(sharedNameProblem('work-2', ['team'])).toBeNull();
   });
