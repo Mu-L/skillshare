@@ -99,6 +99,16 @@ svg.lucide { flex: none; stroke-width: var(--isw); }
 .ss-inp:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
 .ss-inp.err { border-color: var(--bad); }
 .ss-inp .k { margin-left: auto; font: 500 11px/1 var(--fm); color: var(--ink-3); padding: 3px 5px; border: 1px solid var(--line); border-radius: 4px; }
+/* Filter chip (Select `chip`): dashed while unset, filled with a clear button once set. */
+.ss-chip { display: inline-flex; align-items: center; gap: 2px; height: 30px; max-width: 200px; padding: 0 10px 0 12px; border: var(--bw) dashed var(--line-2); border-radius: 999px; color: var(--ink-2); font-size: 13px; cursor: pointer; transition: background-color .12s, color .12s; }
+.ss-chip:hover, .ss-chip.open { background: var(--sel); color: var(--sel-ink); }
+.ss-chip:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ss-chip>button { cursor: pointer; height: 100%; }
+.ss-chip.set { border-style: solid; border-color: var(--pri); background: var(--pri); color: var(--on-pri); padding-right: 4px; }
+.ss-chip.set .p { opacity: .7; }
+.ss-chip .x { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 999px; }
+.ss-chip .x:hover { background: color-mix(in srgb, var(--on-pri) 20%, transparent); }
+:root[data-theme="playful"] .ss-chip.set { border-color: var(--line); box-shadow: var(--sh-btn); }
 .ss-fld { display: flex; flex-direction: column; gap: 6px; }
 .ss-fld label { font-weight: 600; font-size: 13px; }
 .ss-fld .hp { font-size: 12.5px; color: var(--ink-3); }

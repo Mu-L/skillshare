@@ -844,6 +844,8 @@
   "resources.toolbar.folder": "폴더",
   "resources.toolbar.group": "그룹",
   "resources.toolbar.sort": "정렬",
+  "resources.toolbar.clearFilter": "{name} 지우기",
+  "resources.toolbar.arrange": "그룹 및 정렬",
   "resources.group.source": "소스",
   "resources.group.folder": "폴더",
   "resources.group.none": "없음",

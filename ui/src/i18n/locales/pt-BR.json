@@ -844,6 +844,8 @@
   "resources.toolbar.folder": "Pasta",
   "resources.toolbar.group": "Agrupar",
   "resources.toolbar.sort": "Ordem",
+  "resources.toolbar.clearFilter": "Limpar {name}",
+  "resources.toolbar.arrange": "Agrupar e ordenar",
   "resources.group.source": "Origem",
   "resources.group.folder": "Pasta",
   "resources.group.none": "Nenhum",

@@ -59,6 +59,7 @@ import type { SelectMode } from '../components/resources/SkillTree';
 import TreeDetailPane from '../components/resources/TreeDetailPane';
 import type { PaneSubject } from '../components/resources/TreeDetailPane';
 import TreeSplit from '../components/resources/TreeSplit';
+import ArrangeMenu from '../components/resources/ArrangeMenu';
 import { buildTree, findFolder, flattenTree, folderPaths, isRepoRoot, rangeIds, selectedSkills, skillsUnder, summarize } from '../components/resources/tree';
 import type { TargetSummary, TreeRow } from '../components/resources/tree';
 import { useToast } from '../components/Toast';
@@ -488,6 +489,8 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     });
   };
   const resetting = <T,>(set: (v: T) => void) => (v: T) => { set(v); setLimit(STEP); };
+  /** Toolbar filters are chips: 'all' is unset, and the chip's clear button goes back to it. */
+  const chipOf = (key: string) => ({ clearValue: 'all', clearLabel: t('resources.toolbar.clearFilter', { name: t(key) }) });
   const clearFilters = () => { setSearch(''); setSource('all'); setStatus('all'); setFolder(null); setLimit(STEP); };
 
   const changeView = (v: ViewType) => {
@@ -825,10 +828,10 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
               />
               {!search && <span className="k">/</span>}
             </label>
-            <span className="flex-1" />
             <Select
-              className="shrink-0"
+              className="shrink-0 ml-2"
               prefix={t('resources.toolbar.source')}
+              chip={chipOf('resources.toolbar.source')}
               value={source}
               onChange={(v) => resetting(setSource)(v as SourceFilter)}
               options={(['all', ...SOURCE_ORDER] as SourceFilter[]).map((v) => ({ value: v, label: SOURCE_LABEL[v] }))}
@@ -836,6 +839,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
             <Select
               className="shrink-0"
               prefix={t('resources.toolbar.status')}
+              chip={chipOf('resources.toolbar.status')}
               value={status}
               onChange={(v) => resetting(setStatus)(v as StatusFilter)}
               options={(['all', 'enabled', 'disabled'] as StatusFilter[]).map((v) => ({ value: v, label: t(`resources.status.${v}`) }))}
@@ -844,6 +848,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
               <Select
                 className="shrink-0"
                 prefix={t('resources.toolbar.target')}
+                chip={chipOf('resources.toolbar.target')}
                 value={activeTarget}
                 onChange={resetting(setTarget)}
                 options={[
@@ -856,9 +861,9 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
             )}
             {folderIndex.size > 1 && (
               <Select
-                // Capped so a long folder path truncates instead of wrapping the toolbar.
-                className="shrink-0 max-w-[160px]"
+                className="shrink-0"
                 prefix={t('resources.toolbar.folder')}
+                chip={chipOf('resources.toolbar.folder')}
                 // Folder values carry a '/' prefix: '' (the root) and a folder named "all" stay distinct from All.
                 value={activeFolder === null ? 'all' : `/${activeFolder}`}
                 onChange={(v) => resetting(setFolder)(v === 'all' ? null : v.slice(1))}
@@ -870,39 +875,46 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
                 ]}
               />
             )}
-            {view === 'tree' ? (
-              tree.children.size > 0 && <div className="ss-seg ic !flex-nowrap shrink-0" role="group">
-                <button type="button" title={t('resources.folder.expandAll')} aria-label={t('resources.folder.expandAll')} onClick={() => updateCollapsed(new Set())}>
-                  <ChevronsUpDown size={16} />
+            <span className="flex-1" />
+            {view === 'tree' && tree.children.size > 0 && (() => {
+              // One button: collapses everything once all is open, otherwise opens everything.
+              const paths = folderPaths(tree);
+              const allOpen = !paths.some((p) => collapsed.has(p));
+              const label = t(allOpen ? 'resources.folder.collapseAll' : 'resources.folder.expandAll');
+              return (
+                <button
+                  type="button"
+                  className="ss-ib !w-[34px] !h-[34px] shrink-0"
+                  title={label}
+                  aria-label={label}
+                  onClick={() => updateCollapsed(allOpen ? new Set(paths) : new Set())}
+                >
+                  {allOpen ? <ChevronsDownUp size={16} /> : <ChevronsUpDown size={16} />}
                 </button>
-                <button type="button" title={t('resources.folder.collapseAll')} aria-label={t('resources.folder.collapseAll')} onClick={() => updateCollapsed(new Set(folderPaths(tree)))}>
-                  <ChevronsDownUp size={16} />
-                </button>
-              </div>
-            ) : (
-              <Select
-                className="shrink-0"
-                prefix={t('resources.toolbar.group')}
-                value={group}
-                onChange={(v) => setGroup(v as GroupBy)}
-                options={[
+              );
+            })()}
+            <ArrangeMenu
+              group={view === 'tree' ? undefined : {
+                label: t('resources.toolbar.group'),
+                value: group,
+                onChange: (v) => setGroup(v as GroupBy),
+                options: [
                   { value: 'source', label: t('resources.group.source') },
                   { value: 'folder', label: t('resources.group.folder') },
                   { value: 'none', label: t('resources.group.none') },
-                ]}
-              />
-            )}
-            <Select
-              className="shrink-0"
-              prefix={t('resources.toolbar.sort')}
-              value={sort}
-              onChange={(v) => setSort(v as SortType)}
-              options={[
-                { value: 'name-asc', label: t('resources.sort.nameAsc') },
-                { value: 'name-desc', label: t('resources.sort.nameDesc') },
-                { value: 'newest', label: t('resources.sort.newestFirst') },
-                { value: 'oldest', label: t('resources.sort.oldestFirst') },
-              ]}
+                ],
+              }}
+              sort={{
+                label: t('resources.toolbar.sort'),
+                value: sort,
+                onChange: (v) => setSort(v as SortType),
+                options: [
+                  { value: 'name-asc', label: t('resources.sort.nameAsc') },
+                  { value: 'name-desc', label: t('resources.sort.nameDesc') },
+                  { value: 'newest', label: t('resources.sort.newestFirst') },
+                  { value: 'oldest', label: t('resources.sort.oldestFirst') },
+                ],
+              }}
             />
             <SegmentedControl
               className="ic !flex-nowrap shrink-0"

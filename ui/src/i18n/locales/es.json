@@ -844,6 +844,8 @@
   "resources.toolbar.folder": "Carpeta",
   "resources.toolbar.group": "Agrupar",
   "resources.toolbar.sort": "Orden",
+  "resources.toolbar.clearFilter": "Quitar {name}",
+  "resources.toolbar.arrange": "Agrupar y ordenar",
   "resources.group.source": "Origen",
   "resources.group.folder": "Carpeta",
   "resources.group.none": "Ninguno",

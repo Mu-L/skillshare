@@ -844,6 +844,8 @@
   "resources.toolbar.folder": "Dossier",
   "resources.toolbar.group": "Grouper",
   "resources.toolbar.sort": "Tri",
+  "resources.toolbar.clearFilter": "Effacer {name}",
+  "resources.toolbar.arrange": "Grouper et trier",
   "resources.group.source": "Source",
   "resources.group.folder": "Dossier",
   "resources.group.none": "Aucun",

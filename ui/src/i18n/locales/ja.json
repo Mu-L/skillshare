@@ -844,6 +844,8 @@
   "resources.toolbar.folder": "フォルダ",
   "resources.toolbar.group": "グループ",
   "resources.toolbar.sort": "並び順",
+  "resources.toolbar.clearFilter": "{name} をクリア",
+  "resources.toolbar.arrange": "グループと並び順",
   "resources.group.source": "ソース",
   "resources.group.folder": "フォルダ",
   "resources.group.none": "なし",

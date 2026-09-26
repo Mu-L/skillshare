@@ -844,6 +844,8 @@
   "resources.toolbar.folder": "پوشه",
   "resources.toolbar.group": "گروه",
   "resources.toolbar.sort": "مرتب‌سازی",
+  "resources.toolbar.clearFilter": "پاک کردن {name}",
+  "resources.toolbar.arrange": "گروه‌بندی و مرتب‌سازی",
   "resources.group.source": "منبع",
   "resources.group.folder": "پوشه",
   "resources.group.none": "هیچ",

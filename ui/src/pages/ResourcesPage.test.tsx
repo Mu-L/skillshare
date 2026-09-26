@@ -125,6 +125,15 @@ describe('Skills tree view', () => {
     expect(within(await row('two')).queryByText('Disabled', { ignore: 'title' })).toBeNull();
   });
 
+  it('collapses every folder from one button, which then expands them again', async () => {
+    mount();
+    await row('one');
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse all' }));
+    expect(screen.getAllByRole('treeitem').map((el) => el.querySelector('.nm')?.textContent)).toEqual(['repo', 'local']);
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
+    expect(await row('one')).toBeInTheDocument();
+  });
+
   it('keeps a plain folder name as is in the detail pane path', async () => {
     vi.mocked(api.listSkills).mockResolvedValue({ resources: [at('notes__2024/deep/x'), at('notes__2024/deep/y')] } as Awaited<ReturnType<typeof api.listSkills>>);
     mount();
@@ -192,9 +201,23 @@ describe('Skills list folders', () => {
     expect(names()).toEqual(['hooks', 'router']);
   });
 
-  it('groups by folder with the root first, then folders A to Z', async () => {
+  it('shows an unset filter by its name alone', async () => {
     mount();
-    await choose('Group', 'Folder');
+    expect((await screen.findAllByRole('combobox')).map((el) => el.textContent)).toEqual(['Source', 'Status', 'Folder']);
+  });
+
+  it('clears a filter from its chip', async () => {
+    mount();
+    await choose('Folder', 'frontend/react (2)');
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Folder' }));
+    expect(names()).toHaveLength(FOLDERED.length);
+  });
+
+  it('groups by folder with the root first, then folders A to Z', async () => {
+    const user = userEvent.setup();
+    mount();
+    await user.click(await screen.findByRole('button', { name: 'Group and sort' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Folder' }));
     expect([...document.querySelectorAll('.ss-gh b')].map((el) => el.textContent)).toEqual(['Root', 'frontend', 'frontend/react', 'repo']);
   });
 });

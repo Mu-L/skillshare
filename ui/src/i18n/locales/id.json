@@ -844,6 +844,8 @@
   "resources.toolbar.folder": "Folder",
   "resources.toolbar.group": "Grup",
   "resources.toolbar.sort": "Urutkan",
+  "resources.toolbar.clearFilter": "Hapus {name}",
+  "resources.toolbar.arrange": "Kelompokkan dan urutkan",
   "resources.group.source": "Sumber",
   "resources.group.folder": "Folder",
   "resources.group.none": "Tidak ada",

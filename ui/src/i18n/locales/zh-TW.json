@@ -844,6 +844,8 @@
   "resources.toolbar.folder": "目錄",
   "resources.toolbar.group": "分組",
   "resources.toolbar.sort": "排序",
+  "resources.toolbar.clearFilter": "清除{name}",
+  "resources.toolbar.arrange": "分組與排序",
   "resources.group.source": "來源",
   "resources.group.folder": "目錄",
   "resources.group.none": "不分組",

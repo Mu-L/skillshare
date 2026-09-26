@@ -844,6 +844,8 @@
   "resources.toolbar.folder": "Folder",
   "resources.toolbar.group": "Group",
   "resources.toolbar.sort": "Sort",
+  "resources.toolbar.clearFilter": "Clear {name}",
+  "resources.toolbar.arrange": "Group and sort",
   "resources.group.source": "Source",
   "resources.group.folder": "Folder",
   "resources.group.none": "None",
