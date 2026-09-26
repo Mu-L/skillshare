@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"skillshare/internal/install"
 	"skillshare/internal/resource"
 	ssync "skillshare/internal/sync"
 	"skillshare/internal/utils"
@@ -115,10 +116,9 @@ func (s *Server) handleBatchSetTargets(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		updatedSkills = append(updatedSkills, updatedSkill{
-			name: filepath.Base(d.SourcePath),
-			path: d.SourcePath,
-		})
+		if name := filepath.Base(d.SourcePath); s.skillsStore.HasFileHashes(name) {
+			updatedSkills = append(updatedSkills, updatedSkill{name: name, path: d.SourcePath})
+		}
 		updated++
 	}
 	// Save the overrides before unlocking: every API request reloads skillsStore
@@ -128,13 +128,19 @@ func (s *Server) handleBatchSetTargets(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.Unlock()
 
-	// Recompute file hashes outside the lock so reads aren't blocked.
+	// Recompute file hashes outside the lock so reads aren't blocked; the
+	// store itself is only touched under the lock.
+	hashes := make(map[string]map[string]string, len(updatedSkills))
 	for _, sk := range updatedSkills {
-		s.skillsStore.RefreshHashes(sk.name, sk.path)
+		if h, err := install.ComputeFileHashes(sk.path); err == nil {
+			hashes[sk.name] = h
+		}
 	}
-	// Save reads TargetOverrides, which other requests write under the lock.
-	if len(updatedSkills) > 0 {
+	if len(hashes) > 0 {
 		s.mu.Lock()
+		for name, h := range hashes {
+			s.skillsStore.SetFileHashes(name, h)
+		}
 		s.skillsStore.Save(s.cfg.EffectiveSkillsSource()) //nolint:errcheck
 		s.mu.Unlock()
 	}
@@ -219,10 +225,17 @@ func (s *Server) handleSetSkillTargets(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			s.skillsStore.RefreshHashes(d.RelPath, d.SourcePath)
-			s.mu.Lock()
-			s.skillsStore.Save(s.cfg.EffectiveSkillsSource()) //nolint:errcheck
-			s.mu.Unlock()
+			s.mu.RLock()
+			refresh := s.skillsStore.HasFileHashes(d.RelPath)
+			s.mu.RUnlock()
+			if refresh {
+				if hashes, err := install.ComputeFileHashes(d.SourcePath); err == nil {
+					s.mu.Lock()
+					s.skillsStore.SetFileHashes(d.RelPath, hashes)
+					s.skillsStore.Save(s.cfg.EffectiveSkillsSource()) //nolint:errcheck
+					s.mu.Unlock()
+				}
+			}
 		}
 
 		s.writeOpsLog("set-skill-targets", "ok", start, map[string]any{

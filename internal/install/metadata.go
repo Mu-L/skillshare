@@ -382,6 +382,24 @@ func (s *MetadataStore) RefreshHashes(relPath, skillPath string) {
 	entry.FileHashes = hashes
 }
 
+// HasFileHashes reports whether the entry at relPath records file hashes,
+// i.e. whether RefreshHashes would recompute them.
+func (s *MetadataStore) HasFileHashes(relPath string) bool {
+	entry := s.GetByPath(relPath)
+	return entry != nil && entry.FileHashes != nil
+}
+
+// SetFileHashes stores hashes computed by ComputeFileHashes for an entry that
+// already has them. No-op if entry doesn't exist or has no FileHashes. It lets
+// callers hash files without holding the lock that guards the store.
+func (s *MetadataStore) SetFileHashes(relPath string, hashes map[string]string) {
+	entry := s.GetByPath(relPath)
+	if entry == nil || entry.FileHashes == nil {
+		return
+	}
+	entry.FileHashes = hashes
+}
+
 // RefreshTrackedRootSkillHashes recomputes file hashes for tracked repositories
 // that expose a SKILL.md at the repository root.
 func (s *MetadataStore) RefreshTrackedRootSkillHashes(relPath, repoPath string) (bool, error) {

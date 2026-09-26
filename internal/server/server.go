@@ -141,6 +141,32 @@ func (s *Server) IsProjectMode() bool {
 	return s.projectRoot != ""
 }
 
+// skillEntry returns a copy of the skills metadata entry for relPath, or nil.
+// It takes s.mu.RLock, so the caller must not hold s.mu.
+func (s *Server) skillEntry(relPath string) *install.MetadataEntry {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return copyMetadataEntry(s.skillsStore.GetByPath(relPath))
+}
+
+// agentEntry returns a copy of the agents metadata entry for key, or nil.
+// It takes s.mu.RLock, so the caller must not hold s.mu.
+func (s *Server) agentEntry(key string) *install.MetadataEntry {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return copyMetadataEntry(s.agentsStore.GetByPath(key))
+}
+
+// copyMetadataEntry returns a shallow copy so callers can read the entry after
+// s.mu is released while other requests replace or mutate the store.
+func copyMetadataEntry(e *install.MetadataEntry) *install.MetadataEntry {
+	if e == nil {
+		return nil
+	}
+	c := *e
+	return &c
+}
+
 // skillsSource returns the skills source directory for the current mode.
 // Caller must hold s.mu (RLock or Lock) when accessing s.cfg.
 func (s *Server) skillsSource() string {
