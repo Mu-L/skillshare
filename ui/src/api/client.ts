@@ -146,11 +146,13 @@ export interface ExtraTarget {
   mode: string;
   flatten: boolean;
   extension?: string;  // transform extension name; presence implies copy mode
-  status: string;  // "synced" | "drift" | "not synced" | "no source"
+  as?: string; // single-file extra: target filename
+  status: string;  // "synced" | "drift" | "modified" | "not synced" | "no source"
 }
 
 export interface Extra {
   name: string;
+  file?: string; // single-file extra (a shared instruction file): the file in source_dir
   source_dir: string;
   source_type: "per-extra" | "extras_source" | "default";
   file_count: number;
@@ -191,6 +193,93 @@ export interface ExtrasSyncResult {
     errors?: string[];
     error?: string;
   }>;
+}
+
+// Instruction files (CLAUDE.md, AGENTS.md, ...)
+export interface InstructionsAssignment {
+  name: string; // shared instruction file (a single-file extra)
+  mode: string; // import | symlink | copy
+  status: string; // synced | drift | modified | not synced | no source
+}
+
+export interface InstructionsEntry {
+  path: string;
+  kind: 'main' | 'fallback' | 'rules' | 'unread';
+  exists: boolean;
+  read: boolean;
+  count?: number;
+}
+
+export interface TargetInstructions {
+  target: string;
+  project: boolean;
+  supported: boolean;
+  custom: boolean; // the file is one the user set for this target
+  setup?: TargetInstructionsSetup; // that setting as written
+  path?: string;
+  exists: boolean;
+  content: string;
+  size: number;
+  link_to?: string;
+  link_shared?: string; // the shared instruction file link_to points to
+  import: boolean;
+  max_chars?: number;
+  read_order: InstructionsEntry[];
+  import_lines: number[];
+  shared: InstructionsAssignment[];
+  convert: ConvertMethod[];
+  convert_blocked?: Partial<Record<ConvertMethod, string>>;
+}
+
+/** The instruction file a user set for a target skillshare does not know. */
+export interface TargetInstructionsSetup {
+  path: string;
+  import?: boolean;
+}
+
+export type ConvertMethod = 'import' | 'rename' | 'copy';
+
+export interface InstructionsChange {
+  path: string;
+  status: 'new' | 'modified' | 'removed';
+  before: string;
+  after: string;
+}
+
+export interface SharedInstructionsFile {
+  name: string;
+  file: string;
+  path: string;
+  exists: boolean;
+  size: number;
+  chars: number;
+  targets: number;
+}
+
+export interface SharedInstructionsTarget {
+  name: string;
+  path: string;
+  import: boolean;
+  exists: boolean;
+  same_as?: string;
+  max_chars?: number;
+  assigned: InstructionsAssignment[];
+}
+
+export interface ProjectInstructionsReach {
+  target: string;
+  file: string;
+  how: 'direct' | 'fallback' | 'import' | 'link' | 'shadowed' | 'missing';
+  reads: boolean;
+  shim?: 'import' | 'link';
+}
+
+export interface ProjectInstructions {
+  path: string;
+  exists: boolean;
+  content: string;
+  size: number;
+  targets: ProjectInstructionsReach[];
 }
 
 export interface SyncMatrixEntry {
@@ -602,6 +691,68 @@ export const api = {
     apiFetch<{ success: boolean }>(`/extras/${encodeURIComponent(name)}/targets`, {
       method: 'DELETE',
       body: JSON.stringify({ path }),
+    }),
+
+  // Instruction files
+  getTargetInstructions: (name: string) =>
+    apiFetch<TargetInstructions>(`/targets/${encodeURIComponent(name)}/instructions`),
+  putTargetInstructions: (name: string, content: string) =>
+    apiFetch<{ success: boolean }>(`/targets/${encodeURIComponent(name)}/instructions`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    }),
+  convertTargetInstructions: (name: string, body: { method: ConvertMethod; keep_tool_lines: boolean; share_as?: string; share_into?: string; apply: boolean }) =>
+    apiFetch<{ changes: InstructionsChange[] }>(`/targets/${encodeURIComponent(name)}/instructions/convert`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  setTargetInstructionsSetup: (name: string, setup: TargetInstructionsSetup) =>
+    apiFetch<{ success: boolean }>(`/targets/${encodeURIComponent(name)}/instructions/setup`, {
+      method: 'PUT',
+      body: JSON.stringify(setup),
+    }),
+  removeTargetInstructionsSetup: (name: string) =>
+    apiFetch<{ success: boolean }>(`/targets/${encodeURIComponent(name)}/instructions/setup`, { method: 'DELETE' }),
+  listSharedInstructions: () =>
+    apiFetch<{ files: SharedInstructionsFile[]; targets: SharedInstructionsTarget[] }>('/instructions'),
+  createSharedInstructions: (body: { name: string; content?: string; from_target?: string }) =>
+    apiFetch<{ success: boolean; path: string }>('/instructions', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  getSharedInstructionsContent: (name: string) =>
+    apiFetch<{ name: string; path: string; exists: boolean; content: string }>(`/instructions/${encodeURIComponent(name)}/content`),
+  putSharedInstructionsContent: (name: string, content: string) =>
+    apiFetch<{ success: boolean }>(`/instructions/${encodeURIComponent(name)}/content`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    }),
+  /** Sets exactly which shared files each target uses; [] restores their own files. */
+  assignSharedInstructions: (targets: string[], extras: string[]) =>
+    apiFetch<{ success: boolean; errors: string[] }>('/instructions/assign', {
+      method: 'POST',
+      body: JSON.stringify({ targets, extras }),
+    }),
+  restoreSharedInstructions: (name: string, target: string) =>
+    apiFetch<{ success: boolean; errors: string[] }>(`/instructions/${encodeURIComponent(name)}/restore`, {
+      method: 'POST',
+      body: JSON.stringify({ target }),
+    }),
+  resolveSharedInstructions: (name: string, target: string, action: 'collect' | 'reapply') =>
+    apiFetch<{ success: boolean }>(`/instructions/${encodeURIComponent(name)}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ target, action }),
+    }),
+  getProjectInstructions: () => apiFetch<ProjectInstructions>('/instructions/project'),
+  putProjectInstructions: (content: string) =>
+    apiFetch<{ success: boolean }>('/instructions/project', {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    }),
+  addProjectInstructionsShim: (target: string) =>
+    apiFetch<{ success: boolean }>('/instructions/project/shim', {
+      method: 'POST',
+      body: JSON.stringify({ target }),
     }),
 
   // Log

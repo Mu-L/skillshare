@@ -423,6 +423,23 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/targets", s.handleAddTarget)
 	s.mux.HandleFunc("PATCH /api/targets/{name}", s.handleUpdateTarget)
 	s.mux.HandleFunc("DELETE /api/targets/{name}", s.handleRemoveTarget)
+	s.mux.HandleFunc("GET /api/targets/{name}/instructions", s.handleGetTargetInstructions)
+	s.mux.HandleFunc("PUT /api/targets/{name}/instructions", s.handlePutTargetInstructions)
+	s.mux.HandleFunc("POST /api/targets/{name}/instructions/convert", s.handleConvertTargetInstructions)
+	s.mux.HandleFunc("PUT /api/targets/{name}/instructions/setup", s.handlePutTargetInstructionsSetup)
+	s.mux.HandleFunc("DELETE /api/targets/{name}/instructions/setup", s.handleDeleteTargetInstructionsSetup)
+
+	// Instruction files: shared files (global) and the project AGENTS.md
+	s.mux.HandleFunc("GET /api/instructions", s.requireGlobalInstructions(s.handleListSharedInstructions))
+	s.mux.HandleFunc("POST /api/instructions", s.requireGlobalInstructions(s.handleCreateSharedInstructions))
+	s.mux.HandleFunc("POST /api/instructions/assign", s.requireGlobalInstructions(s.handleAssignSharedInstructions))
+	s.mux.HandleFunc("GET /api/instructions/{name}/content", s.requireGlobalInstructions(s.handleGetSharedInstructionsContent))
+	s.mux.HandleFunc("PUT /api/instructions/{name}/content", s.requireGlobalInstructions(s.handlePutSharedInstructionsContent))
+	s.mux.HandleFunc("POST /api/instructions/{name}/restore", s.requireGlobalInstructions(s.handleRestoreSharedInstructions))
+	s.mux.HandleFunc("POST /api/instructions/{name}/resolve", s.requireGlobalInstructions(s.handleResolveSharedInstructions))
+	s.mux.HandleFunc("GET /api/instructions/project", s.requireProjectInstructions(s.handleGetProjectInstructions))
+	s.mux.HandleFunc("PUT /api/instructions/project", s.requireProjectInstructions(s.handlePutProjectInstructions))
+	s.mux.HandleFunc("POST /api/instructions/project/shim", s.requireProjectInstructions(s.handleProjectInstructionsShim))
 
 	// Projects (global config only)
 	s.mux.HandleFunc("GET /api/projects", s.requireGlobalProjects(s.handleListProjects))

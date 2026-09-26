@@ -274,7 +274,7 @@ export function Select({ label, ariaLabel, value = '', onChange, values, onChang
                 key={opt.value}
                 role="option"
                 aria-selected={isSelected}
-                className={`min-h-8 px-2 py-1.5 rounded-[7px] cursor-pointer flex items-center gap-2 ${isFocused ? 'bg-sel text-sel-ink' : isSelected ? 'text-ink' : 'text-ink-2'}`}
+                className={`min-h-8 shrink-0 px-2 py-1.5 rounded-[7px] cursor-pointer flex items-center gap-2 ${isFocused ? 'bg-sel text-sel-ink' : isSelected ? 'text-ink' : 'text-ink-2'}`}
                 onMouseEnter={() => setFocusIdx(i)}
                 onMouseDown={(e) => { e.preventDefault(); select(opt.value); }}
               >
