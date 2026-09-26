@@ -763,7 +763,7 @@
   "update.missingRepos.rehydrateSuccess": "{count} getrackte(s) Repo(s) rehydriert",
   "update.missingRepos.rehydratePartial": "{count} Repo(s) konnten nicht rehydriert werden",
   "updateDialog.copyCommand": "Befehl kopieren",
-  "updateDialog.needsSudo": "Für das Update wird dein Passwort benötigt. Führe sudo skillshare upgrade in einem Terminal aus.",
+  "updateDialog.needsSudo": "Für das Update wird dein Passwort benötigt. Führe skillshare upgrade in einem Terminal aus.",
   "updateDialog.newVersion": "Neue Version verfügbar",
   "updateDialog.restartDev": "DEV-Modus-Neustart simuliert.",
   "updateDialog.restartManual": "Aktualisiert. Starte mit skillshare ui start neu, falls diese Seite keine Verbindung herstellt.",

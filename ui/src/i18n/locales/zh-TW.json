@@ -763,7 +763,7 @@
   "update.missingRepos.rehydrateSuccess": "已 rehydrate {count} 個 tracked repo",
   "update.missingRepos.rehydratePartial": "{count} 個 repo rehydrate 失敗",
   "updateDialog.copyCommand": "複製指令",
-  "updateDialog.needsSudo": "更新需要輸入密碼，請在終端機執行 sudo skillshare upgrade。",
+  "updateDialog.needsSudo": "更新需要輸入密碼，請在終端機執行 skillshare upgrade。",
   "updateDialog.newVersion": "有新版本可用",
   "updateDialog.restartDev": "已模擬 DEV 模式重新啟動。",
   "updateDialog.restartManual": "已更新。如果此頁面沒有重新連線，請執行 skillshare ui start 重新啟動。",

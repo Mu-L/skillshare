@@ -769,7 +769,7 @@
   "syncResult.upToDate.one": "{count} target already up to date",
   "syncResult.upToDate.other": "{count} targets already up to date",
   "updateDialog.copyCommand": "Copy command",
-  "updateDialog.needsSudo": "Updating needs your password. Run sudo skillshare upgrade in a terminal.",
+  "updateDialog.needsSudo": "Updating needs your password. Run skillshare upgrade in a terminal.",
   "updateDialog.newVersion": "New version available",
   "updateDialog.restartDev": "DEV mode restart simulated.",
   "updateDialog.restartManual": "Updated. Restart with skillshare ui start if this page does not reconnect.",

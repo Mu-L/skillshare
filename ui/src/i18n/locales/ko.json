@@ -763,7 +763,7 @@
   "update.missingRepos.rehydrateSuccess": "{count}개의 tracked 저장소를 rehydrate했습니다",
   "update.missingRepos.rehydratePartial": "{count}개의 저장소 rehydrate에 실패했습니다",
   "updateDialog.copyCommand": "명령 복사",
-  "updateDialog.needsSudo": "업데이트하려면 비밀번호가 필요합니다. 터미널에서 sudo skillshare upgrade 를 실행하세요.",
+  "updateDialog.needsSudo": "업데이트하려면 비밀번호가 필요합니다. 터미널에서 skillshare upgrade 를 실행하세요.",
   "updateDialog.newVersion": "새 버전 사용 가능",
   "updateDialog.restartDev": "DEV 모드 재시작을 시뮬레이션했습니다.",
   "updateDialog.restartManual": "업데이트되었습니다. 이 페이지가 다시 연결되지 않으면 skillshare ui start로 다시 시작하세요.",
