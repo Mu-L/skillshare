@@ -34,7 +34,7 @@ import { queryKeys, staleTimes } from '../lib/queryKeys';
 import { clearAuditCache } from '../lib/auditCache';
 import { globToRegex } from '../lib/glob';
 import { parseRemoteURL } from '../lib/parseRemoteURL';
-import { formatTrackedRepoName, resourceHref } from '../lib/resourceNames';
+import { folderOf, formatTrackedRepoName, resourceHref } from '../lib/resourceNames';
 import { useSyncMatrix } from '../hooks/useSyncMatrix';
 import { useRepoUpdate } from '../hooks/useRepoUpdate';
 import { useT } from '../i18n';
@@ -70,7 +70,7 @@ type SourceFilter = 'all' | SourceType;
 type StatusFilter = 'all' | 'enabled' | 'disabled';
 type SortType = 'name-asc' | 'name-desc' | 'newest' | 'oldest';
 type ViewType = 'list' | 'cards' | 'tree';
-type GroupBy = 'source' | 'none';
+type GroupBy = 'source' | 'folder' | 'none';
 type Tone = 'ok' | 'off';
 type Point = { x: number; y: number };
 type MenuState =
@@ -192,9 +192,24 @@ function groupBySource(items: Skill[]): Group[] {
   return [...groups.values()].sort((a, b) => SOURCE_ORDER.indexOf(a.source) - SOURCE_ORDER.indexOf(b.source) || a.key.localeCompare(b.key));
 }
 
+/* -- Folder groups -------------------------------- */
+
+interface FolderGroup { key: string; repo: boolean; items: Skill[] }
+
+/** Root first, then folder name A→Z; items keep the order they came in (the current sort). */
+function groupByFolder(items: Skill[]): FolderGroup[] {
+  const groups = new Map<string, FolderGroup>();
+  for (const s of items) {
+    const key = folderOf(s);
+    if (!groups.has(key)) groups.set(key, { key, repo: !!repoOf(s), items: [] });
+    groups.get(key)!.items.push(s);
+  }
+  return [...groups.values()].sort((a, b) => formatTrackedRepoName(a.key).localeCompare(formatTrackedRepoName(b.key)));
+}
+
 /** Cut groups down to the first `limit` items, keeping headers only for groups that still show something. */
-function limitGroups(groups: Group[], limit: number): Group[] {
-  const out: Group[] = [];
+function limitGroups<G extends { items: Skill[] }>(groups: G[], limit: number): G[] {
+  const out: G[] = [];
   let left = limit;
   for (const g of groups) {
     if (left <= 0) break;
@@ -275,6 +290,8 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
   const [source, setSource] = useState<SourceFilter>('all');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [target, setTarget] = useState('all');
+  // null = all folders; '' is the source root.
+  const [folder, setFolder] = useState<string | null>(null);
   const [sort, setSort] = useState<SortType>('name-asc');
   const [group, setGroup] = useState<GroupBy>(isAgent ? 'none' : 'source');
   const [view, setView] = useState<ViewType>(loadView);
@@ -294,10 +311,16 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
   const targetIndex = useMemo(() => syncedByTarget(items, matrix), [items, matrix]);
   // A target that stopped appearing (kind switch, uninstall) would filter everything out.
   const activeTarget = targetIndex.has(target) ? target : 'all';
+  const folderIndex = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of items) counts.set(folderOf(s), (counts.get(folderOf(s)) ?? 0) + 1);
+    return counts;
+  }, [items]);
+  const activeFolder = folder !== null && folderIndex.has(folder) ? folder : null;
   const updateCount = useMemo(() => countUpdates(checks, updateUnits(all, kind)), [checks, all, kind]);
   const query = search.trim();
   const isGlob = /[*?]/.test(query);
-  const filtering = query !== '' || source !== 'all' || status !== 'all' || activeTarget !== 'all';
+  const filtering = query !== '' || source !== 'all' || status !== 'all' || activeTarget !== 'all' || activeFolder !== null;
 
   const filtered = useMemo(() => {
     const re = query ? globToRegex(query) : null;
@@ -306,11 +329,13 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
       (!re || re.test(s.name) || re.test(s.relPath) || re.test(s.flatName) || (!glob && re.test(s.source ?? ''))) &&
       (source === 'all' || resolveSource(s.type, s.isInRepo) === source) &&
       (status === 'all' || (status === 'disabled') === !!s.disabled) &&
-      (activeTarget === 'all' || (targetIndex.get(activeTarget)?.has(s.flatName) ?? false)),
+      (activeTarget === 'all' || (targetIndex.get(activeTarget)?.has(s.flatName) ?? false)) &&
+      (activeFolder === null || folderOf(s) === activeFolder),
     ), sort);
-  }, [items, query, source, status, sort, activeTarget, targetIndex]);
+  }, [items, query, source, status, sort, activeTarget, targetIndex, activeFolder]);
 
   const groups = useMemo(() => groupBySource(filtered), [filtered]);
+  const folderGroups = useMemo(() => groupByFolder(filtered), [filtered]);
   const tree = useMemo(() => buildTree(filtered), [filtered]);
   const treeRows = useMemo(() => flattenTree(tree, collapsed, filtering), [tree, collapsed, filtering]);
   const shownTreeRows = useMemo(() => {
@@ -463,7 +488,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     });
   };
   const resetting = <T,>(set: (v: T) => void) => (v: T) => { set(v); setLimit(STEP); };
-  const clearFilters = () => { setSearch(''); setSource('all'); setStatus('all'); setLimit(STEP); };
+  const clearFilters = () => { setSearch(''); setSource('all'); setStatus('all'); setFolder(null); setLimit(STEP); };
 
   const changeView = (v: ViewType) => {
     setView(v);
@@ -541,9 +566,21 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     );
   };
 
+  const folderName = (key: string) => (key === '' ? t('resources.folder.root') : formatTrackedRepoName(key));
+
+  const folderHead = (g: FolderGroup, asLabel: boolean) => (
+    <div key={`f:${g.key}`} className={asLabel ? 'ss-gl' : 'ss-gh'}>
+      <Folder size={15} className="shrink-0 text-ink-2" />
+      <b className={g.key ? 'font-mono' : ''}>{folderName(g.key)}</b>
+      {g.repo && <span className="ss-tag">tracked</span>}
+      <span className="text-ink-3">{countLabel(t, kind, g.items.length)}</span>
+    </div>
+  );
+
   const itemRow = (s: Skill) => {
     const { synced, tone, label } = rowInfo(s);
-    const sub = parentPath(s, group === 'source');
+    // Grouped by folder, the header already names the parent path.
+    const sub = group === 'folder' ? '' : parentPath(s, group === 'source');
     return (
       <div
         key={s.flatName}
@@ -559,7 +596,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
           </span>
           {sub && <span className="font-mono text-xs text-ink-3 truncate">{sub}</span>}
         </span>
-        {group === 'none' && view === 'list' && <span className="w-[150px] font-mono text-xs text-ink-3 truncate">{sourceName(s)}</span>}
+        {group !== 'source' && view === 'list' && <span className="w-[150px] font-mono text-xs text-ink-3 truncate">{sourceName(s)}</span>}
         <span className="w-[140px]"><TargetStack names={synced} /></span>
         <span className="w-[120px]">{status$(tone, label)}</span>
         {actionsButton(s)}
@@ -581,7 +618,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
           <Link to={resourceHref(s)} className={`nm flex-1 min-w-0 break-words hover:underline ${s.disabled ? 'text-ink-3' : ''}`}>{s.name}</Link>
           {actionsButton(s)}
         </div>
-        <span className="ds text-[13px] text-ink-2">{group === 'source' ? parentPath(s, true) : parentPath(s) || sourceName(s)}</span>
+        <span className="ds text-[13px] text-ink-2">{group === 'source' ? parentPath(s, true) : group === 'folder' ? sourceName(s) : parentPath(s) || sourceName(s)}</span>
         <div className="ft">
           <span className="flex items-center gap-2">
             <TargetStack names={synced} max={3} />
@@ -617,12 +654,20 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
       />
     );
   } else if (view === 'cards') {
-    const shownGroups = group === 'source' ? limitGroups(groups, limit) : null;
-    content = shownGroups ? (
+    content = group === 'source' ? (
       <div className="flex flex-col gap-6">
-        {shownGroups.map((g) => (
+        {limitGroups(groups, limit).map((g) => (
           <div key={g.key}>
             {groupHead(g, true)}
+            <div className="ss-tiles mt-3">{g.items.map(card)}</div>
+          </div>
+        ))}
+      </div>
+    ) : group === 'folder' ? (
+      <div className="flex flex-col gap-6">
+        {limitGroups(folderGroups, limit).map((g) => (
+          <div key={g.key}>
+            {folderHead(g, true)}
             <div className="ss-tiles mt-3">{g.items.map(card)}</div>
           </div>
         ))}
@@ -690,7 +735,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
         ) : (
           <span className="flex-1">{t('resources.col.name')}</span>
         )}
-        {group === 'none' && view === 'list' && <span className="w-[150px]">{t('resources.col.source')}</span>}
+        {group !== 'source' && view === 'list' && <span className="w-[150px]">{t('resources.col.source')}</span>}
         <span className="w-[140px]">{t('resources.col.targets')}</span>
         <span className="w-[120px]">{t('resources.col.status')}</span>
         <span className="w-[30px]" />
@@ -699,6 +744,8 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     let body: React.ReactNode;
     if (group === 'source') {
       body = limitGroups(groups, limit).map((g) => [groupHead(g, false), ...g.items.map((s) => itemRow(s))]);
+    } else if (group === 'folder') {
+      body = limitGroups(folderGroups, limit).map((g) => [folderHead(g, false), ...g.items.map((s) => itemRow(s))]);
     } else {
       body = filtered.slice(0, limit).map((s) => itemRow(s));
     }
@@ -807,6 +854,22 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
                 ]}
               />
             )}
+            {folderIndex.size > 1 && (
+              <Select
+                // Capped so a long folder path truncates instead of wrapping the toolbar.
+                className="shrink-0 max-w-[160px]"
+                prefix={t('resources.toolbar.folder')}
+                // Folder values carry a '/' prefix: '' (the root) and a folder named "all" stay distinct from All.
+                value={activeFolder === null ? 'all' : `/${activeFolder}`}
+                onChange={(v) => resetting(setFolder)(v === 'all' ? null : v.slice(1))}
+                options={[
+                  { value: 'all', label: 'All' },
+                  ...[...folderIndex]
+                    .sort((a, b) => formatTrackedRepoName(a[0]).localeCompare(formatTrackedRepoName(b[0])))
+                    .map(([key, n]) => ({ value: `/${key}`, label: `${folderName(key)} (${n})` })),
+                ]}
+              />
+            )}
             {view === 'tree' ? (
               tree.children.size > 0 && <div className="ss-seg ic !flex-nowrap shrink-0" role="group">
                 <button type="button" title={t('resources.folder.expandAll')} aria-label={t('resources.folder.expandAll')} onClick={() => updateCollapsed(new Set())}>
@@ -824,6 +887,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
                 onChange={(v) => setGroup(v as GroupBy)}
                 options={[
                   { value: 'source', label: t('resources.group.source') },
+                  { value: 'folder', label: t('resources.group.folder') },
                   { value: 'none', label: t('resources.group.none') },
                 ]}
               />

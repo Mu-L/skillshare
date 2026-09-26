@@ -150,3 +150,44 @@ describe('Skills tree view', () => {
     expect(localStorage.getItem('skillshare:tree-width')).toBe('396');
   });
 });
+
+/* -- Folders ------------------------------------- */
+
+describe('Skills list folders', () => {
+  const FOLDERED = [at('frontend/react/hooks'), at('frontend/react/router'), at('frontend/vue'), at('solo'), at('_repo/skills/gamma')];
+
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('skillshare:skills-view', 'list');
+    vi.clearAllMocks();
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+    vi.mocked(api.listSkills).mockResolvedValue({ resources: FOLDERED } as Awaited<ReturnType<typeof api.listSkills>>);
+    vi.mocked(api.diff).mockResolvedValue({ diffs: [] } as unknown as Awaited<ReturnType<typeof api.diff>>);
+    vi.mocked(api.listTargets).mockResolvedValue({ targets: [], sourceSkillCount: 0 });
+    vi.mocked(api.listTrash).mockResolvedValue({ items: [] } as unknown as Awaited<ReturnType<typeof api.listTrash>>);
+    vi.mocked(api.getSyncMatrix).mockResolvedValue({ entries: [] } as unknown as Awaited<ReturnType<typeof api.getSyncMatrix>>);
+  });
+
+  /** Opens the toolbar select whose prefix reads `prefix` and picks `option`. */
+  async function choose(prefix: string, option: string) {
+    const user = userEvent.setup();
+    const box = (await screen.findAllByRole('combobox')).find((el) => el.textContent?.startsWith(prefix));
+    if (!box) throw new Error(`no ${prefix} select`);
+    await user.click(box);
+    await user.click(await screen.findByRole('option', { name: option }));
+  }
+
+  const names = () => [...document.querySelectorAll('.ss-r .nm')].map((el) => el.textContent);
+
+  it('shows only the chosen folder\'s items', async () => {
+    mount();
+    await choose('Folder', 'frontend/react (2)');
+    expect(names()).toEqual(['hooks', 'router']);
+  });
+
+  it('groups by folder with the root first, then folders A to Z', async () => {
+    mount();
+    await choose('Group', 'Folder');
+    expect([...document.querySelectorAll('.ss-gh b')].map((el) => el.textContent)).toEqual(['Root', 'frontend', 'frontend/react', 'repo']);
+  });
+});
