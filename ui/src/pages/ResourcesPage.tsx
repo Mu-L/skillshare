@@ -1,10 +1,8 @@
-import { useMemo, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
+import { useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Bot,
-  ChevronDown,
-  ChevronRight,
   ChevronsDownUp,
   ChevronsUpDown,
   CircleCheck,
@@ -13,7 +11,6 @@ import {
   Ellipsis,
   ExternalLink,
   Folder,
-  FolderOpen,
   FolderTree,
   GitBranch,
   Github,
@@ -57,6 +54,13 @@ import { Select } from '../components/Select';
 import { PageSkeleton } from '../components/Skeleton';
 import { resolveSource, type SourceType } from '../components/SourceBadge';
 import TargetMenu, { SkillContextMenu } from '../components/TargetMenu';
+import SkillTree from '../components/resources/SkillTree';
+import type { SelectMode } from '../components/resources/SkillTree';
+import TreeDetailPane from '../components/resources/TreeDetailPane';
+import type { PaneSubject } from '../components/resources/TreeDetailPane';
+import TreeSplit from '../components/resources/TreeSplit';
+import { buildTree, findFolder, flattenTree, folderPaths, isRepoRoot, rangeIds, selectedSkills, skillsUnder, summarize } from '../components/resources/tree';
+import type { TargetSummary, TreeRow } from '../components/resources/tree';
 import { useToast } from '../components/Toast';
 import TrashPage from './TrashPage';
 import UpdatePage, { countUpdates, updateUnits, useCheckStatuses } from './UpdatePage';
@@ -73,7 +77,8 @@ type MenuState =
   | { mode: 'item'; skill: Skill; point: Point }
   | { mode: 'folder'; path: string; summary: TargetSummary; point: Point }
   | { mode: 'repo'; repo: string; point: Point }
-  | { mode: 'bulk'; point: Point };
+  | { mode: 'skill'; skill: Skill; point: Point }
+  | { mode: 'bulk'; names: string[]; point: Point };
 type SkillsData = { resources: Skill[] };
 
 const EMPTY: Skill[] = [];
@@ -85,6 +90,8 @@ const SOURCE_LABEL: Record<SourceFilter, string> = { all: 'All', tracked: 'Track
 const SOURCE_ICON = { tracked: GitBranch, github: Github, remote: Globe, local: Folder };
 const VIEW_KEY = 'skillshare:skills-view';
 const COLLAPSED_KEY = 'skillshare:folder-collapsed';
+/** Enable/disable toasts replace each other, so quick on/off clicks never leave an outdated one on screen. */
+const TOGGLE_TOAST = 'resource-toggle';
 
 function loadView(): ViewType {
   try {
@@ -106,12 +113,6 @@ function loadCollapsed(): Set<string> {
 
 function saveCollapsed(collapsed: Set<string>) {
   try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed])); } catch { /* storage unavailable */ }
-}
-
-/** Normalize skill targets: ["*"] or empty/null → [] (meaning All). */
-function normalizeTargets(targets?: string[] | null): string[] {
-  if (!targets || targets.length === 0 || targets.includes('*')) return [];
-  return targets;
 }
 
 /**
@@ -203,85 +204,6 @@ function limitGroups(groups: Group[], limit: number): Group[] {
   return out;
 }
 
-/* -- Folder tree ---------------------------------- */
-
-interface TargetSummary {
-  display: string;      // "claude" | "claude, cursor" | "4 targets"
-  targets: string[];    // sorted union
-  isUniform: boolean;   // every direct skill has the same target set
-}
-
-interface FolderNode {
-  name: string;
-  path: string;
-  children: Map<string, FolderNode>;
-  skills: Skill[];
-  count: number;
-  summary: TargetSummary;
-}
-
-type TreeRow =
-  | { type: 'folder'; node: FolderNode; depth: number; collapsed: boolean }
-  | { type: 'item'; skill: Skill; depth: number };
-
-const ALL_TARGETS: TargetSummary = { display: '', targets: [], isUniform: true };
-
-function summarize(skills: Skill[]): TargetSummary {
-  const sets = skills.map((s) => [...normalizeTargets(s.targets)].sort());
-  if (sets.length === 0) return ALL_TARGETS;
-  const first = sets[0];
-  const isUniform = sets.every((x) => x.length === first.length && x.every((v, i) => v === first[i]));
-  const union = [...new Set(sets.flat())].sort();
-  const shown = isUniform ? first : union;
-  return { display: shown.length > 3 ? `${shown.length} targets` : shown.join(', '), targets: shown, isUniform };
-}
-
-function buildTree(skills: Skill[]): FolderNode {
-  const root: FolderNode = { name: '', path: '', children: new Map(), skills: [], count: 0, summary: ALL_TARGETS };
-  for (const skill of skills) {
-    const slash = skill.relPath.lastIndexOf('/');
-    let node = root;
-    if (slash > 0) {
-      for (const seg of skill.relPath.slice(0, slash).split('/')) {
-        if (!node.children.has(seg)) {
-          const path = node.path ? `${node.path}/${seg}` : seg;
-          node.children.set(seg, { name: seg, path, children: new Map(), skills: [], count: 0, summary: ALL_TARGETS });
-        }
-        node = node.children.get(seg)!;
-      }
-    }
-    node.skills.push(skill);
-  }
-  // Counts include subfolders; the target summary covers direct skills only, because
-  // a folder's batch target change only touches the skills directly inside it.
-  const finish = (node: FolderNode): number => {
-    node.summary = summarize(node.skills);
-    node.count = node.skills.length;
-    for (const child of node.children.values()) node.count += finish(child);
-    return node.count;
-  };
-  finish(root);
-  return root;
-}
-
-function flattenTree(root: FolderNode, collapsed: ReadonlySet<string>, expandAll: boolean): TreeRow[] {
-  const rows: TreeRow[] = [];
-  const walk = (node: FolderNode, depth: number) => {
-    for (const child of [...node.children.values()].sort((a, b) => a.name.localeCompare(b.name))) {
-      const isCollapsed = !expandAll && collapsed.has(child.path);
-      rows.push({ type: 'folder', node: child, depth, collapsed: isCollapsed });
-      if (!isCollapsed) walk(child, depth + 1);
-    }
-    for (const skill of node.skills) rows.push({ type: 'item', skill, depth });
-  };
-  walk(root, 0);
-  return rows;
-}
-
-function folderPaths(node: FolderNode): string[] {
-  return [...node.children.values()].flatMap((c) => [c.path, ...folderPaths(c)]);
-}
-
 /* -- Small pieces --------------------------------- */
 
 function TargetStack({ names, max = 4 }: { names: string[]; max?: number }) {
@@ -359,6 +281,9 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
   const [limit, setLimit] = useState(STEP);
   const [collapsed, setCollapsed] = useState<Set<string>>(loadCollapsed);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // The tree view selects folders and skills by row id, apart from the list's checkboxes.
+  const [treeSel, setTreeSel] = useState<Set<string>>(new Set());
+  const [anchor, setAnchor] = useState<string | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [uninstalling, setUninstalling] = useState<Skill[] | null>(null);
   const [confirmDisable, setConfirmDisable] = useState<string[] | null>(null);
@@ -388,6 +313,25 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
   const groups = useMemo(() => groupBySource(filtered), [filtered]);
   const tree = useMemo(() => buildTree(filtered), [filtered]);
   const treeRows = useMemo(() => flattenTree(tree, collapsed, filtering), [tree, collapsed, filtering]);
+  const shownTreeRows = useMemo(() => {
+    let left = limit;
+    const rows: TreeRow[] = [];
+    for (const r of treeRows) {
+      if (r.type === 'item' && left-- <= 0) break;
+      rows.push(r);
+    }
+    return rows;
+  }, [treeRows, limit]);
+  const byName = useMemo(() => new Map(items.map((s) => [s.flatName, s])), [items]);
+  const treeSkills = useMemo(() => selectedSkills(tree, treeSel, byName), [tree, treeSel, byName]);
+  const paneSubject = useMemo((): PaneSubject => {
+    if (treeSkills.length === 0) return { type: 'none' };
+    const [only] = treeSel.size === 1 ? treeSel : [];
+    const node = only?.startsWith('f:') ? findFolder(tree, only.slice(2)) : undefined;
+    if (node) return { type: 'folder', node, skills: treeSkills };
+    if (only) return { type: 'skill', skill: treeSkills[0] };
+    return { type: 'multi', skills: treeSkills };
+  }, [tree, treeSel, treeSkills]);
 
   const selectedItems = useMemo(() => items.filter((s) => selected.has(s.flatName)), [items, selected]);
   const allSelected = filtered.length > 0 && filtered.every((s) => selected.has(s.flatName));
@@ -442,7 +386,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     onMutate: ({ s, disable }) => patch((list) => list.map((x) => (x.flatName === s.flatName && x.kind === s.kind ? { ...x, disabled: disable } : x))),
     onSuccess: (_, { s, disable }) => {
       const kindLabel = isAgent ? 'Agent' : 'Skill';
-      toast(t(disable ? 'resources.toast.disabled' : 'resources.toast.enabled', { kind: kindLabel, name: s.name }), 'success');
+      toast(t(disable ? 'resources.toast.disabled' : 'resources.toast.enabled', { kind: kindLabel, name: s.name }), 'success', { key: TOGGLE_TOAST });
     },
     onError: rollback,
     onSettled: refreshAfterTargets,
@@ -458,8 +402,8 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
       const { updated, unchanged, failed } = res.summary;
       if (failed > 0 && updated > 0) toast(t('resources.batchToggle.toast.partial', { updated, failed }), 'warning');
       else if (failed > 0) toast(t('resources.batchToggle.toast.failed', { count: failed }), 'error');
-      else if (updated === 0 && unchanged > 0) toast(t('resources.batchToggle.toast.noChange'), 'info');
-      else toast(t(enable ? 'resources.batchToggle.toast.enabled' : 'resources.batchToggle.toast.disabled', { count: updated }), 'success');
+      else if (updated === 0 && unchanged > 0) toast(t('resources.batchToggle.toast.noChange'), 'info', { key: TOGGLE_TOAST });
+      else toast(t(enable ? 'resources.batchToggle.toast.enabled' : 'resources.batchToggle.toast.disabled', { count: updated }), 'success', { key: TOGGLE_TOAST });
       setSelected(new Set());
     },
     onError: rollback,
@@ -479,7 +423,8 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
 
   const setFolderTargets = useMutation({
     mutationFn: ({ folder, target }: { folder: string; target: string | null }) => api.batchSetTargets(folder, target),
-    onSuccess: (res, { folder, target }) => {
+    onSuccess: (res, { folder: path, target }) => {
+      const folder = formatTrackedRepoName(path);
       if (res.updated === 0 && res.skipped > 0) toast(t('resources.folder.noEditableSkills', { folder }), 'error');
       else toast(t('resources.folder.skillsUpdated', { count: res.updated, folder, target: target ?? t('resources.targets.all') }), 'success');
     },
@@ -487,8 +432,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     onSettled: refreshAfterTargets,
   });
 
-  const setSelectedTargets = async (target: string | null) => {
-    const names = selectedItems.map((s) => s.flatName);
+  const setManyTargets = async (names: string[], target: string | null) => {
     const results = await Promise.allSettled(names.map((n) => api.setSkillTargets(n, target)));
     const failed = results.filter((r) => r.status === 'rejected').length;
     if (failed === 0) toast(t('resources.bulk.targetsSet', { count: names.length, target: target ?? t('resources.targets.all') }), 'success');
@@ -504,6 +448,20 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     return next;
   });
   const selectAll = (on: boolean) => setSelected(on ? new Set(filtered.map((s) => s.flatName)) : new Set());
+  const selectNode = (id: string, mode: SelectMode) => {
+    if (mode === 'range') {
+      setTreeSel(new Set(rangeIds(shownTreeRows, anchor, id)));
+      if (!anchor) setAnchor(id);
+      return;
+    }
+    setAnchor(id);
+    setTreeSel((prev) => {
+      if (mode === 'only') return new Set([id]);
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  };
   const resetting = <T,>(set: (v: T) => void) => (v: T) => { set(v); setLimit(STEP); };
   const clearFilters = () => { setSearch(''); setSource('all'); setStatus('all'); setLimit(STEP); };
 
@@ -583,14 +541,13 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     );
   };
 
-  const itemRow = (s: Skill, depth?: number) => {
+  const itemRow = (s: Skill) => {
     const { synced, tone, label } = rowInfo(s);
-    const sub = depth === undefined ? parentPath(s, group === 'source') : '';
+    const sub = parentPath(s, group === 'source');
     return (
       <div
         key={s.flatName}
-        className={`ss-r link ${depth !== undefined ? 'tr' : ''} ${selected.has(s.flatName) ? 'sel' : ''}`}
-        style={depth !== undefined ? ({ '--d': depth } as CSSProperties) : undefined}
+        className={`ss-r link ${selected.has(s.flatName) ? 'sel' : ''}`}
         onClick={(e) => openRow(e, s)}
         onContextMenu={(e) => openItemMenu(e, s)}
       >
@@ -606,40 +563,6 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
         <span className="w-[140px]"><TargetStack names={synced} /></span>
         <span className="w-[120px]">{status$(tone, label)}</span>
         {actionsButton(s)}
-      </div>
-    );
-  };
-
-  const folderRow = (row: Extract<TreeRow, { type: 'folder' }>) => {
-    const { node, depth } = row;
-    const repo = depth === 0 && node.name.startsWith('_') ? node.path : null;
-    const editable = !isAgent && !node.path.startsWith('_') && node.skills.length > 0;
-    return (
-      <div key={`f:${node.path}`} className={`ss-r fold tr ${depth > 0 ? 'sub' : ''}`} style={{ '--d': depth } as CSSProperties}>
-        <button
-          type="button"
-          className="flex items-center gap-[9px] min-w-0 flex-1 text-left cursor-pointer"
-          aria-expanded={!row.collapsed}
-          onClick={() => toggleFolder(node.path)}
-        >
-          {row.collapsed ? <ChevronRight size={14} className="shrink-0 text-ink-3" /> : <ChevronDown size={14} className="shrink-0 text-ink-3" />}
-          {repo ? <GitBranch size={15} className="shrink-0" /> : row.collapsed ? <Folder size={15} className="shrink-0" /> : <FolderOpen size={15} className="shrink-0" />}
-          <b className="font-mono truncate">{repo ? formatTrackedRepoName(node.name) : node.name}</b>
-          {repo && <span className="ss-tag">tracked</span>}
-          <span className="text-ink-3 whitespace-nowrap">{countLabel(t, kind, node.count)}</span>
-        </button>
-        {repo && !isAgent && repoActions(repo)}
-        {editable && (
-          <>
-            {!node.summary.isUniform
-              ? status$('off', t('resources.tree.mixed'))
-              : node.summary.targets.length > 0 && <span className="text-xs text-ink-3">{node.summary.display}</span>}
-            <Button variant="ghost" size="sm" onClick={(e) => setMenu({ mode: 'folder', path: node.path, summary: node.summary, point: menuPoint(e) })}>
-              <Target size={14} />
-              {t('resources.setTargets')}
-            </Button>
-          </>
-        )}
       </div>
     );
   };
@@ -707,6 +630,52 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     ) : (
       <div className="ss-tiles">{filtered.slice(0, limit).map(card)}</div>
     );
+  } else if (view === 'tree') {
+    const subject = paneSubject;
+    const repoRoot = subject.type === 'folder' && !isAgent && isRepoRoot(subject.node) ? subject.node.path : null;
+    content = (
+      <TreeSplit
+        tree={
+          <SkillTree
+            rows={shownTreeRows}
+            selected={treeSel}
+            kind={kind}
+            label={t(isAgent ? 'layout.nav.agents' : 'layout.nav.skills')}
+            onSelect={selectNode}
+            onToggleFolder={toggleFolder}
+            onOpen={(s) => navigate(resourceHref(s))}
+          />
+        }
+        pane={
+          <TreeDetailPane
+            kind={kind}
+            subject={subject}
+            busy={toggleMany.isPending || toggleOne.isPending}
+            onToggleAll={(list, enable) => toggleMany.mutate({ names: list.map((s) => s.flatName), enable })}
+            onToggleOne={(s) => toggleOne.mutate({ s, disable: !s.disabled })}
+            onSetTargets={(e) => {
+              const point = menuPoint(e);
+              if (subject.type === 'folder') setMenu({ mode: 'folder', path: subject.node.path, summary: summarize(skillsUnder(subject.node)), point });
+              else if (subject.type === 'skill') setMenu({ mode: 'skill', skill: subject.skill, point });
+              else if (subject.type === 'multi') setMenu({ mode: 'bulk', names: subject.skills.map((s) => s.flatName), point });
+            }}
+            onUninstall={() => setUninstalling(treeSkills)}
+            repoActions={repoRoot && (
+              <>
+                <Button variant="secondary" size="sm" loading={updating === repoRoot} disabled={updating !== null} onClick={() => update(repoRoot)}>
+                  <RefreshCw size={14} />
+                  {t('resources.repo.update')}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setUninstalling(items.filter((s) => repoOf(s) === repoRoot))}>
+                  <Trash2 size={14} />
+                  {t('resources.contextMenu.uninstallRepo')}
+                </Button>
+              </>
+            )}
+          />
+        }
+      />
+    );
   } else {
     const header = (
       <div className="ss-lh">
@@ -719,7 +688,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
             </button>
           </span>
         ) : (
-          <span className="flex-1">{t(view === 'tree' ? 'resources.col.folderName' : 'resources.col.name')}</span>
+          <span className="flex-1">{t('resources.col.name')}</span>
         )}
         {group === 'none' && view === 'list' && <span className="w-[150px]">{t('resources.col.source')}</span>}
         <span className="w-[140px]">{t('resources.col.targets')}</span>
@@ -728,15 +697,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
       </div>
     );
     let body: React.ReactNode;
-    if (view === 'tree') {
-      let left = limit;
-      const rows: TreeRow[] = [];
-      for (const r of treeRows) {
-        if (r.type === 'item' && left-- <= 0) break;
-        rows.push(r);
-      }
-      body = rows.map((r) => (r.type === 'folder' ? folderRow(r) : itemRow(r.skill, r.depth)));
-    } else if (group === 'source') {
+    if (group === 'source') {
       body = limitGroups(groups, limit).map((g) => [groupHead(g, false), ...g.items.map((s) => itemRow(s))]);
     } else {
       body = filtered.slice(0, limit).map((s) => itemRow(s));
@@ -744,7 +705,8 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
     content = <div className="ss-list">{header}{body}</div>;
   }
 
-  const count = selectedItems.length;
+  // The tree view acts on its own selection through the detail pane, not the bulk toolbar.
+  const count = view === 'tree' ? 0 : selectedItems.length;
 
   return (
     <div className={`ss-wrap animate-fade-in ${tab === 'installed' && count > 0 ? 'pb-16' : ''}`}>
@@ -915,7 +877,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
                 {t('resources.batchToggle.disable')}
               </Button>
               {!isAgent && (
-                <Button variant="secondary" size="sm" onClick={(e) => setMenu({ mode: 'bulk', point: menuPoint(e) })}>
+                <Button variant="secondary" size="sm" onClick={(e) => setMenu({ mode: 'bulk', names: selectedItems.map((s) => s.flatName), point: menuPoint(e) })}>
                   <Target size={15} />
                   {t('resources.setTargets')}
                 </Button>
@@ -969,8 +931,18 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
               onClose={() => setMenu(null)}
             />
           )}
+          {menu?.mode === 'skill' && (
+            <TargetMenu
+              open
+              flat
+              anchorPoint={menu.point}
+              currentTargets={menu.skill.targets ?? null}
+              onSelect={(target) => setTargets.mutate({ name: menu.skill.flatName, target })}
+              onClose={() => setMenu(null)}
+            />
+          )}
           {menu?.mode === 'bulk' && (
-            <TargetMenu open flat anchorPoint={menu.point} currentTargets={null} isUniform={false} onSelect={setSelectedTargets} onClose={() => setMenu(null)} />
+            <TargetMenu open flat anchorPoint={menu.point} currentTargets={null} isUniform={false} onSelect={(target) => setManyTargets(menu.names, target)} onClose={() => setMenu(null)} />
           )}
           {menu?.mode === 'repo' && (
             <SkillContextMenu
@@ -1007,7 +979,7 @@ export default function ResourcesPage({ kind }: { kind: Kind }) {
               selection={uninstalling}
               all={items}
               onClose={(removed) => {
-                if (removed) setSelected(new Set());
+                if (removed) { setSelected(new Set()); setTreeSel(new Set()); }
                 setUninstalling(null);
               }}
             />
